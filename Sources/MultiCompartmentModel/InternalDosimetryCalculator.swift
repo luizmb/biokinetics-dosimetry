@@ -1,4 +1,7 @@
+import Calculus
 import Foundation
+import Math
+import RealNumber
 import RungeKutta
 
 public enum SolverMethod: Equatable, Sendable {
@@ -30,24 +33,17 @@ public struct InternalDosimetryCalculator {
         switch solver {
         case .birchall:
             return (0 ... stepCount + 1).map { i in
-                matrixExponential(Double(i * step) * A).apply(to: x0)
+                Birchall.matrixExponential(Double(i * step) * A).apply(to: x0)
             }
         case .rungeKutta4(let h):
-            return rungeKuttaTrajectory(A: A, x0: x0, internalStep: h)
+            let trajectory = RungeKutta4.trajectory(
+                from: x0,
+                derivative: { _, y in A.apply(to: y) },
+                step: h,
+                through: Double((stepCount + 1) * step)
+            )
+            let stepsPerOutput = Int((Double(step) / h).rounded())
+            return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state }
         }
-    }
-
-    private func rungeKuttaTrajectory(A: Matrix, x0: [Double], internalStep h: Double) -> [[Double]] {
-        let derivative: (Double, [Double]) -> [Double] = { _, y in A.apply(to: y) }
-        let advance = RungeKutta4.calculateNextState(Δt: h, stepCalculator: RungeKutta4.rk4(derivative))
-
-        let endTime = Double((stepCount + 1) * step)
-        let trajectory = stride(from: h, through: endTime, by: h).reduce(
-            [(time: 0.0, state: x0)],
-            advance
-        )
-
-        let stepsPerOutput = Int((Double(step) / h).rounded())
-        return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state }
     }
 }

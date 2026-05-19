@@ -23,6 +23,8 @@ let package = Package(
                 .product(name: "FPMacros", package: "FP"),
                 .product(name: "Core", package: "NetworkTools"),
                 .product(name: "XMLCoder", package: "XMLCoder"),
+                .product(name: "Math", package: "RungeKutta"),
+                .product(name: "Calculus", package: "RungeKutta"),
                 .product(name: "RungeKutta", package: "RungeKutta")
             ]
         ),
