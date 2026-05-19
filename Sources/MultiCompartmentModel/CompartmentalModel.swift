@@ -1,6 +1,8 @@
 import Foundation
 import FP
 import FPMacros
+import Math
+import RealNumber
 
 @Lenses(init: .public)
 public struct CompartmentalModel: Hashable, Sendable {
@@ -18,7 +20,7 @@ extension CompartmentalModel {
 }
 
 extension CompartmentalModel {
-    public func coefficientMatrix(decay lambda: Double) -> Matrix {
+    public func coefficientMatrix(decay lambda: Double) -> Matrix<Double> {
         let n = compartments.count
         let indexOf = Dictionary(uniqueKeysWithValues: compartments.enumerated().map { ($1.id, $0) })
 
