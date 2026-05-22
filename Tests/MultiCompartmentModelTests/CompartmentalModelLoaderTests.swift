@@ -35,7 +35,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         XCTAssertTrue(zeroRateConnections.isEmpty, "Zero-rate connections should be filtered out")
     }
 
-    func testRunsCalculatorOnUraniumWithPlasmaIntake() throws {
+    func testRunsCalculatorOnUraniumWithPlasmaIntake() async throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let data = try Data(contentsOf: url)
         let loaded = try loadCompartmentalModel(using: XMLDecoder())(data).get()
@@ -44,7 +44,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
 
         let halfLife = 4.5e9 * 365.0
         let calculator = InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 10)
-        let result = calculator.calculate(model: model)
+        let result = await calculator.calculate(model: model).run()
 
         XCTAssertEqual(result.count, 12, "stepCount+2 rows expected")
         XCTAssertEqual(result[0].count, 19, "n compartments")
