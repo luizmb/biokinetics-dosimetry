@@ -8,12 +8,10 @@ let package = Package(
         .library(name: "MultiCompartmentModel", targets: ["MultiCompartmentModel"])
     ],
     dependencies: [
-        .package(url: "https://github.com/luizmb/FP.git", from: "1.7.0"),
-        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.2.0"),
+        .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.5.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
-        // Local path while Phase B fixes (rk4 double-add + vector-state) are unreleased.
-        // Switch to `.package(url: "https://github.com/luizmb/RungeKutta.git", from: "...")` once tagged.
-        .package(path: "../RungeKutta")
+        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.2.0")
     ],
     targets: [
         .target(
@@ -23,9 +21,9 @@ let package = Package(
                 .product(name: "FPMacros", package: "FP"),
                 .product(name: "Core", package: "NetworkTools"),
                 .product(name: "XMLCoder", package: "XMLCoder"),
-                .product(name: "Math", package: "RungeKutta"),
-                .product(name: "Calculus", package: "RungeKutta"),
-                .product(name: "RungeKutta", package: "RungeKutta")
+                .product(name: "Math", package: "SwiftCalx"),
+                .product(name: "Calculus", package: "SwiftCalx"),
+                .product(name: "RungeKutta", package: "SwiftCalx")
             ]
         ),
         .testTarget(
