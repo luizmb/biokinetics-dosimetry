@@ -1,13 +1,13 @@
 {
-  "originHash" : "d887e1f52c2b801033f5328bc4ce0a8a254c1594cee0ddf29f3d2343946dd708",
+  "originHash" : "bd8b1a9db9f8cdb2d864c5e70791bbda6ed9867b95a83072f85629c549da239e",
   "pins" : [
     {
       "identity" : "fp",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/FP.git",
       "state" : {
-        "revision" : "7434775b7bf82b7ee5099958e6bfc52c95488221",
-        "version" : "1.7.0"
+        "revision" : "dda7d6cb9bc20a23f0c89e5447df258e5cd17e28",
+        "version" : "1.8.1"
       }
     },
     {
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/NetworkTools.git",
       "state" : {
-        "revision" : "b9678cc3d053842a53525c062293eb9868c21ab5",
-        "version" : "0.4.0"
+        "revision" : "df80a653cc8f23bfeb3ad25e222b40c5f9ebcad6",
+        "version" : "0.5.0"
       }
     },
     {
@@ -62,6 +62,15 @@
       "state" : {
         "revision" : "7c6ad0fc39d0763e0b699210e4124afd5041c5df",
         "version" : "1.6.4"
+      }
+    },
+    {
+      "identity" : "swiftcalx",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/luizmb/SwiftCalx.git",
+      "state" : {
+        "revision" : "5ac355f8b1de75ebbe2f27800e91e010a22d5fd8",
+        "version" : "0.2.0"
       }
     },
     {
