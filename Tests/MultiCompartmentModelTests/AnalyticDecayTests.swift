@@ -4,7 +4,7 @@ import XCTest
 final class AnalyticDecayTests: XCTestCase {
     private let tolerance = 1e-9
 
-    func testTwoCompartmentTransferNoDecay() {
+    func testTwoCompartmentTransferNoDecay() async {
         let k = 0.1
         let model = CompartmentalModel(
             compartments: [
@@ -16,7 +16,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = InternalDosimetryCalculator(step: 1, halfLife: 0, final: 50).calculate(model: model)
+        let result = await InternalDosimetryCalculator(step: 1, halfLife: 0, final: 50).calculate(model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -26,7 +26,7 @@ final class AnalyticDecayTests: XCTestCase {
         }
     }
 
-    func testThreeCompartmentBatemanChain() {
+    func testThreeCompartmentBatemanChain() async {
         let k1 = 0.1
         let k2 = 0.05
         let model = CompartmentalModel(
@@ -41,7 +41,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = InternalDosimetryCalculator(step: 1, halfLife: 0, final: 100).calculate(model: model)
+        let result = await InternalDosimetryCalculator(step: 1, halfLife: 0, final: 100).calculate(model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -54,7 +54,7 @@ final class AnalyticDecayTests: XCTestCase {
         }
     }
 
-    func testSingleCompartmentRadioactiveDecay() {
+    func testSingleCompartmentRadioactiveDecay() async {
         let halfLife = 10.0
         let model = CompartmentalModel(
             compartments: [
@@ -63,7 +63,7 @@ final class AnalyticDecayTests: XCTestCase {
             connections: []
         )
 
-        let result = InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 50).calculate(model: model)
+        let result = await InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 50).calculate(model: model).run()
 
         let lambda = log(2) / halfLife
         for t in [0, 1, 5, 10, 20, 50] {

@@ -14,7 +14,7 @@ final class UraniumGoldenTests: XCTestCase {
         let rows: [[Double]]
     }
 
-    func testSwiftBirchallMatchesCSharpReference() throws {
+    func testSwiftBirchallMatchesCSharpReference() async throws {
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment["RUN_GOLDEN"] != nil,
             "Slow (~220s). Run with `RUN_GOLDEN=1 swift test` or generate a fresh fixture from ../ipen-validator first."
@@ -34,7 +34,7 @@ final class UraniumGoldenTests: XCTestCase {
             $0.with(intake: true, fraction: golden.fraction)
         }
         let calculator = InternalDosimetryCalculator(step: golden.step, halfLife: golden.halfLife, final: golden.final)
-        let swiftRows = calculator.calculate(model: model)
+        let swiftRows = await calculator.calculate(model: model).run()
 
         XCTAssertEqual(swiftRows.count, golden.rows.count, "row count mismatch")
 
