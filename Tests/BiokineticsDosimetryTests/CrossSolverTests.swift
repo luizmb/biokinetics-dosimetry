@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 /// Verifies that the four solver paths (Birchall.perTime, Birchall.semigroup,
 /// RK4, RK45) agree with each other and with closed-form solutions where they
@@ -105,7 +107,7 @@ final class CrossSolverTests: XCTestCase {
     func testUraniumAllSolversAgreeOnShortHorizon() async throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: url)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 4.5e9 * 365.0
 
@@ -136,9 +138,10 @@ final class CrossSolverTests: XCTestCase {
         final: Int,
         solver: SolverMethod
     ) async -> [[Double]] {
-        await InternalDosimetryCalculator(step: step, halfLife: halfLife, final: final, solver: solver)
-            .calculate(model: model)
-            .run()
+        await Solver.solve(
+            plan: BiokineticsSimulationPlan(step: step, halfLife: halfLife, final: final, solver: solver),
+            model: model
+        ).run()
     }
 
     /// Asserts that all four solver outputs agree with the analytic expectation

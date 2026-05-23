@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 final class UraniumGoldenTests: XCTestCase {
     private struct Golden: Decodable {
@@ -25,7 +27,7 @@ final class UraniumGoldenTests: XCTestCase {
 
         let xmlURL = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: xmlURL)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
 
         XCTAssertEqual(loaded.compartments.map(\.id), golden.compartmentIds,
                        "Swift loader and C# loader must produce compartments in the same order")
@@ -33,8 +35,8 @@ final class UraniumGoldenTests: XCTestCase {
         let model = loaded.updatingCompartment(id: golden.intakeCompartmentId) {
             $0.with(intake: true, fraction: golden.fraction)
         }
-        let calculator = InternalDosimetryCalculator(step: golden.step, halfLife: golden.halfLife, final: golden.final)
-        let swiftRows = await calculator.calculate(model: model).run()
+        let calculator = BiokineticsSimulationPlan(step: golden.step, halfLife: golden.halfLife, final: golden.final)
+        let swiftRows = await solve(plan: calculator, model: model).run()
 
         XCTAssertEqual(swiftRows.count, golden.rows.count, "row count mismatch")
 
