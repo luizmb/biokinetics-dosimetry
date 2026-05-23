@@ -1,6 +1,6 @@
 //
 //  ViewController.swift
-//  MultiCompartmentModel
+//  Biokinetics & Dosimetry
 //
 //  Created by Luiz Rodrigo Martins Barbosa on 12.07.17.
 //  Copyright © 2017 Luiz Rodrigo Martins Barbosa. All rights reserved.

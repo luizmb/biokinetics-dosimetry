@@ -1,6 +1,6 @@
 import Math
 import XCTest
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 final class BirchallTests: XCTestCase {
     private let tolerance = 1e-10

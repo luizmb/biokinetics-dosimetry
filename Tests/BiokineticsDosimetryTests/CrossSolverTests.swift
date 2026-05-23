@@ -1,6 +1,6 @@
 import XCTest
 import XMLCoder
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 /// Verifies that the four solver paths (Birchall.perTime, Birchall.semigroup,
 /// RK4, RK45) agree with each other and with closed-form solutions where they
