@@ -1,6 +1,6 @@
 import XCTest
 import XMLCoder
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 /// One-shot timing of all four solver paths on the Uranium golden setup
 /// (step=1 day, final=1000 days). Gated by `RUN_BENCH=1`; not part of the

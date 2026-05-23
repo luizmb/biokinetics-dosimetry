@@ -1,6 +1,6 @@
 import XCTest
 import XMLCoder
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 final class UraniumGoldenTests: XCTestCase {
     private struct Golden: Decodable {
