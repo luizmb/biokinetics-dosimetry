@@ -1,6 +1,7 @@
-import Foundation
 import Core
+import Domain
 import FP
+import Foundation
 
 public func loadCompartmentalModel(
     using factory: DataDecoderFactory

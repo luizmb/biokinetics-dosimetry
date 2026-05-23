@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 /// Verifies that the four solver paths (Birchall.perTime, Birchall.semigroup,
 /// RK4, RK45) agree with each other and with closed-form solutions where they
@@ -136,9 +138,10 @@ final class CrossSolverTests: XCTestCase {
         final: Int,
         solver: SolverMethod
     ) async -> [[Double]] {
-        await InternalDosimetryCalculator(step: step, halfLife: halfLife, final: final, solver: solver)
-            .calculate(model: model)
-            .run()
+        await Solver.solve(
+            plan: BiokineticsSimulationPlan(step: step, halfLife: halfLife, final: final, solver: solver),
+            model: model
+        ).run()
     }
 
     /// Asserts that all four solver outputs agree with the analytic expectation
