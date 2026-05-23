@@ -150,6 +150,18 @@ private func birchallSemigroup(
     return stepper.actions(on: x0, count: stepCount + 1)
 }
 
+// Both RK solvers route through ``AcceleratedVector`` for the state type so
+// every per-stage `+` / scalar `*` goes through vDSP on Apple platforms via
+// the protocol witness. `x0` is wrapped once at the boundary; the derivative
+// returns `AcceleratedVector` via the ``Matrix.apply(to: AcceleratedVector)``
+// bridge overload (zero-copy — same COW buffer underneath); only the public
+// `[[Double]]` boundary unwraps.
+//
+// Birchall paths (`perTime`, `semigroup`) stay on `[Double]` because their hot
+// path is mat-vec (`Matrix.apply(to: [Double])`), which is already routed to
+// `cblas_dgemv` on Apple — there's no per-stage vector arithmetic to gain
+// from `AcceleratedVector`.
+
 private func rungeKutta4(
     A: Matrix<Double>,
     x0: [Double],
@@ -158,13 +170,13 @@ private func rungeKutta4(
     h: Double
 ) -> [[Double]] {
     let trajectory = RungeKutta4.trajectory(
-        from: x0,
+        from: x0.asAcceleratedVector,
         derivative: { _, y in A.apply(to: y) },
         step: h,
         through: Double((stepCount + 1) * step)
     )
     let stepsPerOutput = Int((Double(step) / h).rounded())
-    return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state }
+    return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state.storage }
 }
 
 private func rungeKutta45(
@@ -177,8 +189,8 @@ private func rungeKutta45(
     let outputTimes = (0 ... stepCount + 1).map { Double($0 * step) }
     return RungeKutta45.trajectory(
         at: outputTimes,
-        from: x0,
+        from: x0.asAcceleratedVector,
         derivative: { _, y in A.apply(to: y) },
         tolerance: tolerance
-    )
+    ).map(\.storage)
 }
