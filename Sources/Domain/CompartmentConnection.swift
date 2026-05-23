@@ -1,4 +1,3 @@
-import Foundation
 import FPMacros
 
 @Lenses(init: .public)

@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 final class CompartmentalModelLoaderTests: XCTestCase {
     func testLoadsUraniumModelFromXML() throws {
@@ -43,8 +45,8 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
         let halfLife = 4.5e9 * 365.0
-        let calculator = InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 10)
-        let result = await calculator.calculate(model: model).run()
+        let calculator = BiokineticsSimulationPlan(step: 1, halfLife: halfLife, final: 10)
+        let result = await solve(plan: calculator, model: model).run()
 
         XCTAssertEqual(result.count, 12, "stepCount+2 rows expected")
         XCTAssertEqual(result[0].count, 19, "n compartments")
