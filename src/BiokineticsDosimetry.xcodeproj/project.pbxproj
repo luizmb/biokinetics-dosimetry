@@ -15,7 +15,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D5434F6A1F159B6B00435174 /* MultiCompartmentModel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MultiCompartmentModel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5434F6A1F159B6B00435174 /* BiokineticsDosimetry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BiokineticsDosimetry.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5434F6D1F159B6B00435174 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D5434F6F1F159B6B00435174 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		D5434F721F159B6B00435174 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -41,7 +41,7 @@
 		D5434F611F159B6B00435174 = {
 			isa = PBXGroup;
 			children = (
-				D5434F6C1F159B6B00435174 /* MultiCompartmentModel */,
+				D5434F6C1F159B6B00435174 /* BiokineticsDosimetry */,
 				D5434F6B1F159B6B00435174 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -49,12 +49,12 @@
 		D5434F6B1F159B6B00435174 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D5434F6A1F159B6B00435174 /* MultiCompartmentModel.app */,
+				D5434F6A1F159B6B00435174 /* BiokineticsDosimetry.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D5434F6C1F159B6B00435174 /* MultiCompartmentModel */ = {
+		D5434F6C1F159B6B00435174 /* BiokineticsDosimetry */ = {
 			isa = PBXGroup;
 			children = (
 				D587C44A1F159BE700072002 /* Model */,
@@ -65,7 +65,7 @@
 				D5434F761F159B6B00435174 /* LaunchScreen.storyboard */,
 				D5434F791F159B6B00435174 /* Info.plist */,
 			);
-			path = MultiCompartmentModel;
+			path = BiokineticsDosimetry;
 			sourceTree = "<group>";
 		};
 		D587C44A1F159BE700072002 /* Model */ = {
@@ -81,9 +81,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D5434F691F159B6B00435174 /* MultiCompartmentModel */ = {
+		D5434F691F159B6B00435174 /* BiokineticsDosimetry */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D5434F7C1F159B6B00435174 /* Build configuration list for PBXNativeTarget "MultiCompartmentModel" */;
+			buildConfigurationList = D5434F7C1F159B6B00435174 /* Build configuration list for PBXNativeTarget "BiokineticsDosimetry" */;
 			buildPhases = (
 				D5434F661F159B6B00435174 /* Sources */,
 				D5434F671F159B6B00435174 /* Frameworks */,
@@ -93,9 +93,9 @@
 			);
 			dependencies = (
 			);
-			name = MultiCompartmentModel;
-			productName = MultiCompartmentModel;
-			productReference = D5434F6A1F159B6B00435174 /* MultiCompartmentModel.app */;
+			name = BiokineticsDosimetry;
+			productName = BiokineticsDosimetry;
+			productReference = D5434F6A1F159B6B00435174 /* BiokineticsDosimetry.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -113,7 +113,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D5434F651F159B6B00435174 /* Build configuration list for PBXProject "MultiCompartmentModel" */;
+			buildConfigurationList = D5434F651F159B6B00435174 /* Build configuration list for PBXProject "BiokineticsDosimetry" */;
 			compatibilityVersion = "Xcode 8.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -126,7 +126,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D5434F691F159B6B00435174 /* MultiCompartmentModel */,
+				D5434F691F159B6B00435174 /* BiokineticsDosimetry */,
 			);
 		};
 /* End PBXProject section */
@@ -284,9 +284,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 7BK8NL3DYL;
-				INFOPLIST_FILE = MultiCompartmentModel/Info.plist;
+				INFOPLIST_FILE = BiokineticsDosimetry/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = de.developercity.MultiCompartmentModel;
+				PRODUCT_BUNDLE_IDENTIFIER = lu.ios.biokinetics-dosimetry;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -298,9 +298,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 7BK8NL3DYL;
-				INFOPLIST_FILE = MultiCompartmentModel/Info.plist;
+				INFOPLIST_FILE = BiokineticsDosimetry/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = de.developercity.MultiCompartmentModel;
+				PRODUCT_BUNDLE_IDENTIFIER = lu.ios.biokinetics-dosimetry;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -310,7 +310,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D5434F651F159B6B00435174 /* Build configuration list for PBXProject "MultiCompartmentModel" */ = {
+		D5434F651F159B6B00435174 /* Build configuration list for PBXProject "BiokineticsDosimetry" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D5434F7A1F159B6B00435174 /* Debug */,
@@ -319,7 +319,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D5434F7C1F159B6B00435174 /* Build configuration list for PBXNativeTarget "MultiCompartmentModel" */ = {
+		D5434F7C1F159B6B00435174 /* Build configuration list for PBXNativeTarget "BiokineticsDosimetry" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D5434F7D1F159B6B00435174 /* Debug */,

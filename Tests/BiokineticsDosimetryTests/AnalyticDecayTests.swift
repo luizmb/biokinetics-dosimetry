@@ -1,5 +1,5 @@
 import XCTest
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 final class AnalyticDecayTests: XCTestCase {
     private let tolerance = 1e-9

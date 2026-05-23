@@ -2,10 +2,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "MultiCompartmentModel",
+    name: "BiokineticsDosimetry",
     platforms: [.iOS(.v16), .macOS(.v13)],
     products: [
-        .library(name: "MultiCompartmentModel", targets: ["MultiCompartmentModel"])
+        .library(name: "BiokineticsDosimetry", targets: ["BiokineticsDosimetry"])
     ],
     dependencies: [
         .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MultiCompartmentModel",
+            name: "BiokineticsDosimetry",
             dependencies: [
                 .product(name: "FP", package: "FP"),
                 .product(name: "FPMacros", package: "FP"),
@@ -27,8 +27,8 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "MultiCompartmentModelTests",
-            dependencies: ["MultiCompartmentModel"],
+            name: "BiokineticsDosimetryTests",
+            dependencies: ["BiokineticsDosimetry"],
             resources: [.process("Fixtures")]
         )
     ]
