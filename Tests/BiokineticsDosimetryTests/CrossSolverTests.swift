@@ -107,7 +107,7 @@ final class CrossSolverTests: XCTestCase {
     func testUraniumAllSolversAgreeOnShortHorizon() async throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: url)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 4.5e9 * 365.0
 

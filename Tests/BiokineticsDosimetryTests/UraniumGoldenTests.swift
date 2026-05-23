@@ -27,7 +27,7 @@ final class UraniumGoldenTests: XCTestCase {
 
         let xmlURL = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: xmlURL)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
 
         XCTAssertEqual(loaded.compartments.map(\.id), golden.compartmentIds,
                        "Swift loader and C# loader must produce compartments in the same order")
