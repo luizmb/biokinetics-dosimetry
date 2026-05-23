@@ -11,7 +11,7 @@ let package = Package(
         .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.5.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
-        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.2.0")
+        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.3.0")
     ],
     targets: [
         .target(

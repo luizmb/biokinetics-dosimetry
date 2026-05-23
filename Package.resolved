@@ -1,5 +1,5 @@
 {
-  "originHash" : "bd8b1a9db9f8cdb2d864c5e70791bbda6ed9867b95a83072f85629c549da239e",
+  "originHash" : "9a054c1e4f038f75cf43e6f4e5d48b993bb0325528168373a6649ae3b6ccff17",
   "pins" : [
     {
       "identity" : "fp",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "f71c8d2a5e74a2c6d11a0fbe324774b5d6084237",
-        "version" : "2.99.0"
+        "revision" : "57c0a08a331aaea9f5d7a932ad94ef43be942a95",
+        "version" : "2.100.0"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/SwiftCalx.git",
       "state" : {
-        "revision" : "5ac355f8b1de75ebbe2f27800e91e010a22d5fd8",
-        "version" : "0.2.0"
+        "revision" : "da5dbb8aacc721d86597d780e0cd9105924d1d15",
+        "version" : "0.3.0"
       }
     },
     {
