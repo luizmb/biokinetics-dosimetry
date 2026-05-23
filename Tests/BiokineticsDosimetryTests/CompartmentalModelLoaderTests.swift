@@ -12,7 +12,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         )
         let data = try Data(contentsOf: url)
 
-        let model = try loadCompartmentalModel(using: XMLDecoder())(data).get()
+        let model = try loadIpenXml(using: XMLDecoder())(data).map { $0.toCompartmentalModel() }.get()
 
         XCTAssertEqual(model.compartments.count, 19, "Uranium model has 19 compartments")
         XCTAssertEqual(model.compartments.first?.name, "Intermediate Turnover (ST1)")
@@ -40,7 +40,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
     func testRunsCalculatorOnUraniumWithPlasmaIntake() async throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let data = try Data(contentsOf: url)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(data).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(data).map { $0.toCompartmentalModel() }.get()
 
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 

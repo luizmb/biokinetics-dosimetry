@@ -16,7 +16,7 @@ final class SolverBenchmarks: XCTestCase {
 
         let xmlURL = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: xmlURL)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 1_642_500_000_000.0
         let step = 1
