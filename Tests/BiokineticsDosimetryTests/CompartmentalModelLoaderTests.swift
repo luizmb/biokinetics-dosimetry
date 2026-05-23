@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 final class CompartmentalModelLoaderTests: XCTestCase {
     func testLoadsUraniumModelFromXML() throws {
@@ -10,7 +12,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         )
         let data = try Data(contentsOf: url)
 
-        let model = try loadCompartmentalModel(using: XMLDecoder())(data).get()
+        let model = try loadIpenXml(using: XMLDecoder())(data).map { $0.toCompartmentalModel() }.get()
 
         XCTAssertEqual(model.compartments.count, 19, "Uranium model has 19 compartments")
         XCTAssertEqual(model.compartments.first?.name, "Intermediate Turnover (ST1)")
@@ -38,13 +40,13 @@ final class CompartmentalModelLoaderTests: XCTestCase {
     func testRunsCalculatorOnUraniumWithPlasmaIntake() async throws {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let data = try Data(contentsOf: url)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(data).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(data).map { $0.toCompartmentalModel() }.get()
 
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
         let halfLife = 4.5e9 * 365.0
-        let calculator = InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 10)
-        let result = await calculator.calculate(model: model).run()
+        let calculator = BiokineticsSimulationPlan(step: 1, halfLife: halfLife, final: 10)
+        let result = await solve(plan: calculator, model: model).run()
 
         XCTAssertEqual(result.count, 12, "stepCount+2 rows expected")
         XCTAssertEqual(result[0].count, 19, "n compartments")

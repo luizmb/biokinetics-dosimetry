@@ -1,6 +1,8 @@
 import XCTest
 import XMLCoder
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 /// One-shot timing of all four solver paths on the Uranium golden setup
 /// (step=1 day, final=1000 days). Gated by `RUN_BENCH=1`; not part of the
@@ -14,7 +16,7 @@ final class SolverBenchmarks: XCTestCase {
 
         let xmlURL = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: xmlURL)
-        let loaded = try loadCompartmentalModel(using: XMLDecoder())(xmlData).get()
+        let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
         let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 1_642_500_000_000.0
         let step = 1
@@ -28,14 +30,14 @@ final class SolverBenchmarks: XCTestCase {
         ]
 
         for solver in solvers {
-            let calculator = InternalDosimetryCalculator(
+            let calculator = BiokineticsSimulationPlan(
                 step: step,
                 halfLife: halfLife,
                 final: final,
                 solver: solver.method
             )
             let start = Date()
-            _ = await calculator.calculate(model: model).run()
+            _ = await solve(plan: calculator, model: model).run()
             let elapsed = Date().timeIntervalSince(start)
             print(String(format: "%@  %8.2f s", solver.name, elapsed))
         }

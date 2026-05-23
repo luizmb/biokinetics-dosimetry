@@ -1,5 +1,7 @@
 import XCTest
-@testable import BiokineticsDosimetry
+import Domain
+import Parser
+import Solver
 
 final class AnalyticDecayTests: XCTestCase {
     private let tolerance = 1e-9
@@ -16,7 +18,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = await InternalDosimetryCalculator(step: 1, halfLife: 0, final: 50).calculate(model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: 0, final: 50), model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -41,7 +43,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = await InternalDosimetryCalculator(step: 1, halfLife: 0, final: 100).calculate(model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: 0, final: 100), model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -63,7 +65,7 @@ final class AnalyticDecayTests: XCTestCase {
             connections: []
         )
 
-        let result = await InternalDosimetryCalculator(step: 1, halfLife: halfLife, final: 50).calculate(model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: halfLife, final: 50), model: model).run()
 
         let lambda = log(2) / halfLife
         for t in [0, 1, 5, 10, 20, 50] {
