@@ -1,6 +1,6 @@
 import XCTest
 import XMLCoder
-@testable import MultiCompartmentModel
+@testable import BiokineticsDosimetry
 
 final class CompartmentalModelLoaderTests: XCTestCase {
     func testLoadsUraniumModelFromXML() throws {
