@@ -76,18 +76,20 @@ let package = Package(
             name: "EditorFeatureTests",
             dependencies: [
                 "EditorFeature",
-                .product(name: "SwiftRex",         package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing", package: "SwiftRex"),
-                .product(name: "SnapshotTesting",  package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
+                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
-                .product(name: "SwiftRex",         package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing", package: "SwiftRex"),
-                .product(name: "SnapshotTesting",  package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
+                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
@@ -96,9 +98,10 @@ let package = Package(
                 "AppCore",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(name: "SwiftRex",         package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing", package: "SwiftRex"),
-                .product(name: "SnapshotTesting",  package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
+                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
             ]
         ),
     ],

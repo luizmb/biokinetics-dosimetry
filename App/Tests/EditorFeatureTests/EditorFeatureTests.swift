@@ -400,6 +400,7 @@ struct EditorFeatureMapStateTests {
 // SwiftUI .image(layout:) strategy is only available on iOS/tvOS simulators.
 // Run snapshot tests via `xcodebuild test -destination 'platform=iOS Simulator,...'`.
 #if os(iOS) || os(tvOS)
+import SwiftRexArchitecture
 import SwiftUI
 
 @Suite("EditorFeature Snapshots")
