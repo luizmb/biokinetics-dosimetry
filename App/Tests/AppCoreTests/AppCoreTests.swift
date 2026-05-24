@@ -282,6 +282,7 @@ struct HomeFeatureMapActionTests {
 // MARK: - Snapshot tests
 
 #if os(iOS) || os(tvOS)
+import SwiftRexArchitecture
 import SwiftUI
 
 @Suite("HomeFeature Snapshots")

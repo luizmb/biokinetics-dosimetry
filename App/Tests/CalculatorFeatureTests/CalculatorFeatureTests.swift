@@ -346,6 +346,7 @@ struct CalculatorFeatureMapActionTests {
 // SwiftUI .image(layout:) strategy is only available on iOS/tvOS simulators.
 // Run snapshot tests via `xcodebuild test -destination 'platform=iOS Simulator,...'`.
 #if os(iOS) || os(tvOS)
+import SwiftRexArchitecture
 import SwiftUI
 
 @Suite("CalculatorFeature Snapshots")
@@ -391,15 +392,13 @@ struct CalculatorFeatureSnapshotTests {
     @Test func snapshotAfterCalculate() async {
         var initial = CalculatorFeature.initialState()
         initial.document = .validation
-        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
-
-        let step = feature.dispatch(.calculate)
-            .mapped(to: CalculatorFeature.Action.prism.calculate) { $0.isCalculating = true }
-        await step.runEffects()
-        step.receive(CalculatorFeature.Action.prism.resultsReady) { _, vs in
-            vs.isCalculating = false
+        // Pre-seed plausible decay curves so the chart is populated.
+        // Behavior correctness is covered by the unit tests above.
+        initial.results = (0..<201).map { step -> [Double] in
+            let t = Double(step)
+            return [exp(-0.05 * t), max(0.0, exp(-0.08 * t) - 0.1), max(0.0, exp(-0.11 * t) - 0.2)]
         }
-
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snap(feature, named: "chart-results")
     }
 
