@@ -18,44 +18,15 @@ public enum HomeFeature {
 
     // MARK: - State
 
-    // MARK: - State
-
-    public struct State: Sendable {
-        /// The canonical list of saved biokinetic models.
-        public var documents: Loading<[ModelDocument], DecodingError> = .idle
-        /// Tracks the file-picker lifecycle.
-        /// `.loading` → picker sheet visible; `.loaded(())` → file chosen, importing;
-        /// `.idle` → closed. Swap `Never` for a concrete error type to surface picker errors.
-        public var filePicker: Loading<Terminal, Never> = .idle
-
-        public init() {}
-    }
+    public typealias State = HomeModule.State
 
     // MARK: - Action
 
-    @dynamicMemberLookup
-    public enum Action: Sendable {
-        // File picker state machine
-        case openFilePicker
-        case filePickerDismissed
-        // Document management
-        case newDocument
-        case importXML(Data)
-        case importResult(Result<ModelDocument, DecodingError>)
-        case saveDocument(ModelDocument)
-        case deleteDocument(ModelDocument.ID)
-        case edit(document: ModelDocument)
-        case calculate(document: ModelDocument)
-    }
+    public typealias Action = HomeModule.Action
 
     // MARK: - Environment
 
-    public struct Environment: Sendable {
-        public var xmlDecoder: DataDecoderFactory & Sendable
-        public init(xmlDecoder: DataDecoderFactory & Sendable) {
-            self.xmlDecoder = xmlDecoder
-        }
-    }
+    public typealias Environment = HomeModule.Environment
 
     // MARK: - ViewModel
 
