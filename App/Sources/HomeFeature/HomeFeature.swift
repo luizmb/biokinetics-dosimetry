@@ -26,7 +26,7 @@ public enum HomeFeature {
         /// Tracks the file-picker lifecycle.
         /// `.loading` → picker sheet visible; `.loaded(())` → file chosen, importing;
         /// `.idle` → closed. Swap `Never` for a concrete error type to surface picker errors.
-        public var filePicker: Loading<Trivial, Never> = .idle
+        public var filePicker: Loading<Terminal, Never> = .idle
 
         public init() {}
     }
@@ -72,7 +72,7 @@ public enum HomeFeature {
         }
 
         public struct ViewState: Sendable, Equatable {
-            public var filePicker: Loading<Trivial, Never> = .idle
+            public var filePicker: Loading<Terminal, Never> = .idle
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
         }
 
