@@ -5,10 +5,12 @@ let package = Package(
     name: "BiokineticsDosimetryApp",
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
-        .library(name: "AppDomain",         targets: ["AppDomain"]),
-        .library(name: "App.Core",          targets: ["AppCore"]),
-        .library(name: "EditorFeature",     targets: ["EditorFeature"]),
-        .library(name: "CalculatorFeature", targets: ["CalculatorFeature"]),
+        .library(name: "AppDomain",          targets: ["AppDomain"]),
+        .library(name: "NavigationFeature",  targets: ["NavigationFeature"]),
+        .library(name: "HomeFeature",        targets: ["HomeFeature"]),
+        .library(name: "EditorFeature",      targets: ["EditorFeature"]),
+        .library(name: "CalculatorFeature",  targets: ["CalculatorFeature"]),
+        .library(name: "App.Core",           targets: ["AppCore"]),
     ],
     dependencies: [
         .package(path: ".."),
@@ -30,6 +32,28 @@ let package = Package(
         ),
 
         // MARK: - Feature targets
+
+        .target(
+            name: "NavigationFeature",
+            dependencies: [
+                "AppDomain",
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+            ]
+        ),
+
+        .target(
+            name: "HomeFeature",
+            dependencies: [
+                "AppDomain",
+                .product(name: "Domain",                package: "BiokineticsDosimetry"),
+                .product(name: "Parser",                package: "BiokineticsDosimetry"),
+                .product(name: "FP",                    package: "FP"),
+                .product(name: "Core",                  package: "NetworkTools"),
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+            ]
+        ),
 
         .target(
             name: "EditorFeature",
@@ -61,40 +85,17 @@ let package = Package(
             name: "AppCore",
             dependencies: [
                 "AppDomain",
+                "NavigationFeature",
+                "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(
-                    name: "Domain",
-                    package: "BiokineticsDosimetry"
-                ),
-                .product(
-                    name: "Solver",
-                    package: "BiokineticsDosimetry"
-                ),
-                .product(
-                    name: "Parser",
-                    package: "BiokineticsDosimetry"
-                ),
-                .product(
-                    name: "SwiftRex",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Architecture",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "FP",
-                    package: "FP"
-                ),
-                .product(
-                    name: "Core",
-                    package: "NetworkTools"
-                ),
-                .product(
-                    name: "XMLCoder",
-                    package: "XMLCoder"
-                ),
+                .product(name: "Domain",                package: "BiokineticsDosimetry"),
+                .product(name: "Solver",                package: "BiokineticsDosimetry"),
+                .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "FP",                    package: "FP"),
+                .product(name: "Core",                  package: "NetworkTools"),
+                .product(name: "XMLCoder",              package: "XMLCoder"),
             ]
         ),
 
@@ -104,68 +105,34 @@ let package = Package(
             name: "EditorFeatureTests",
             dependencies: [
                 "EditorFeature",
-                .product(
-                    name: "SwiftRex",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Architecture",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Testing",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SnapshotTesting",
-                    package: "swift-snapshot-testing"
-                ),
+                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
+                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
-                .product(
-                    name: "SwiftRex",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Architecture",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Testing",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SnapshotTesting",
-                    package: "swift-snapshot-testing"
-                ),
+                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
+                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
             name: "AppCoreTests",
             dependencies: [
                 "AppCore",
+                "NavigationFeature",
+                "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(
-                    name: "SwiftRex",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Architecture",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SwiftRex.Testing",
-                    package: "SwiftRex"
-                ),
-                .product(
-                    name: "SnapshotTesting",
-                    package: "swift-snapshot-testing"
-                ),
+                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
+                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
             ]
         ),
     ],

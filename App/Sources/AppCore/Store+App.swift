@@ -2,6 +2,8 @@ import AppDomain
 import CalculatorFeature
 import EditorFeature
 import FP
+import HomeFeature
+import NavigationFeature
 import SwiftRex
 import SwiftRexArchitecture
 import SwiftUI

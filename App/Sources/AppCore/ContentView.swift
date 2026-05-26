@@ -1,5 +1,8 @@
+import AppDomain
 import CalculatorFeature
 import EditorFeature
+import HomeFeature
+import NavigationFeature
 import Observation
 import SwiftRex
 import SwiftRexArchitecture
