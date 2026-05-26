@@ -67,6 +67,10 @@ let package = Package(
                     package: "BiokineticsDosimetry"
                 ),
                 .product(
+                    name: "Solver",
+                    package: "BiokineticsDosimetry"
+                ),
+                .product(
                     name: "Parser",
                     package: "BiokineticsDosimetry"
                 ),
