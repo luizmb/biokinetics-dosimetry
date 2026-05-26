@@ -49,6 +49,10 @@ public struct ModelDocument: Identifiable, Hashable, Sendable {
         self.model = model
         self.visuals = visuals
     }
+
+    public static var empty: Self {
+        .init(name: "Untitled", model: .init(compartments: [], connections: []))
+    }
 }
 
 // MARK: - Sample data

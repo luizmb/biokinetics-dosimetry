@@ -1,39 +1,28 @@
-import AppDomain
-import EditorFeature
-import CalculatorFeature
+import Core
 import Foundation
-import SwiftRexArchitecture
+@preconcurrency import XMLCoder
 
-@Prisms @dynamicMemberLookup
-public enum AppAction: Sendable {
-    case home(HomeFeature.Action)
-    case editor(EditorFeature.Action)
-    case calculator(CalculatorFeature.Action)
-}
+// MARK: - App-level typealiases
 
-@Lenses
-public struct AppState: Sendable {
-    public var home:       HomeFeature.State       = HomeFeature.initialState()
-    public var editor:     EditorFeature.State     = EditorFeature.initialState()
-    public var calculator: CalculatorFeature.State = CalculatorFeature.initialState()
+/// The full action space of the app — defined inside `NavigationFeature`.
+/// `push` and `setPath` are direct cases on this type (no `NavigationAction` wrapper).
+public typealias AppAction = NavigationFeature.Action
 
-    public init() {}
-}
+/// The full state tree of the app — defined inside `NavigationFeature`.
+public typealias AppState  = NavigationFeature.State
 
-/// Live dependencies injected at app startup. Feature environments are derived
-/// from these primitives during the `lift` step in `AppCoordinator`.
-public struct AppEnvironment: Sendable {
-    public let parseXML: @Sendable (Data) -> Result<ModelDocument, ParseError>
+// MARK: - World
 
-    public init(parseXML: @escaping @Sendable (Data) -> Result<ModelDocument, ParseError>) {
-        self.parseXML = parseXML
+/// Live dependencies injected once at app startup.
+/// Feature environments are derived from these primitives in the `lift` step.
+public struct World: Sendable {
+    public let xmlDecoder: Sendable & DataDecoderFactory
+
+    public init(xmlDecoder: Sendable & DataDecoderFactory) {
+        self.xmlDecoder = xmlDecoder
     }
 
     public static var live: Self {
-        .init(parseXML: parseIpenXMLData)
-    }
-
-    public static var mock: Self {
-        .init(parseXML: { _ in .failure(ParseError("Mock environment: XML parsing unavailable")) })
+        .init(xmlDecoder: XMLDecoder())
     }
 }

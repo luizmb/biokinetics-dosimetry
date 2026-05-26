@@ -7,6 +7,7 @@ import AppDomain
 /// calculator features are initialised from this snapshot; mutations are
 /// surfaced back to the home document list via the save action.
 public enum AppRoute: Hashable, Sendable {
-    case editor(ModelDocument)
-    case calculator(ModelDocument)
+    case home
+    case editor
+    case calculator
 }

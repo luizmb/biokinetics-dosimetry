@@ -8,12 +8,11 @@ import UniformTypeIdentifiers
 @BoundTo(HomeFeature.self)
 public struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var hSize
-    @State private var isImportingFile = false
 
     public var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                heroHeader
+                header
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                     .padding(.bottom, 16)
@@ -26,7 +25,16 @@ public struct HomeView: View {
         .navigationTitle("")
         .inlineNavigationTitle()
         .fileImporter(
-            isPresented: $isImportingFile,
+            isPresented: Binding(
+                get: { viewModel.filePicker.is(.loading) },
+                // Only dispatch filePickerDismissed if still .loading — avoids a spurious
+                // dismiss when importXML already moved us to .loaded(()).
+                set: { presenting in
+                    if !presenting && viewModel.filePicker.is(.loading) {
+                        viewModel.dispatch(.filePickerDismissed)
+                    }
+                }
+            ),
             allowedContentTypes: [UTType(filenameExtension: "xml") ?? .data]
         ) { result in
             if case .success(let url) = result,
@@ -39,10 +47,10 @@ public struct HomeView: View {
         .alert(
             "Import Error",
             isPresented: Binding(
-                get: { viewModel.importError != nil },
+                get: { viewModel.cards.is(.failed) },
                 set: { _ in }
             ),
-            presenting: viewModel.importError
+            presenting: viewModel.cards.failed?.0.localizedDescription
         ) { _ in
             Button("OK", role: .cancel) {}
         } message: { msg in
@@ -50,9 +58,9 @@ public struct HomeView: View {
         }
     }
 
-    // MARK: - Hero header
+    // MARK: - Header
 
-    private var heroHeader: some View {
+    private var header: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Biokinetics")
@@ -63,7 +71,7 @@ public struct HomeView: View {
             }
             Spacer()
             Button {
-                isImportingFile = true
+                viewModel.dispatch(.openFilePicker)
             } label: {
                 Label("Open XML", systemImage: "doc.badge.arrow.up")
                     .font(.subheadline.weight(.medium))
@@ -92,7 +100,7 @@ public struct HomeView: View {
 
         LazyVGrid(columns: columns, spacing: 16) {
             newModelTile
-            ForEach(viewModel.cards) { card in
+            ForEach(viewModel.cards.loadedOrPrevious ?? []) { card in
                 ModelCard(card: card) {
                     viewModel.dispatch(.editDocument(card.document))
                 } onCalculate: {
@@ -131,18 +139,6 @@ public struct HomeView: View {
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - ViewModel helper
-
-extension HomeFeature.ViewModel {
-    @MainActor
-    var pathBinding: Binding<[AppRoute]> {
-        Binding(
-            get: { self.path },
-            set: { self.dispatch(.setPath($0)) }
-        )
     }
 }
 

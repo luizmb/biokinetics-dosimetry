@@ -13,6 +13,6 @@ import Foundation
 /// ```
 public func loadIpenXml(
     using factory: DataDecoderFactory
-) -> Convert<Data, IpenXmlModel, DecodingError> {
+) -> DataDecoder<IpenXmlModel> {
     factory.dataDecoder(for: IpenXmlModel.self)
 }

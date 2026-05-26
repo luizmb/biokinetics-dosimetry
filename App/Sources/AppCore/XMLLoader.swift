@@ -2,27 +2,18 @@ import AppDomain
 import Domain
 import Foundation
 import Parser
-import XMLCoder
 
-/// Parses an IPEN XML `Data` buffer into a `ModelDocument`, assigning default
-/// visual layouts to each imported compartment.
-///
-/// Called from `AppEnvironment.live.parseXML` so that neither `EditorFeature`
-/// nor `CalculatorFeature` need to import `XMLCoder` or `Parser`.
-func parseIpenXMLData(_ data: Data) -> Result<ModelDocument, ParseError> {
-    loadIpenXml(using: XMLDecoder())(data)
-        .map { xml in
-            let model = xml.toCompartmentalModel()
-            let visuals = defaultVisuals(for: model)
-            return ModelDocument(
-                name: "Imported Model",
-                description: "",
-                halfLife: 0,
-                model: model,
-                visuals: visuals
-            )
-        }
-        .mapError { ParseError($0.localizedDescription) }
+extension CompartmentalModel {
+    var asModelDocument: ModelDocument {
+        let visuals = defaultVisuals(for: self)
+        return ModelDocument(
+            name: "Imported Model",
+            description: "",
+            halfLife: 0,
+            model: self,
+            visuals: visuals
+        )
+    }
 }
 
 /// Assigns a circular layout and cycling tints to freshly imported compartments.
