@@ -2,22 +2,22 @@ import AppDomain
 import CalculatorFeature
 import EditorFeature
 import HomeFeature
+import SwiftRex
 import SwiftRexArchitecture
 import SwiftUI
 
-// MARK: - AppRoute → Module
+// MARK: - AppRoute → View
 
 public extension AppRoute {
 
-    /// Returns the `Module` for this route — behavior + view both lifted to
-    /// `AppAction / AppState / World`. Lives in AppCore (not AppDomain) because
-    /// it references `Module` lift extensions and the app-level type aliases.
-    @MainActor
-    func module() -> Module<AppAction, AppState, World, AnyView> {
+    /// Produces the view for this route, already lifted to `AppAction / AppState / World`.
+    /// `@ViewBuilder` unifies the concrete per-route view types without `AnyView` erasure.
+    @MainActor @ViewBuilder
+    func view(in store: Store<AppAction, AppState, World>) -> some View {
         switch self {
-        case .home:       Module.home.lift()
-        case .editor:     Module.editor.lift()
-        case .calculator: Module.calculator.lift()
+        case .home:       Module.home.lift().view(for: store)
+        case .editor:     Module.editor.lift().view(for: store)
+        case .calculator: Module.calculator.lift().view(for: store)
         }
     }
 }
