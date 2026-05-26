@@ -28,6 +28,7 @@ let package = Package(
             name: "AppDomain",
             dependencies: [
                 .product(name: "Domain", package: "BiokineticsDosimetry"),
+                .product(name: "FP",     package: "FP"),
             ]
         ),
 
