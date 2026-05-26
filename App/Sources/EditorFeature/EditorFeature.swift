@@ -13,7 +13,7 @@ public enum EditorFeature {
 
     public struct State: Sendable, Equatable {
         /// The document being edited (mutated in place by all editor actions).
-        public var document: ModelDocument = .iodo131
+        public var document: ModelDocument = .empty
         /// Currently selected compartment ID (nil = nothing selected).
         public var selectedCompartmentId: String?
         /// Currently selected connection "K-id" (nil = nothing / compartment selected).
@@ -29,7 +29,8 @@ public enum EditorFeature {
         public var canvasOffset: CanvasPoint = CanvasPoint(x: 0, y: 0)
         public var canvasScale: Double = 1.0
 
-        public init() {}
+        public init() {
+        }
     }
 
     public enum InspectorTab: String, Sendable, Equatable {
@@ -82,9 +83,7 @@ public enum EditorFeature {
 
     // MARK: - Environment
 
-    public struct Environment: Sendable {
-        public init() {}
-    }
+    public typealias Environment = Void
 
     // MARK: - ViewModel
 

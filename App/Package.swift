@@ -14,6 +14,7 @@ let package = Package(
         .package(path: ".."),
         .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main"),
         .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.5.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
     ],
@@ -61,12 +62,34 @@ let package = Package(
                 "AppDomain",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(name: "Domain",                  package: "BiokineticsDosimetry"),
-                .product(name: "Parser",                  package: "BiokineticsDosimetry"),
-                .product(name: "SwiftRex",                package: "SwiftRex"),
-                .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
-                .product(name: "FP",                      package: "FP"),
-                .product(name: "XMLCoder",                package: "XMLCoder"),
+                .product(
+                    name: "Domain",
+                    package: "BiokineticsDosimetry"
+                ),
+                .product(
+                    name: "Parser",
+                    package: "BiokineticsDosimetry"
+                ),
+                .product(
+                    name: "SwiftRex",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Architecture",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "FP",
+                    package: "FP"
+                ),
+                .product(
+                    name: "Core",
+                    package: "NetworkTools"
+                ),
+                .product(
+                    name: "XMLCoder",
+                    package: "XMLCoder"
+                ),
             ]
         ),
 
@@ -76,20 +99,44 @@ let package = Package(
             name: "EditorFeatureTests",
             dependencies: [
                 "EditorFeature",
-                .product(name: "SwiftRex",              package: "SwiftRex"),
-                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
-                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
+                .product(
+                    name: "SwiftRex",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Architecture",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Testing",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SnapshotTesting",
+                    package: "swift-snapshot-testing"
+                ),
             ]
         ),
         .testTarget(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
-                .product(name: "SwiftRex",              package: "SwiftRex"),
-                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
-                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
+                .product(
+                    name: "SwiftRex",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Architecture",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Testing",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SnapshotTesting",
+                    package: "swift-snapshot-testing"
+                ),
             ]
         ),
         .testTarget(
@@ -98,10 +145,22 @@ let package = Package(
                 "AppCore",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(name: "SwiftRex",              package: "SwiftRex"),
-                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",      package: "SwiftRex"),
-                .product(name: "SnapshotTesting",       package: "swift-snapshot-testing"),
+                .product(
+                    name: "SwiftRex",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Architecture",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SwiftRex.Testing",
+                    package: "SwiftRex"
+                ),
+                .product(
+                    name: "SnapshotTesting",
+                    package: "swift-snapshot-testing"
+                ),
             ]
         ),
     ],

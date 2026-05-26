@@ -1,6 +1,9 @@
 import AppDomain
+import Core
 import Domain
+import FP
 import Foundation
+import Parser
 import SwiftRex
 import SwiftRexArchitecture
 
@@ -15,13 +18,15 @@ public enum HomeFeature {
 
     // MARK: - State
 
-    public struct State: Sendable, Equatable {
-        /// Navigation stack path — drives `NavigationStack(path:)` in ContentView.
-        public var path: [AppRoute] = []
+    // MARK: - State
+
+    public struct State: Sendable {
         /// The canonical list of saved biokinetic models.
-        public var documents: [ModelDocument] = [.iodo131, .validation]
-        public var importError: String?
-        public var isImporting: Bool = false
+        public var documents: Loading<[ModelDocument], DecodingError> = .idle
+        /// Tracks the file-picker lifecycle.
+        /// `.loading` → picker sheet visible; `.loaded(())` → file chosen, importing;
+        /// `.idle` → closed. Swap `Never` for a concrete error type to surface picker errors.
+        public var filePicker: Loading<Unit, Never> = .idle
 
         public init() {}
     }
@@ -30,23 +35,25 @@ public enum HomeFeature {
 
     @dynamicMemberLookup
     public enum Action: Sendable {
-        // Navigation
-        case push(AppRoute)
-        case setPath([AppRoute])
+        // File picker state machine
+        case openFilePicker
+        case filePickerDismissed
         // Document management
         case newDocument
         case importXML(Data)
-        case importResult(Result<ModelDocument, ParseError>)
+        case importResult(Result<ModelDocument, DecodingError>)
         case saveDocument(ModelDocument)
         case deleteDocument(ModelDocument.ID)
+        case edit(document: ModelDocument)
+        case calculate(document: ModelDocument)
     }
 
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var parseXML: @Sendable (Data) -> Result<ModelDocument, ParseError>
-        public init(parseXML: @escaping @Sendable (Data) -> Result<ModelDocument, ParseError>) {
-            self.parseXML = parseXML
+        public var xmlDecoder: DataDecoderFactory & Sendable
+        public init(xmlDecoder: DataDecoderFactory & Sendable) {
+            self.xmlDecoder = xmlDecoder
         }
     }
 
@@ -65,16 +72,14 @@ public enum HomeFeature {
         }
 
         public struct ViewState: Sendable, Equatable {
-            public var path: [AppRoute] = []
-            public var cards: [DocumentCard] = []
-            public var importError: String? = nil
-            public var isImporting: Bool = false
+            public var filePicker: Loading<Unit, Never> = .idle
+            public var cards: Loading<[DocumentCard], DecodingError> = .idle
         }
 
         @dynamicMemberLookup
         public enum ViewAction: Sendable {
-            case push(AppRoute)
-            case setPath([AppRoute])
+            case openFilePicker
+            case filePickerDismissed
             case newDocument
             case importXML(Data)
             case editDocument(ModelDocument)
@@ -88,37 +93,37 @@ public enum HomeFeature {
 
     public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
         ViewModel.ViewState(
-            path: state.path,
-            cards: state.documents.map { doc in
-                ViewModel.DocumentCard(
-                    id: doc.id,
-                    name: doc.name,
-                    description: doc.description,
-                    halfLife: doc.halfLife,
-                    compartmentCount: doc.model.compartments.count,
-                    connectionCount: doc.model.connections.count,
-                    tints: doc.model.compartments
-                        .compactMap { doc.visuals[$0.id]?.tint }
-                        .prefix(8)
-                        .map { $0 },
-                    document: doc
-                )
-            },
-            importError: state.importError,
-            isImporting: state.isImporting
+            filePicker: state.filePicker,
+            cards: state.documents.map { value in
+                value.map { doc in
+                    ViewModel.DocumentCard(
+                        id: doc.id,
+                        name: doc.name,
+                        description: doc.description,
+                        halfLife: doc.halfLife,
+                        compartmentCount: doc.model.compartments.count,
+                        connectionCount: doc.model.connections.count,
+                        tints: doc.model.compartments
+                            .compactMap { doc.visuals[$0.id]?.tint }
+                            .prefix(8)
+                            .map { $0 },
+                        document: doc
+                    )
+                }
+            }
         )
     }
 
     public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
         switch va {
-        case .push(let r):               .push(r)
-        case .setPath(let p):            .setPath(p)
-        case .newDocument:               .newDocument
-        case .importXML(let d):          .importXML(d)
-        case .editDocument(let doc):     .push(.editor(doc))
-        case .calculateDocument(let d):  .push(.calculator(d))
-        case .deleteDocument(let id):    .deleteDocument(id)
-        case .saveDocument(let doc):     .saveDocument(doc)
+        case .openFilePicker:             .openFilePicker
+        case .filePickerDismissed:        .filePickerDismissed
+        case .newDocument:                .newDocument
+        case .importXML(let d):           .importXML(d)
+        case .editDocument(let doc):      .edit(document: doc)
+        case .calculateDocument(let doc): .calculate(document: doc)
+        case .deleteDocument(let id):     .deleteDocument(id)
+        case .saveDocument(let doc):      .saveDocument(doc)
         }
     }
 
@@ -129,45 +134,58 @@ public enum HomeFeature {
     public static func behavior() -> Behavior<Action, State, Environment> {
         .handle { action, _ in
             switch action.action {
-            case .push(let route):
-                .reduce { $0.path.append(route) }
+            case .openFilePicker:
+                .reduce { $0.filePicker = $0.filePicker.startLoading() }
 
-            case .setPath(let path):
-                .reduce { $0.path = path }
+            case .filePickerDismissed:
+                .reduce { $0.filePicker = .idle }
 
             case .newDocument:
-                .reduce { $0.documents.append(makeBlankDocument()) }
+                .reduce { $0.documents = .loaded([makeBlankDocument()] + ($0.documents.loadedOrPrevious ?? [])) }
 
             case .importXML(let data):
-                .reduce { $0.isImporting = true }
+                // Transition filePicker to .loaded(()) so the isPresented binding
+                // drops to false without triggering filePickerDismissed (the set
+                // closure guards on filePicker.is(.loading)).
+                .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
                 .produce { env in
-                    .just(.importResult(env.parseXML(data)))
+                    .just(
+                        .importResult(
+                            env.xmlDecoder
+                                .dataDecoder(for: IpenXmlModel.self)(data)
+                                .map { $0.toCompartmentalModel() }
+                                .map(\.asModelDocument)
+                        )
+                    )
                 }
 
-            case .importResult(.success(let doc)):
-                .reduce {
-                    $0.documents.append(doc)
-                    $0.isImporting = false
-                    $0.importError = nil
-                }
-
-            case .importResult(.failure(let err)):
-                .reduce {
-                    $0.isImporting = false
-                    $0.importError = err.message
+            case let .importResult(result):
+                .reduce { state in
+                    state.filePicker = .idle
+                    state.documents = state.documents.applying(
+                        Array.pure >>> curry(+)(state.documents.loadedOrPrevious ?? []) <£> result
+                    )
                 }
 
             case .saveDocument(let doc):
                 .reduce { state in
-                    if let idx = state.documents.firstIndex(where: { $0.id == doc.id }) {
-                        state.documents[idx] = doc
+                    let zoom = Loading<[ModelDocument], DecodingError>.prism.loaded >>> [ModelDocument].ix(id: doc.id)
+
+                    if zoom.preview(state.documents) != nil {
+                        state.documents = zoom.over(const(doc))(state.documents)
                     } else {
-                        state.documents.append(doc)
+                        state.documents = .loaded([doc])
                     }
                 }
 
             case .deleteDocument(let id):
-                .reduce { $0.documents.removeAll { $0.id == id } }
+                .reduce { state in
+                    guard let loaded = state.documents.loaded else { return }
+                    state.documents = .loaded(loaded.filter(\.id >>> notEquals(id)))
+                }
+
+            case .edit, .calculate:
+                .doNothing
             }
         }
     }
@@ -193,4 +211,16 @@ private func makeBlankDocument() -> ModelDocument {
         model: model,
         visuals: [id: CompartmentVisuals(x: 450, y: 310, tint: .steel)]
     )
+}
+
+extension DecodingError: @retroactive Equatable {
+    public static func == (lhs: DecodingError, rhs: DecodingError) -> Bool {
+        lhs.localizedDescription == rhs.localizedDescription
+    }
+}
+
+extension Array {
+    static func pure(_ element: Element) -> Self {
+        [element]
+    }
 }
