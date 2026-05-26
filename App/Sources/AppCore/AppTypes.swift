@@ -65,7 +65,7 @@ public extension Store where Action == AppAction, State == AppState, Environment
 
     /// The root navigation view, ready to be placed in a `WindowGroup`.
     @MainActor var rootView: some View {
-        AppRootView(store: self)
+        AppRootView(viewModel: AppRootViewModel(store: self))
     }
 }
 
