@@ -1,5 +1,3 @@
-import AppDomain
-
 /// Every screen that can be pushed onto the navigation stack.
 ///
 /// Each case carries the `ModelDocument` snapshot that was current when the
