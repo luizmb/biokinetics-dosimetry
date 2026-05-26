@@ -55,8 +55,9 @@ public struct ModelDocument: Identifiable, Hashable, Sendable {
     }
 }
 
-// MARK: - Sample data
+// MARK: - Sample data (moved to ModelDocument+Fixture.swift under #if DEBUG)
 
+#if DEBUG
 public extension ModelDocument {
     /// Iodine-131 fast biokinetic model used for demonstrations and previews.
     static let iodo131: ModelDocument = {
@@ -145,3 +146,4 @@ public extension ModelDocument {
         )
     }()
 }
+#endif

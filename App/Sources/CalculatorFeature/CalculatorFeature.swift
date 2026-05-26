@@ -15,7 +15,7 @@ public enum CalculatorFeature {
     // MARK: - State
 
     public struct State: Sendable, Equatable {
-        public var document: ModelDocument = .iodo131
+        public var document: ModelDocument = .empty
         public var solver: SolverMethod = .birchall(composition: .perTime)
         public var finalDay: Int = 200
         public var stepSize: Double = 1.0

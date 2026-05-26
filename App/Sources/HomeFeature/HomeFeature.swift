@@ -141,7 +141,7 @@ public enum HomeFeature {
                 .reduce { $0.filePicker = .idle }
 
             case .newDocument:
-                .reduce { $0.documents = .loaded([makeBlankDocument()] + ($0.documents.loadedOrPrevious ?? [])) }
+                .reduce { $0.documents = .loaded([.empty] + ($0.documents.loadedOrPrevious ?? [])) }
 
             case .importXML(let data):
                 // Transition filePicker to .loaded(()) so the isPresented binding
@@ -191,36 +191,4 @@ public enum HomeFeature {
     }
 
     public typealias Content = HomeView
-}
-
-// MARK: - Helpers
-
-private func makeBlankDocument() -> ModelDocument {
-    let id = "a"
-    let model = CompartmentalModel(
-        compartments: [
-            Compartment(id: id, name: "Compartment A",
-                        follow: true, intake: true, dispose: false, fraction: 1.0)
-        ],
-        connections: []
-    )
-    return ModelDocument(
-        name: "New Model",
-        description: "",
-        halfLife: 0,
-        model: model,
-        visuals: [id: CompartmentVisuals(x: 450, y: 310, tint: .steel)]
-    )
-}
-
-extension DecodingError: @retroactive Equatable {
-    public static func == (lhs: DecodingError, rhs: DecodingError) -> Bool {
-        lhs.localizedDescription == rhs.localizedDescription
-    }
-}
-
-extension Array {
-    static func pure(_ element: Element) -> Self {
-        [element]
-    }
 }
