@@ -4,13 +4,22 @@ import DataStructure
 
 /// A type with exactly one inhabitant.
 ///
-/// All instances are trivially equal — the protocol provides `Equatable` via
-/// a default `==` that ignores both arguments and returns `true` (`const(true)`).
-/// Conform any unit/terminal type to `Singleton` to get `Equatable` for free.
-public protocol Singleton: Equatable {}
+/// The protocol supplies every conformance a singleton type needs:
+/// - `Equatable` (via `Hashable`): `==` is `const(true)` — all instances are equal.
+/// - `Hashable`: `hash(into:)` is a no-op — all instances share the same hash.
+/// - `Codable`: `encode(to:)` writes nothing; `init(from:)` calls `self.init()`.
+/// - `Sendable`: singleton values carry no mutable state.
+///
+/// The only requirement a conforming type must satisfy is a no-arg `init()`.
+public protocol Singleton: Hashable, Sendable, Codable {
+    init()
+}
 
 public extension Singleton {
     static func == (_: Self, _: Self) -> Bool { true }
+    func hash(into hasher: inout Hasher) {}
+    func encode(to encoder: any Encoder) throws {}
+    init(from decoder: any Decoder) throws { self.init() }
 }
 
 // MARK: - Terminal
@@ -21,7 +30,7 @@ public extension Singleton {
 /// a type with exactly one inhabitant, unique up to unique isomorphism.
 /// Use `Terminal` anywhere `Void` is needed as a generic type argument — e.g.
 /// `Loading<Terminal, Never>` instead of `Loading<Void, Never>`.
-public struct Terminal: Singleton, Hashable, Sendable, Codable {
+public struct Terminal: Singleton {
     public init() {}
 }
 
