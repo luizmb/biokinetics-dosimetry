@@ -1,5 +1,7 @@
 import Core
 import Foundation
+import SwiftRex
+import SwiftUI
 @preconcurrency import XMLCoder
 
 // MARK: - App-level typealiases
@@ -24,5 +26,23 @@ public struct World: Sendable {
 
     public static var live: Self {
         .init(xmlDecoder: XMLDecoder())
+    }
+}
+
+// MARK: - Store conveniences
+
+public extension Store where Action == AppAction, State == AppState, Environment == World {
+    /// The live app store: initial state + full behavior wired up.
+    @MainActor static var app: Store<AppAction, AppState, World> {
+        Store(
+            initial: AppState(),
+            behavior: NavigationFeature.behavior(),
+            environment: .live
+        )
+    }
+
+    /// The root navigation view, ready to be placed in a `WindowGroup`.
+    @MainActor var rootView: some View {
+        AppRootView(store: self)
     }
 }

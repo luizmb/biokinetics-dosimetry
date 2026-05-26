@@ -1,15 +1,14 @@
 import AppCore
+import SwiftRex
 import SwiftUI
 
 @main
 struct BiokineticsDosimetryApp: SwiftUI.App {
-    /// The coordinator owns the store and all feature ViewModels.
-    /// `@State` keeps the single instance stable across re-renders.
-    @State private var coordinator = AppCoordinator()
+    @State private var store = Store<AppAction, AppState, World>.app
 
     var body: some Scene {
         WindowGroup {
-            coordinator.rootView
+            store.rootView
         }
     }
 }
