@@ -1,4 +1,5 @@
 import AppDomain
+import CoreFP
 import Domain
 import Foundation
 import Solver
@@ -57,16 +58,14 @@ public enum CalculatorFeature {
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var solve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]
+        public var solve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
 
-        public init(solve: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]) {
+        public init(solve: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>) {
             self.solve = solve
         }
 
         public static var live: Self {
-            .init { plan, model in
-                await Solver.solve(plan: plan, model: model).run()
-            }
+            .init { plan, model in Solver.solve(plan: plan, model: model) }
         }
 
         public static var preview: Self {
@@ -74,11 +73,13 @@ public enum CalculatorFeature {
                 // Return plausible fake data for previews
                 let n = model.compartments.count
                 let steps = plan.stepCount + 1
-                return (0..<steps).map { step in
-                    let t = Double(step * plan.step)
-                    return (0..<n).map { idx in
-                        let k = 0.05 + Double(idx) * 0.03
-                        return max(0, exp(-k * t) - Double(idx) * 0.1)
+                return DeferredTask {
+                    (0..<steps).map { step in
+                        let t = Double(step * plan.step)
+                        return (0..<n).map { idx in
+                            let k = 0.05 + Double(idx) * 0.03
+                            return max(0, exp(-k * t) - Double(idx) * 0.1)
+                        }
                     }
                 }
             }
@@ -264,7 +265,7 @@ public enum CalculatorFeature {
         )
         return C.reduce { $0.isCalculating = true; $0.error = nil }
             .produce { env in
-                .task { Action.resultsReady(await env.solve(plan, doc.model)) }
+                .task { Action.resultsReady(await env.solve(plan, doc.model).run()) }
             }
     }
 
