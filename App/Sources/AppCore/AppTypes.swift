@@ -1,9 +1,11 @@
 import AppDomain
 import CalculatorFeature
 import Core
+import Domain
 import EditorFeature
 import FP
 import Foundation
+import Solver
 import SwiftRex
 import SwiftRexArchitecture
 import SwiftUI
@@ -37,12 +39,22 @@ public enum AppAction: Sendable {
 /// Live dependencies injected once at app startup.
 public struct World: Sendable {
     public let xmlDecoder: Sendable & DataDecoderFactory
+    public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]
 
-    public init(xmlDecoder: Sendable & DataDecoderFactory) {
+    public init(
+        xmlDecoder: Sendable & DataDecoderFactory,
+        solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]
+    ) {
         self.xmlDecoder = xmlDecoder
+        self.solver = solver
     }
 
-    public static var live: Self { .init(xmlDecoder: XMLDecoder()) }
+    public static var live: Self {
+        .init(
+            xmlDecoder: XMLDecoder(),
+            solver: { plan, model in await Solver.solve(plan: plan, model: model).run() }
+        )
+    }
 }
 
 // MARK: - Store conveniences
@@ -103,7 +115,7 @@ private func calculatorBehavior() -> Behavior<AppAction, AppState, World> {
         .lift(
             action:      AppAction.prism.calculator,
             state:       AppState.lens.calculator,
-            environment: const(.live)
+            environment: \.solver >>> CalculatorFeature.Environment.init
         )
 }
 
