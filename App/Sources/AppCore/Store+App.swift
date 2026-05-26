@@ -6,7 +6,6 @@ import HomeFeature
 import NavigationFeature
 import SwiftRex
 import SwiftRexArchitecture
-import SwiftUI
 
 // MARK: - AppState
 
@@ -41,21 +40,17 @@ public extension Store where Action == AppAction, State == AppState, Environment
         Store(
             initial: AppState(),
             behavior: navigationBehavior()
-                <> homeBehavior()
-                <> editorBehavior()
-                <> calculatorBehavior()
+                <> Module.home.lift().behavior
+                <> Module.editor.lift().behavior
+                <> Module.calculator.lift().behavior
                 <> bridgeBehavior(),
             environment: environment
         )
     }
 
-    /// The root navigation view, ready to be placed in a `WindowGroup`.
-    @MainActor var rootView: some View {
-        AppRootView(viewModel: AppRootViewModel(store: self))
-    }
 }
 
-// MARK: - Lifted sub-behaviors
+// MARK: - Navigation behavior (no FeatureHost — NavigationFeature uses @ViewModel, not @Feature)
 
 private func navigationBehavior() -> Behavior<AppAction, AppState, World> {
     NavigationFeature.behavior()
@@ -63,33 +58,6 @@ private func navigationBehavior() -> Behavior<AppAction, AppState, World> {
             action:      AppAction.prism.navigation,
             state:       AppState.lens.navigation,
             environment: ignore
-        )
-}
-
-private func homeBehavior() -> Behavior<AppAction, AppState, World> {
-    FeatureHost.home.behavior
-        .lift(
-            action:      AppAction.prism.home,
-            state:       AppState.lens.home,
-            environment: \.xmlDecoder >>> HomeFeature.Environment.init
-        )
-}
-
-private func editorBehavior() -> Behavior<AppAction, AppState, World> {
-    FeatureHost.editor.behavior
-        .lift(
-            action:      AppAction.prism.editor,
-            state:       AppState.lens.editor,
-            environment: ignore
-        )
-}
-
-private func calculatorBehavior() -> Behavior<AppAction, AppState, World> {
-    FeatureHost.calculator.behavior
-        .lift(
-            action:      AppAction.prism.calculator,
-            state:       AppState.lens.calculator,
-            environment: \.solver >>> CalculatorFeature.Environment.init
         )
 }
 

@@ -272,13 +272,14 @@ public enum CalculatorFeature {
     public typealias Content = CalculatorView
 }
 
-// MARK: - FeatureHost convenience
+// MARK: - Module convenience
 
 import SwiftRexArchitecture
 
-extension FeatureHost
+extension Module
 where Action == CalculatorFeature.Action,
       State == CalculatorFeature.State,
-      Environment == CalculatorFeature.Environment {
+      Environment == CalculatorFeature.Environment,
+      Content == CalculatorFeature.Content {
     public static var calculator: Self { .init(CalculatorFeature.self) }
 }

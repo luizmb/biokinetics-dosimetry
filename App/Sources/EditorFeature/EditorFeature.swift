@@ -415,13 +415,14 @@ public enum EditorFeature {
     public typealias Content = EditorView
 }
 
-// MARK: - FeatureHost convenience (within the feature module)
+// MARK: - Module convenience
 
 import SwiftRexArchitecture
 
-extension FeatureHost
+extension Module
 where Action == EditorFeature.Action,
       State == EditorFeature.State,
-      Environment == EditorFeature.Environment {
+      Environment == EditorFeature.Environment,
+      Content == EditorFeature.Content {
     public static var editor: Self { .init(EditorFeature.self) }
 }

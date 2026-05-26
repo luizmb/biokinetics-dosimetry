@@ -8,29 +8,11 @@ import SwiftRexArchitecture
 ///
 /// `State` is a single `path: [AppRoute]`. `Action` is `push` / `setPath`.
 /// Everything else (home, editor, calculator state and cross-feature bridging)
-/// lives at the `AppState` / `AppAction` level in `AppTypes.swift`.
+/// lives at the `AppState` / `AppAction` level in `Store+App.swift`.
+///
+/// Because State ≡ ViewState and Action ≡ ViewAction for this feature,
+/// both are typealiases — the mapping is the identity function.
 public enum NavigationFeature {
-
-    // MARK: - Action
-
-    @Prisms @dynamicMemberLookup
-    public enum Action: Sendable {
-        /// Appends a single route to the navigation stack.
-        case push(AppRoute)
-        /// Replaces the entire path (used by SwiftUI back-navigation binding).
-        case setPath([AppRoute])
-    }
-
-    // MARK: - State
-
-    public struct State: Sendable, Equatable {
-        public var path: [AppRoute] = []
-        public init() {}
-    }
-
-    // MARK: - Environment
-
-    public typealias Environment = Void
 
     // MARK: - ViewModel
 
@@ -38,27 +20,26 @@ public enum NavigationFeature {
     public final class ViewModel {
         public struct ViewState: Sendable, Equatable {
             public var path: [AppRoute] = []
+            public init() {}
         }
 
-        @dynamicMemberLookup
+        @Prisms @dynamicMemberLookup
         public enum ViewAction: Sendable {
+            /// Appends a single route to the navigation stack.
             case push(AppRoute)
+            /// Replaces the entire path (used by SwiftUI back-navigation binding).
             case setPath([AppRoute])
         }
     }
 
-    // MARK: - Mappings
+    // MARK: - State / Action / Environment
 
-    public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
-        .init(path: state.path)
-    }
+    /// Identical to `ViewModel.ViewState` — no projection needed.
+    public typealias State = ViewModel.ViewState
+    /// Identical to `ViewModel.ViewAction` — no projection needed.
+    public typealias Action = ViewModel.ViewAction
 
-    public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
-        switch va {
-        case .push(let route):   .push(route)
-        case .setPath(let path): .setPath(path)
-        }
-    }
+    public typealias Environment = Void
 
     // MARK: - Behavior
 
