@@ -1,14 +1,17 @@
 import AppCore
-import SwiftRex
 import SwiftUI
 
 @main
 struct BiokineticsDosimetryApp: SwiftUI.App {
-    let store = Store<AppAction, AppState, World>.app(environment: .live)
+    let coordinator: NavigationCoordinator
+
+    init() {
+        coordinator = NavigationCoordinator(store: .app(environment: .live))
+    }
 
     var body: some Scene {
         WindowGroup {
-            store.rootView
+            coordinator.rootView
         }
     }
 }
