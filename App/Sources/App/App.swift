@@ -4,7 +4,7 @@ import SwiftUI
 
 @main
 struct BiokineticsDosimetryApp: SwiftUI.App {
-    @State private var store = Store<AppAction, AppState, World>.app
+    let store = Store<AppAction, AppState, World>.app(environment: .live)
 
     var body: some Scene {
         WindowGroup {
