@@ -1,9 +1,7 @@
-import AppDomain
 import Domain
 import Foundation
-import Parser
 
-extension CompartmentalModel {
+public extension CompartmentalModel {
     var asModelDocument: ModelDocument {
         let visuals = defaultVisuals(for: self)
         return ModelDocument(
