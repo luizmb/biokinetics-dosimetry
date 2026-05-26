@@ -48,6 +48,7 @@ let package = Package(
                 "AppDomain",
                 .product(name: "Domain",                  package: "BiokineticsDosimetry"),
                 .product(name: "Solver",                  package: "BiokineticsDosimetry"),
+                .product(name: "FP",                      package: "FP"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.Concurrency",    package: "SwiftRex"),
