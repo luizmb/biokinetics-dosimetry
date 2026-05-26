@@ -1,15 +1,10 @@
 import AppDomain
 import CalculatorFeature
-import Core
-import Domain
 import EditorFeature
 import FP
-import Foundation
-import Solver
 import SwiftRex
 import SwiftRexArchitecture
 import SwiftUI
-@preconcurrency import XMLCoder
 
 // MARK: - AppState
 
@@ -34,36 +29,13 @@ public enum AppAction: Sendable {
     case calculator(CalculatorFeature.Action)
 }
 
-// MARK: - World
-
-/// Live dependencies injected once at app startup.
-public struct World: Sendable {
-    public let xmlDecoder: Sendable & DataDecoderFactory
-    public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]
-
-    public init(
-        xmlDecoder: Sendable & DataDecoderFactory,
-        solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) async -> [[Double]]
-    ) {
-        self.xmlDecoder = xmlDecoder
-        self.solver = solver
-    }
-
-    public static var live: Self {
-        .init(
-            xmlDecoder: XMLDecoder(),
-            solver: { plan, model in await Solver.solve(plan: plan, model: model).run() }
-        )
-    }
-}
-
 // MARK: - Store conveniences
 
 public extension Store where Action == AppAction, State == AppState, Environment == World {
 
-    /// Builds the live app store: all features lifted to the flat AppState/AppAction level,
-    /// plus the bridge behavior that converts Home edit/calculate actions into navigation pushes.
-    @MainActor static var app: Store<AppAction, AppState, World> {
+    /// Builds the app store wired to the given environment.
+    /// Call `.app(environment: .live)` at the entry point; pass a mock environment in tests.
+    @MainActor static func app(environment: World) -> Store<AppAction, AppState, World> {
         Store(
             initial: AppState(),
             behavior: navigationBehavior()
@@ -71,7 +43,7 @@ public extension Store where Action == AppAction, State == AppState, Environment
                 <> editorBehavior()
                 <> calculatorBehavior()
                 <> bridgeBehavior(),
-            environment: .live
+            environment: environment
         )
     }
 
