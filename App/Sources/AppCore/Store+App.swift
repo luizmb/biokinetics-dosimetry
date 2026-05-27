@@ -30,35 +30,27 @@ public enum AppAction: Sendable {
     case calculator(CalculatorFeature.Action)
 }
 
+public typealias MainStoreType = any StoreType<AppAction, AppState>
+public typealias MainStore = Store<AppAction, AppState, World>
+
 // MARK: - Store conveniences
 
-public extension Store where Action == AppAction, State == AppState, Environment == World {
+public extension MainStore {
 
     /// Builds the app store wired to the given environment.
     /// Call `.app(environment: .live)` at the entry point; pass a mock environment in tests.
-    @MainActor static func app(environment: World) -> Store<AppAction, AppState, World> {
+    @MainActor static func app(world: World) -> MainStoreType {
         Store(
             initial: AppState(),
-            behavior: navigationBehavior()
+            behavior: NavigationFeature.behavior().lift()
                 <> Module.home.lift().behavior
                 <> Module.editor.lift().behavior
                 <> Module.calculator.lift().behavior
                 <> bridgeBehavior(),
-            environment: environment
+            environment: world
         )
     }
 
-}
-
-// MARK: - Navigation behavior (no FeatureHost — NavigationFeature uses @ViewModel, not @Feature)
-
-private func navigationBehavior() -> Behavior<AppAction, AppState, World> {
-    NavigationFeature.behavior()
-        .lift(
-            action:      AppAction.prism.navigation,
-            state:       AppState.lens.navigation,
-            environment: ignore
-        )
 }
 
 // MARK: - Bridge behavior
