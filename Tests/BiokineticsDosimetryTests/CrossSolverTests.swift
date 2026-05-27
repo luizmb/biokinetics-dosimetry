@@ -18,16 +18,17 @@ final class CrossSolverTests: XCTestCase {
     func testTwoCompartmentAllSolversAgreeWithClosedForm() async {
         let k = 0.1
         let model = CompartmentalModel(
+            nuclides: [],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
-                Compartment(id: "b", name: "b", follow: false, intake: false, dispose: false, fraction: 0)
+                Compartment(id: "a", nuclideId: "n0", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
+                Compartment(id: "b", nuclideId: "n0", name: "b", follow: false, intake: false, dispose: false, fraction: 0)
             ],
             connections: [CompartmentConnection(from: "a", to: "b", rate: k)]
         )
-        let perTime = await solve(model: model, halfLife: 0, step: 1, final: 50, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, halfLife: 0, step: 1, final: 50, solver: .birchall(composition: .semigroup))
-        let rk4 = await solve(model: model, halfLife: 0, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45 = await solve(model: model, halfLife: 0, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
+        let semigroup = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
+        let rk4       = await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -45,20 +46,21 @@ final class CrossSolverTests: XCTestCase {
         let k1 = 0.1
         let k2 = 0.05
         let model = CompartmentalModel(
+            nuclides: [],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
-                Compartment(id: "b", name: "b", follow: false, intake: false, dispose: false, fraction: 0),
-                Compartment(id: "c", name: "c", follow: false, intake: false, dispose: false, fraction: 0)
+                Compartment(id: "a", nuclideId: "n0", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
+                Compartment(id: "b", nuclideId: "n0", name: "b", follow: false, intake: false, dispose: false, fraction: 0),
+                Compartment(id: "c", nuclideId: "n0", name: "c", follow: false, intake: false, dispose: false, fraction: 0)
             ],
             connections: [
                 CompartmentConnection(from: "a", to: "b", rate: k1),
                 CompartmentConnection(from: "b", to: "c", rate: k2)
             ]
         )
-        let perTime = await solve(model: model, halfLife: 0, step: 1, final: 100, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, halfLife: 0, step: 1, final: 100, solver: .birchall(composition: .semigroup))
-        let rk4 = await solve(model: model, halfLife: 0, step: 1, final: 100, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45 = await solve(model: model, halfLife: 0, step: 1, final: 100, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .perTime))
+        let semigroup = await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .semigroup))
+        let rk4       = await solve(model: model, step: 1, final: 100, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = await solve(model: model, step: 1, final: 100, solver: .rungeKutta45(tolerance: rk45Tolerance))
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -77,16 +79,18 @@ final class CrossSolverTests: XCTestCase {
     func testRadioactiveDecayAllSolversAgreeWithClosedForm() async {
         let halfLife = 10.0
         let lambda = log(2) / halfLife
+        let nuclide = Nuclide(id: "n0", name: "Test", halfLife: halfLife)
         let model = CompartmentalModel(
+            nuclides: [nuclide],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0)
+                Compartment(id: "a", nuclideId: nuclide.id, name: "a", follow: false, intake: true, dispose: false, fraction: 1.0)
             ],
             connections: []
         )
-        let perTime = await solve(model: model, halfLife: halfLife, step: 1, final: 50, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, halfLife: halfLife, step: 1, final: 50, solver: .birchall(composition: .semigroup))
-        let rk4 = await solve(model: model, halfLife: halfLife, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45 = await solve(model: model, halfLife: halfLife, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
+        let semigroup = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
+        let rk4       = await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
 
         for t in [0, 1, 5, 10, 20, 50] {
             let expected = exp(-lambda * Double(t))
@@ -108,13 +112,14 @@ final class CrossSolverTests: XCTestCase {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: url)
         let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
-        let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 4.5e9 * 365.0
+        let model = withHalfLife(halfLife, in: loaded)
+            .updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
-        let perTime = await solve(model: model, halfLife: halfLife, step: 1, final: 5, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, halfLife: halfLife, step: 1, final: 5, solver: .birchall(composition: .semigroup))
-        let rk4 = await solve(model: model, halfLife: halfLife, step: 1, final: 5, solver: .rungeKutta4(stepSize: 0.001))
-        let rk45 = await solve(model: model, halfLife: halfLife, step: 1, final: 5, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .perTime))
+        let semigroup = await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .semigroup))
+        let rk4       = await solve(model: model, step: 1, final: 5, solver: .rungeKutta4(stepSize: 0.001))
+        let rk45      = await solve(model: model, step: 1, final: 5, solver: .rungeKutta45(tolerance: rk45Tolerance))
 
         XCTAssertEqual(perTime.count, semigroup.count, "perTime vs semigroup row count mismatch")
         XCTAssertEqual(perTime.count, rk4.count, "perTime vs RK4 row count mismatch")
@@ -131,15 +136,25 @@ final class CrossSolverTests: XCTestCase {
 
     // MARK: - Helpers
 
+    /// Updates the primary (first) nuclide's half-life on a model, leaving all other fields unchanged.
+    /// Compartments with `nuclideId` pointing to that nuclide inherit the updated decay constant.
+    private func withHalfLife(_ halfLife: Double, in model: CompartmentalModel) -> CompartmentalModel {
+        guard let first = model.nuclides.first else {
+            let n = Nuclide(id: "n0", name: "Imported", halfLife: halfLife)
+            return model.with(nuclides: [n])
+        }
+        let updated = Nuclide(id: first.id, name: first.name, halfLife: halfLife)
+        return model.with(nuclides: [updated] + Array(model.nuclides.dropFirst()))
+    }
+
     private func solve(
         model: CompartmentalModel,
-        halfLife: Double,
-        step: Int,
+        step: Double,
         final: Int,
         solver: SolverMethod
     ) async -> [[Double]] {
         await Solver.solve(
-            plan: BiokineticsSimulationPlan(step: step, halfLife: halfLife, final: final, solver: solver),
+            plan: BiokineticsSimulationPlan(step: step, final: Double(final), solver: solver),
             model: model
         ).run()
     }

@@ -117,15 +117,9 @@ struct EditorFeatureBehaviorTests {
     @Test func updateCompartmentNameChangesNameOnly() {
         let initial = loaded()
         store(initial: initial).dispatch(.updateCompartmentName(id: "A", name: "Alpha")) { state in
-            state.document.model = CompartmentalModel(
-                compartments: state.document.model.compartments.map {
-                    $0.id == "A"
-                        ? Compartment(id: $0.id, name: "Alpha", follow: $0.follow,
-                                      intake: $0.intake, dispose: $0.dispose, fraction: $0.fraction)
-                        : $0
-                },
-                connections: state.document.model.connections
-            )
+            state.document.model = state.document.model.updatingCompartment(id: "A") {
+                $0.with(name: "Alpha")
+            }
         }
     }
 
@@ -134,8 +128,7 @@ struct EditorFeatureBehaviorTests {
         // "A" starts with follow = true in validation
         store(initial: initial).dispatch(.updateCompartmentFollow(id: "A", value: false)) { state in
             state.document.model = state.document.model.updatingCompartment(id: "A") {
-                Compartment(id: $0.id, name: $0.name, follow: false,
-                            intake: $0.intake, dispose: $0.dispose, fraction: $0.fraction)
+                $0.with(follow: false)
             }
         }
     }
@@ -144,8 +137,7 @@ struct EditorFeatureBehaviorTests {
         let initial = loaded()
         store(initial: initial).dispatch(.updateCompartmentDispose(id: "C", value: true)) { state in
             state.document.model = state.document.model.updatingCompartment(id: "C") {
-                Compartment(id: $0.id, name: $0.name, follow: $0.follow,
-                            intake: $0.intake, dispose: true, fraction: $0.fraction)
+                $0.with(dispose: true)
             }
         }
     }
@@ -154,8 +146,7 @@ struct EditorFeatureBehaviorTests {
         let initial = loaded()
         store(initial: initial).dispatch(.updateCompartmentIntake(id: "B", value: true)) { state in
             state.document.model = state.document.model.updatingCompartment(id: "B") {
-                Compartment(id: $0.id, name: $0.name, follow: $0.follow,
-                            intake: true, dispose: $0.dispose, fraction: $0.fraction)
+                $0.with(intake: true)
             }
         }
     }
@@ -177,7 +168,7 @@ struct EditorFeatureBehaviorTests {
         var initial = loaded()
         initial.selectedCompartmentId = "B"
         store(initial: initial).dispatch(.deleteCompartment(id: "B")) { state in
-            state.document.model = CompartmentalModel(
+            state.document.model = state.document.model.with(
                 compartments: state.document.model.compartments.filter { $0.id != "B" },
                 connections: []  // All connections involve B
             )
@@ -191,7 +182,7 @@ struct EditorFeatureBehaviorTests {
         initial.selectedCompartmentId = "A"
         // Delete C — A→B survives; B→C and C→B removed
         store(initial: initial).dispatch(.deleteCompartment(id: "C")) { state in
-            state.document.model = CompartmentalModel(
+            state.document.model = state.document.model.with(
                 compartments: state.document.model.compartments.filter { $0.id != "C" },
                 connections: state.document.model.connections.filter { $0.from != "C" && $0.to != "C" }
             )
@@ -218,8 +209,7 @@ struct EditorFeatureBehaviorTests {
         initial.linkingState = .awaitingTo(fromId: "A")
         let newConn = CompartmentConnection(from: "A", to: "C", rate: 0.1)
         store(initial: initial).dispatch(.linkStep("C")) { state in
-            state.document.model = CompartmentalModel(
-                compartments: state.document.model.compartments,
+            state.document.model = state.document.model.with(
                 connections: state.document.model.connections + [newConn]
             )
             state.selectedLinkIndex = 3      // Was 3 connections; new one is at index 3
@@ -253,10 +243,7 @@ struct EditorFeatureBehaviorTests {
             let old = state.document.model.connections[1]
             var conns = state.document.model.connections
             conns[1] = CompartmentConnection(from: old.from, to: old.to, rate: 0.99)
-            state.document.model = CompartmentalModel(
-                compartments: state.document.model.compartments,
-                connections: conns
-            )
+            state.document.model = state.document.model.with(connections: conns)
         }
     }
 
@@ -279,10 +266,7 @@ struct EditorFeatureBehaviorTests {
         store(initial: initial).dispatch(.deleteLink(index: 0)) { state in
             var conns = state.document.model.connections
             conns.remove(at: 0)
-            state.document.model = CompartmentalModel(
-                compartments: state.document.model.compartments,
-                connections: conns
-            )
+            state.document.model = state.document.model.with(connections: conns)
             state.selectedLinkIndex = nil   // Was 0, matches deleted index
         }
     }
@@ -293,10 +277,7 @@ struct EditorFeatureBehaviorTests {
         store(initial: initial).dispatch(.deleteLink(index: 0)) { state in
             var conns = state.document.model.connections
             conns.remove(at: 0)
-            state.document.model = CompartmentalModel(
-                compartments: state.document.model.compartments,
-                connections: conns
-            )
+            state.document.model = state.document.model.with(connections: conns)
             // selectedLinkIndex stays 2 (different from deleted index 0)
         }
     }

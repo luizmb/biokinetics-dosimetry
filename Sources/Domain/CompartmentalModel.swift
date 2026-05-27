@@ -3,6 +3,8 @@ import FPMacros
 
 @Lenses(init: .public)
 public struct CompartmentalModel: Hashable, Sendable {
+    /// All nuclides present in this model (one for single-nuclide, many for decay chains).
+    public let nuclides: [Nuclide]
     public let compartments: [Compartment]
     public let connections: [CompartmentConnection]
 }

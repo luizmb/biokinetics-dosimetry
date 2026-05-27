@@ -9,8 +9,8 @@ final class UraniumGoldenTests: XCTestCase {
         let intakeCompartmentId: String
         let fraction: Double
         let halfLife: Double
-        let step: Int
-        let final: Int
+        let step: Double
+        let final: Double
         let compartmentIds: [String]
         let times: [Int]
         let rows: [[Double]]
@@ -32,10 +32,11 @@ final class UraniumGoldenTests: XCTestCase {
         XCTAssertEqual(loaded.compartments.map(\.id), golden.compartmentIds,
                        "Swift loader and C# loader must produce compartments in the same order")
 
-        let model = loaded.updatingCompartment(id: golden.intakeCompartmentId) {
+        let modelWithHL = withHalfLife(golden.halfLife, in: loaded)
+        let model = modelWithHL.updatingCompartment(id: golden.intakeCompartmentId) {
             $0.with(intake: true, fraction: golden.fraction)
         }
-        let calculator = BiokineticsSimulationPlan(step: golden.step, halfLife: golden.halfLife, final: golden.final)
+        let calculator = BiokineticsSimulationPlan(step: golden.step, final: golden.final)
         let swiftRows = await solve(plan: calculator, model: model).run()
 
         XCTAssertEqual(swiftRows.count, golden.rows.count, "row count mismatch")
@@ -50,5 +51,16 @@ final class UraniumGoldenTests: XCTestCase {
                 )
             }
         }
+    }
+
+    // MARK: - Helpers
+
+    private func withHalfLife(_ halfLife: Double, in model: CompartmentalModel) -> CompartmentalModel {
+        guard let first = model.nuclides.first else {
+            let n = Nuclide(id: "n0", name: "Imported", halfLife: halfLife)
+            return model.with(nuclides: [n])
+        }
+        let updated = Nuclide(id: first.id, name: first.name, halfLife: halfLife)
+        return model.with(nuclides: [updated] + Array(model.nuclides.dropFirst()))
     }
 }
