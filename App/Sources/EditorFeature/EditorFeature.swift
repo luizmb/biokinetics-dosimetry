@@ -263,9 +263,8 @@ public enum EditorFeature {
                 .reduce { state in
                     let id = UUID().uuidString.prefix(8).lowercased()
                     let idStr = String(id)
-                    let name = tint.defaultName
                     let compartment = Compartment(
-                        id: idStr, name: name,
+                        id: idStr, name: "New Compartment",
                         follow: false, intake: false, dispose: false, fraction: 0
                     )
                     state.document.model = CompartmentalModel(
