@@ -130,6 +130,8 @@ let package = Package(
                 "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
+                .product(name: "FP",                package: "FP"),
+                .product(name: "Core",              package: "NetworkTools"),
                 .product(name: "SwiftRex",          package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
                 .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
