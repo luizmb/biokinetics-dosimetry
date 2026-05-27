@@ -18,6 +18,34 @@ public struct IpenXmlCompartment: Decodable, Sendable {
     public let colorG: UInt8?
     public let colorB: UInt8?
 
+    #if DEBUG
+    public init(
+        number:    Int,
+        name:      String,
+        follow:    Bool,
+        dispose:   Bool,
+        posLeft:   Int?   = nil,
+        posTop:    Int?   = nil,
+        posWidth:  Int?   = nil,
+        posHeight: Int?   = nil,
+        colorR:    UInt8? = nil,
+        colorG:    UInt8? = nil,
+        colorB:    UInt8? = nil
+    ) {
+        self.number    = number
+        self.name      = name
+        self.follow    = follow
+        self.dispose   = dispose
+        self.posLeft   = posLeft
+        self.posTop    = posTop
+        self.posWidth  = posWidth
+        self.posHeight = posHeight
+        self.colorR    = colorR
+        self.colorG    = colorG
+        self.colorB    = colorB
+    }
+    #endif
+
     enum CodingKeys: String, CodingKey {
         case number    = "Numero"
         case name      = "Nome"
