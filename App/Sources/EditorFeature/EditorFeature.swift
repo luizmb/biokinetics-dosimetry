@@ -233,7 +233,7 @@ public enum EditorFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         .handle { action, _ in
-            switch action.action {
+            switch action {
             case .load(let doc):
                 .reduce {
                     $0.document = doc
