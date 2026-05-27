@@ -7,6 +7,13 @@ public struct IpenXmlModel: Decodable, Sendable {
     public let compartments: [IpenXmlCompartment]
     public let connections: [IpenXmlConnection]
 
+    #if DEBUG
+    public init(compartments: [IpenXmlCompartment], connections: [IpenXmlConnection]) {
+        self.compartments = compartments
+        self.connections  = connections
+    }
+    #endif
+
     enum CodingKeys: String, CodingKey {
         case compartments = "TableCaixas"
         case connections  = "TableLinhas"

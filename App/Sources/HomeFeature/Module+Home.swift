@@ -19,7 +19,7 @@ public enum HomeModule {
     // MARK: - State
 
     @Lenses
-    public struct State: Sendable {
+    public struct State: Sendable, Equatable {
         /// The canonical list of saved biokinetic models.
         public var documents: Loading<[ModelDocument], DecodingError> = .idle
         /// Tracks the file-picker lifecycle.
@@ -56,21 +56,6 @@ public enum HomeModule {
         }
     }
 
-    // MARK: - Content
-
-    /// Public type-erasing view. The concrete `HomeView` (internal) is sealed inside;
-    /// callers only see `Content: View`. Created exclusively within this module via
-    /// the internal `init(_:)`.
-    public struct Content: View {
-        private let _body: AnyView
-
-        /// Internal: only `Module.home` can vend a `Content` value.
-        init(_ body: some View) {
-            _body = AnyView(body)
-        }
-
-        public var body: some View { _body }
-    }
 }
 
 // MARK: - Module.Home bridge
@@ -86,18 +71,7 @@ public extension Module
 where Action == HomeModule.Action,
       State  == HomeModule.State,
       Environment == HomeModule.Environment,
-      Content == HomeModule.Content {
+      Content == HomeView {
 
-    static var home: Self {
-        Module(
-            behavior: HomeFeature.behavior(),
-            view: { @MainActor store in
-                let vm = HomeFeature.ViewModel(store: store.projection(
-                    action: HomeFeature.mapAction,
-                    state:  HomeFeature.mapState
-                ))
-                return HomeModule.Content(HomeFeature.Content(viewModel: vm))
-            }
-        )
-    }
+    static var home: Self { .init(HomeFeature.self) }
 }
