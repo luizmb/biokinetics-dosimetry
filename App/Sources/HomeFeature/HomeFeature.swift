@@ -104,7 +104,7 @@ public enum HomeFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         .handle { action, _ in
-            switch action.action {
+            switch action {
             case .openFilePicker:
                 .reduce { $0.filePicker = $0.filePicker.startLoading() }
 
@@ -119,10 +119,10 @@ public enum HomeFeature {
                 // drops to false without triggering filePickerDismissed (the set
                 // closure guards on filePicker.is(.loading)).
                 .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
-                .produce { env in
+                .produce { ctx in
                     .just(
                         .importResult(
-                            env.xmlDecoder
+                            ctx.environment.xmlDecoder
                                 .dataDecoder(for: IpenXmlModel.self)(data)
                                 .map { $0.toCompartmentalModel() }
                                 .map(\.asModelDocument)

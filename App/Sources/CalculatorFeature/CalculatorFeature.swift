@@ -182,8 +182,8 @@ public enum CalculatorFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         typealias C = Consequence<State, Environment, Action>
-        return .handle { action, stateAccess in
-            switch action.action {
+        return .handle { action, context in
+            switch action {
             case .load(let doc):
                 C.reduce { state in
                     state.document = doc
@@ -193,8 +193,8 @@ public enum CalculatorFeature {
                     state.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
                 }
             case .calculate:
-                // Capture pre-mutation state in phase 1 (@MainActor — stateAccess.state is safe here)
-                calculateConsequence(stateAccess: stateAccess)
+                // Capture pre-mutation state in phase 1 (@MainActor — context.stateBefore is safe here)
+                calculateConsequence(context: context)
             case .resultsReady(let data):
                 C.reduce { $0.results = data; $0.isCalculating = false }
             case .resultsFailed(let msg):
@@ -231,10 +231,10 @@ public enum CalculatorFeature {
     /// all single expressions (required for Swift's implicit-return switch expression inference).
     @MainActor
     private static func calculateConsequence(
-        stateAccess: StateAccess<State>
+        context: PreReducerContext<State>
     ) -> Consequence<State, Environment, Action> {
         typealias C = Consequence<State, Environment, Action>
-        let snapshot = stateAccess.state
+        let snapshot = context.stateBefore
         let doc = snapshot?.document ?? State().document
         let plan = BiokineticsSimulationPlan(
             step: 1,
@@ -243,8 +243,8 @@ public enum CalculatorFeature {
             solver: snapshot?.solver ?? .rungeKutta45(tolerance: 1e-6)
         )
         return C.reduce { $0.isCalculating = true; $0.error = nil }
-            .produce { env in
-                .task { Action.resultsReady(await env.solve(plan, doc.model).run()) }
+            .produce { ctx in
+                .task { Action.resultsReady(await ctx.environment.solve(plan, doc.model).run()) }
             }
     }
 

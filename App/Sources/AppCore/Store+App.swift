@@ -59,18 +59,15 @@ public extension MainStore {
 /// route push + target-feature document load. Lives here — not inside NavigationFeature —
 /// because NavigationFeature is intentionally unaware of other features.
 private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
-    Behavior { dispatched, _ in
-        switch dispatched.action {
-        case let .home(.edit(document: doc)):
-            .reduce { $0.editor.document = doc }
-            .produce(const(.just(.navigation(.setPath([.editor])))))
-
-        case let .home(.calculate(document: doc)):
-            .reduce { $0.calculator.document = doc }
-            .produce(const(.just(.navigation(.setPath([.calculator])))))
-
-        default:
-            .doNothing
-        }
-    }
+    Behavior<AppAction, AppState, World>.identity
+        .on(
+            AppAction.prism.home >>> HomeModule.Action.prism.edit,
+            dispatch: { doc in .navigation(.setPath([.editor])) },
+            reduce: { doc, state in state.editor.document = doc }
+        )
+        .on(
+            AppAction.prism.home >>> HomeModule.Action.prism.calculate,
+            dispatch: { doc in .navigation(.setPath([.calculator])) },
+            reduce: { doc, state in state.calculator.document = doc }
+        )
 }
