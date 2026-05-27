@@ -22,20 +22,6 @@ public enum CompartmentTint: String, CaseIterable, Codable, Hashable, Sendable {
         }
     }
 
-    /// Human-readable default compartment name for this tint.
-    public var defaultName: String {
-        switch self {
-        case .steel:   "Plasma"
-        case .amber:   "Stomach"
-        case .crimson: "Thyroid"
-        case .forest:  "SI"
-        case .violet:  "Bladder"
-        case .slate:   "Rest of Body"
-        case .rose:    "Urine"
-        case .ochre:   "Faeces"
-        }
-    }
-
     // MARK: - Color roles
 
     public func fillColor(dark: Bool = false) -> Color {
