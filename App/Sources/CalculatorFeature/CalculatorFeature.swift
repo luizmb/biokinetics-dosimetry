@@ -63,27 +63,6 @@ public enum CalculatorFeature {
         public init(solve: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>) {
             self.solve = solve
         }
-
-        public static var live: Self {
-            .init { plan, model in Solver.solve(plan: plan, model: model) }
-        }
-
-        public static var preview: Self {
-            .init { plan, model in
-                // Return plausible fake data for previews
-                let n = model.compartments.count
-                let steps = plan.stepCount + 1
-                return DeferredTask {
-                    (0..<steps).map { step in
-                        let t = Double(step * plan.step)
-                        return (0..<n).map { idx in
-                            let k = 0.05 + Double(idx) * 0.03
-                            return max(0, exp(-k * t) - Double(idx) * 0.1)
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - ViewModel
