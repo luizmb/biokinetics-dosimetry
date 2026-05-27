@@ -9,16 +9,17 @@ final class AnalyticDecayTests: XCTestCase {
     func testTwoCompartmentTransferNoDecay() async {
         let k = 0.1
         let model = CompartmentalModel(
+            nuclides: [],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
-                Compartment(id: "b", name: "b", follow: false, intake: false, dispose: false, fraction: 0)
+                Compartment(id: "a", nuclideId: "n0", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
+                Compartment(id: "b", nuclideId: "n0", name: "b", follow: false, intake: false, dispose: false, fraction: 0)
             ],
             connections: [
                 CompartmentConnection(from: "a", to: "b", rate: k)
             ]
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: 0, final: 50), model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -32,10 +33,11 @@ final class AnalyticDecayTests: XCTestCase {
         let k1 = 0.1
         let k2 = 0.05
         let model = CompartmentalModel(
+            nuclides: [],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
-                Compartment(id: "b", name: "b", follow: false, intake: false, dispose: false, fraction: 0),
-                Compartment(id: "c", name: "c", follow: false, intake: false, dispose: false, fraction: 0)
+                Compartment(id: "a", nuclideId: "n0", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0),
+                Compartment(id: "b", nuclideId: "n0", name: "b", follow: false, intake: false, dispose: false, fraction: 0),
+                Compartment(id: "c", nuclideId: "n0", name: "c", follow: false, intake: false, dispose: false, fraction: 0)
             ],
             connections: [
                 CompartmentConnection(from: "a", to: "b", rate: k1),
@@ -43,7 +45,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: 0, final: 100), model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 100), model: model).run()
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -58,14 +60,16 @@ final class AnalyticDecayTests: XCTestCase {
 
     func testSingleCompartmentRadioactiveDecay() async {
         let halfLife = 10.0
+        let nuclide = Nuclide(id: "n0", name: "Test", halfLife: halfLife)
         let model = CompartmentalModel(
+            nuclides: [nuclide],
             compartments: [
-                Compartment(id: "a", name: "a", follow: false, intake: true, dispose: false, fraction: 1.0)
+                Compartment(id: "a", nuclideId: nuclide.id, name: "a", follow: false, intake: true, dispose: false, fraction: 1.0)
             ],
             connections: []
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, halfLife: halfLife, final: 50), model: model).run()
+        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run()
 
         let lambda = log(2) / halfLife
         for t in [0, 1, 5, 10, 20, 50] {
