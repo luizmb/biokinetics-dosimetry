@@ -47,7 +47,7 @@ public enum NavigationFeature {
 
     public static func behavior() -> Behavior<Action, State, Void> {
         .handle { action, _ in
-            switch action.action {
+            switch action {
             case .push(let route):   .reduce { $0.path.append(route) }
             case .setPath(let path): .reduce { $0.path = path }
             }
