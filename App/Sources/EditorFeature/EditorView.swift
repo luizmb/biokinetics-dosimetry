@@ -95,7 +95,7 @@ public struct EditorView: View {
                 Button {
                     viewModel.dispatch(.addCompartment(tint))
                 } label: {
-                    Label(tint.defaultName, systemImage: "square.fill")
+                    Label(tint.rawValue.capitalized, systemImage: "square.fill")
                 }
             }
         } label: {
