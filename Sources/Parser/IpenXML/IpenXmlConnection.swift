@@ -18,6 +18,28 @@ public struct IpenXmlConnection: Decodable, Sendable {
     public let colorG: UInt8?
     public let colorB: UInt8?
 
+    #if DEBUG
+    public init(
+        fromCompartmentNumber: Int,
+        toCompartmentNumber:   Int,
+        rateAtoB:              Double,
+        rateBtoA:              Double = 0,
+        direction:             UInt8? = nil,
+        colorR:                UInt8? = nil,
+        colorG:                UInt8? = nil,
+        colorB:                UInt8? = nil
+    ) {
+        self.fromCompartmentNumber = fromCompartmentNumber
+        self.toCompartmentNumber   = toCompartmentNumber
+        self.rateAtoB              = rateAtoB
+        self.rateBtoA              = rateBtoA
+        self.direction             = direction
+        self.colorR                = colorR
+        self.colorG                = colorG
+        self.colorB                = colorB
+    }
+    #endif
+
     enum CodingKeys: String, CodingKey {
         case fromCompartmentNumber = "CaixaInicio"
         case toCompartmentNumber   = "CaixaFim"

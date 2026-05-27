@@ -22,7 +22,7 @@ struct CalculatorFeatureBehaviorTests {
         [0.820, 0.162, 0.018],
     ]
     private var env: CalculatorFeature.Environment {
-        .init { [mockResults] _, _ in mockResults }
+        .succeeds(with: mockResults)
     }
     private func store(
         initial: CalculatorFeature.State = CalculatorFeature.initialState()
@@ -353,7 +353,9 @@ import SwiftUI
 @MainActor
 struct CalculatorFeatureSnapshotTests {
 
-    private let env: CalculatorFeature.Environment = .preview
+    /// `solve` is never actually called since all snapshot tests
+    /// pre-seed `State.results` directly.
+    private let env: CalculatorFeature.Environment = .alwaysFails
     private static let snapshotLayout = SwiftUISnapshotLayout.fixed(width: 800, height: 600)
 
     /// Helper that wraps snapshot capture in `ignoringActions` to suppress
