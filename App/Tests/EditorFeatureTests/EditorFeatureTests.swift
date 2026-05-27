@@ -19,7 +19,7 @@ struct EditorFeatureBehaviorTests {
     private func store(
         initial: EditorFeature.State = EditorFeature.initialState()
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
-        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: .init())
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: ())
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
@@ -429,14 +429,14 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotDefaultDocument() async {
-        let feature = TestFeature<EditorFeature>(environment: .init())
+        let feature = TestFeature<EditorFeature>(environment: ())
         await snap(feature, named: "default-document")
     }
 
     @Test func snapshotValidationDocument() async {
         var initial = EditorFeature.initialState()
         initial.document = .validation
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: .init())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
         await snap(feature, named: "validation-document")
     }
 
@@ -445,7 +445,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.selectedCompartmentId = "A"
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: .init())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
         await snap(feature, named: "compartment-selected")
     }
 
@@ -454,7 +454,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = false
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: .init())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
         await snap(feature, named: "panels-hidden")
     }
 
@@ -462,7 +462,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         initial.linkingState = .awaitingTo(fromId: "A")
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: .init())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
         await snap(feature, named: "linking-in-progress")
     }
 }
