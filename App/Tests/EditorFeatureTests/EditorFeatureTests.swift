@@ -374,6 +374,161 @@ struct EditorFeatureMapStateTests {
         #expect(vs.canvasOffsetY == -10)
         #expect(vs.canvasScale == 1.8)
     }
+
+    @Test func nucleiRowsReflectModelNuclides() {
+        var state = EditorFeature.initialState()
+        state.document = .validation  // has Nuclide("val", halfLife: 5.0)
+        let vs = EditorFeature.mapState(state)
+        #expect(vs.nuclides.count == 1)
+        #expect(vs.nuclides[0].id == "val")
+        #expect(vs.nuclides[0].halfLife == 5.0)
+        #expect(vs.nuclides[0].compartmentCount == 3)  // A, B, C all assigned to "val"
+        #expect(vs.nuclides[0].canDelete == false)  // only one nuclide
+    }
+
+    @Test func compartmentRowCarriesNuclideId() {
+        var state = EditorFeature.initialState()
+        state.document = .validation
+        let vs = EditorFeature.mapState(state)
+        #expect(vs.compartments.allSatisfy { $0.nuclideId == "val" })
+    }
+}
+
+// MARK: - Nuclide management behavior tests
+
+@Suite("EditorFeature Nuclide Management")
+@MainActor
+struct EditorFeatureNuclideTests {
+
+    private func store(
+        initial: EditorFeature.State = EditorFeature.initialState()
+    ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: ())
+    }
+
+    private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
+        var s = EditorFeature.initialState()
+        s.document = doc
+        return s
+    }
+
+    // MARK: - addNuclide
+
+    @Test func addNuclideAppendsNewNuclide() {
+        let initial = loaded()
+        let s = store(initial: initial)
+        // Dispatch without the state-equality check because the new nuclide has a random ID.
+        let src = ActionSource(file: #filePath, function: #function, line: #line)
+        s.dispatch(.addNuclide, source: src)
+        let nuclides = s.state.document.model.nuclides
+        #expect(nuclides.count == 2)
+        #expect(nuclides[1].name == "New Nuclide")
+        #expect(nuclides[1].halfLife == 0)
+    }
+
+    // MARK: - updateNuclideName
+
+    @Test func updateNuclideNameChangesName() {
+        let initial = loaded()
+        store(initial: initial).dispatch(.updateNuclideName(id: "val", name: "Cs-137")) { state in
+            state.document.model = state.document.model.with(
+                nuclides: state.document.model.nuclides.map {
+                    $0.id == "val" ? Nuclide(id: $0.id, name: "Cs-137", halfLife: $0.halfLife) : $0
+                }
+            )
+        }
+    }
+
+    // MARK: - updateNuclideHalfLife
+
+    @Test func updateNuclideHalfLifeSetsValue() {
+        let initial = loaded()
+        store(initial: initial).dispatch(.updateNuclideHalfLife(id: "val", halfLife: 30.17)) { state in
+            state.document.model = state.document.model.with(
+                nuclides: state.document.model.nuclides.map {
+                    $0.id == "val" ? Nuclide(id: $0.id, name: $0.name, halfLife: 30.17) : $0
+                }
+            )
+        }
+    }
+
+    @Test func updateNuclideHalfLifeClampsNegativeToZero() {
+        let initial = loaded()
+        store(initial: initial).dispatch(.updateNuclideHalfLife(id: "val", halfLife: -5)) { state in
+            state.document.model = state.document.model.with(
+                nuclides: state.document.model.nuclides.map {
+                    $0.id == "val" ? Nuclide(id: $0.id, name: $0.name, halfLife: 0) : $0
+                }
+            )
+        }
+    }
+
+    // MARK: - deleteNuclide
+
+    @Test func deleteNuclideWithSingleNuclideIsNoOp() {
+        let initial = loaded()
+        // validation has exactly one nuclide — deletion must be refused
+        let before = initial
+        store(initial: initial).dispatch(.deleteNuclide(id: "val")) { _ in }
+        _ = before  // state unchanged
+    }
+
+    @Test func deleteNuclideReassignsCompartmentsToSurvivor() {
+        // Build a two-nuclide document
+        let n1 = Nuclide(id: "n1", name: "N1", halfLife: 10)
+        let n2 = Nuclide(id: "n2", name: "N2", halfLife: 20)
+        let comps = [
+            Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
+            Compartment(id: "b", nuclideId: "n2", name: "B", follow: true, intake: false, dispose: false, fraction: 0),
+        ]
+        let twoNuclideDoc = ModelDocument(
+            name: "Two",
+            model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
+        )
+        var initial = EditorFeature.initialState()
+        initial.document = twoNuclideDoc
+
+        store(initial: initial).dispatch(.deleteNuclide(id: "n2")) { state in
+            // n2 removed; "b" reassigned to n1
+            state.document.model = CompartmentalModel(
+                nuclides: [n1],
+                compartments: [
+                    comps[0],
+                    comps[1].with(nuclideId: "n1"),
+                ],
+                connections: []
+            )
+        }
+    }
+
+    // MARK: - setCompartmentNuclide
+
+    @Test func setCompartmentNuclideReassignsIt() {
+        let n1 = Nuclide(id: "n1", name: "N1", halfLife: 10)
+        let n2 = Nuclide(id: "n2", name: "N2", halfLife: 20)
+        let comps = [
+            Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
+        ]
+        let doc = ModelDocument(
+            name: "Two",
+            model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
+        )
+        var initial = EditorFeature.initialState()
+        initial.document = doc
+
+        store(initial: initial).dispatch(.setCompartmentNuclide(compartmentId: "a", nuclideId: "n2")) { state in
+            state.document.model = state.document.model.updatingCompartment(id: "a") {
+                $0.with(nuclideId: "n2")
+            }
+        }
+    }
+
+    @Test func setCompartmentNuclideToUnknownIdIsNoOp() {
+        let initial = loaded()
+        let before = initial
+        store(initial: initial).dispatch(.setCompartmentNuclide(compartmentId: "A", nuclideId: "nonexistent")) { _ in }
+        _ = before
+    }
 }
 
 // MARK: - Snapshot tests
