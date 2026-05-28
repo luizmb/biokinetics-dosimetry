@@ -123,6 +123,41 @@ struct InspectorPanel: View {
                 .background(Color.platformSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator, lineWidth: 0.5))
             }
+
+            // Nuclide picker — only shown when the model has more than one nuclide
+            if viewModel.nuclides.count > 1 {
+                infoSection("Nuclide") {
+                    VStack(spacing: 0) {
+                        ForEach(Array(viewModel.nuclides.enumerated()), id: \.1.id) { idx, nuclide in
+                            let isSelected = comp.nuclideId == nuclide.id
+                            HStack(spacing: 10) {
+                                Image(systemName: isSelected ? "circle.fill" : "circle")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(nuclide.name)
+                                        .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                                    if nuclide.halfLife > 0 {
+                                        Text("T½ \(nuclide.halfLife.formatted(.number.precision(.fractionLength(2)))) d")
+                                            .font(.system(size: 10, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.dispatch(.setCompartmentNuclide(compartmentId: comp.id, nuclideId: nuclide.id))
+                            }
+                            if idx < viewModel.nuclides.count - 1 { Divider() }
+                        }
+                    }
+                    .background(Color.platformSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator, lineWidth: 0.5))
+                }
+            }
         }
     }
 
@@ -397,20 +432,89 @@ struct InspectorPanel: View {
 
             Divider()
 
-            // Half-life field (only shown for single-nuclide documents)
-            infoSection("Half-life (days)") {
-                TextField("Half-life", value: Binding(
-                    get: { viewModel.halfLife },
-                    set: { viewModel.dispatch(.updateHalfLife($0)) }
-                ), format: .number.precision(.fractionLength(4)))
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 13, design: .monospaced))
-                .decimalKeyboard()
-            }
+            // Nuclide management section
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    infoSection("Nuclides") {
+                        VStack(spacing: 0) {
+                            ForEach(Array(viewModel.nuclides.enumerated()), id: \.1.id) { idx, nuclide in
+                                nuclideEditorRow(nuclide: nuclide)
+                                if idx < viewModel.nuclides.count - 1 { Divider() }
+                            }
+                            if viewModel.nuclides.isEmpty {
+                                Text("No nuclides — tap + to add one")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .background(Color.platformSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator, lineWidth: 0.5))
+                    }
 
-            Spacer()
+                    Button {
+                        viewModel.dispatch(.addNuclide)
+                    } label: {
+                        Label("Add nuclide", systemImage: "plus.circle")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+                }
+                .padding(.bottom, 16)
+            }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func nuclideEditorRow(nuclide: EditorFeature.ViewModel.NuclideRow) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                TextField("Name", text: Binding(
+                    get: { nuclide.name },
+                    set: { viewModel.dispatch(.updateNuclideName(id: nuclide.id, name: $0)) }
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 13, weight: .semibold))
+
+                if nuclide.canDelete {
+                    Button(role: .destructive) {
+                        viewModel.dispatch(.deleteNuclide(id: nuclide.id))
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(spacing: 6) {
+                Text("T½")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                TextField("0", value: Binding(
+                    get: { nuclide.halfLife },
+                    set: { viewModel.dispatch(.updateNuclideHalfLife(id: nuclide.id, halfLife: $0)) }
+                ), format: .number.precision(.fractionLength(4)))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 12, design: .monospaced))
+                .decimalKeyboard()
+                Text("days")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            if nuclide.compartmentCount > 0 {
+                Text("\(nuclide.compartmentCount) compartment\(nuclide.compartmentCount == 1 ? "" : "s")")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 }
 
