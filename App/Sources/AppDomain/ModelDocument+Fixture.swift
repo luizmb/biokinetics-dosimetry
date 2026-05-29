@@ -16,21 +16,22 @@ public extension ModelDocument {
     /// specific compartment topology — prefer the named fixtures below when
     /// a particular model shape matters.
     static func fixture(
-        id:          UUID             = UUID(),
-        name:        String           = "Fixture",
-        description: String           = "",
-        halfLife:    Double           = 0,
-        model:       CompartmentalModel = .fixture(),
+        id:          UUID                         = UUID(),
+        name:        String                       = "Fixture",
+        description: String                       = "",
+        model:       CompartmentalModel           = .fixture(),
+        variants:    [String: CompartmentalModel] = [:],
         visuals:     [String: CompartmentVisuals] = [:]
     ) -> ModelDocument {
         ModelDocument(id: id, name: name, description: description,
-                      halfLife: halfLife, model: model, visuals: visuals)
+                      model: model, variants: variants, visuals: visuals)
     }
 
     // MARK: - Named domain fixtures
 
     /// Iodine-131 fast biokinetic model used for demonstrations and previews.
     static let iodo131: ModelDocument = {
+        let nuclide = Nuclide(id: "I131", name: "I-131", halfLife: 8.02)
         let compartments: [(String, String, Bool, Bool, Bool, Double)] = [
             ("plasma",  "Plasma",       true,  true,  false, 1.0),
             ("thyroid", "Thyroid",      true,  false, false, 0),
@@ -56,9 +57,10 @@ public extension ModelDocument {
             ("thyroid", "plasma",  8.66e-3),
         ]
         let model = CompartmentalModel(
+            nuclides: [nuclide],
             compartments: compartments.map { id, name, follow, intake, dispose, fraction in
-                Compartment(id: id, name: name, follow: follow,
-                            intake: intake, dispose: dispose, fraction: fraction)
+                Compartment(id: id, nuclideId: nuclide.id, name: name,
+                            follow: follow, intake: intake, dispose: dispose, fraction: fraction)
             },
             connections: connections.map { from, to, rate in
                 CompartmentConnection(from: from, to: to, rate: rate)
@@ -81,7 +83,6 @@ public extension ModelDocument {
         return ModelDocument(
             name: "Iodo 131 F",
             description: "Iodine fast model",
-            halfLife: 8.02,
             model: model,
             visuals: visuals
         )
@@ -89,11 +90,16 @@ public extension ModelDocument {
 
     /// A minimal three-compartment cascade model used for software validation.
     static let validation: ModelDocument = {
+        let nuclide = Nuclide(id: "val", name: "Validation", halfLife: 5.0)
         let model = CompartmentalModel(
+            nuclides: [nuclide],
             compartments: [
-                Compartment(id: "A", name: "A", follow: true,  intake: true,  dispose: false, fraction: 1.0),
-                Compartment(id: "B", name: "B", follow: true,  intake: false, dispose: false, fraction: 0),
-                Compartment(id: "C", name: "C", follow: true,  intake: false, dispose: false, fraction: 0),
+                Compartment(id: "A", nuclideId: nuclide.id, name: "A",
+                            follow: true, intake: true, dispose: false, fraction: 1.0),
+                Compartment(id: "B", nuclideId: nuclide.id, name: "B",
+                            follow: true, intake: false, dispose: false, fraction: 0),
+                Compartment(id: "C", nuclideId: nuclide.id, name: "C",
+                            follow: true, intake: false, dispose: false, fraction: 0),
             ],
             connections: [
                 CompartmentConnection(from: "A", to: "B", rate: 0.1),
@@ -104,7 +110,6 @@ public extension ModelDocument {
         return ModelDocument(
             name: "Validation",
             description: "Model to validate the software",
-            halfLife: 5.0,
             model: model,
             visuals: [
                 "A": CompartmentVisuals(x: 280, y: 200, tint: .steel),

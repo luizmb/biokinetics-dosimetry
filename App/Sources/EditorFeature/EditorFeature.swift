@@ -57,6 +57,8 @@ public enum EditorFeature {
         case selectCompartment(String?)
         case selectLink(Int?)
         case setInspectorTab(InspectorTab)
+        // Document-level mutations
+        case updateHalfLife(Double)
         // Compartment mutations
         case addCompartment(CompartmentTint)
         case updateCompartmentName(id: String, name: String)
@@ -131,6 +133,7 @@ public enum EditorFeature {
             case selectCompartment(String?)
             case selectLink(Int?)
             case setInspectorTab(InspectorTab)
+            case updateHalfLife(Double)
             case addCompartment(CompartmentTint)
             case updateCompartmentName(id: String, name: String)
             case updateCompartmentFollow(id: String, value: Bool)
@@ -207,6 +210,7 @@ public enum EditorFeature {
         case .selectCompartment(let id):               .selectCompartment(id)
         case .selectLink(let idx):                     .selectLink(idx)
         case .setInspectorTab(let tab):                .setInspectorTab(tab)
+        case .updateHalfLife(let hl):                  .updateHalfLife(hl)
         case .addCompartment(let tint):                .addCompartment(tint)
         case .updateCompartmentName(let id, let n):    .updateCompartmentName(id: id, name: n)
         case .updateCompartmentFollow(let id, let v):  .updateCompartmentFollow(id: id, value: v)
@@ -259,17 +263,24 @@ public enum EditorFeature {
             case .setInspectorTab(let tab):
                 .reduce { $0.inspectorTab = tab }
 
+            case .updateHalfLife(let hl):
+                .reduce { state in
+                    guard let first = state.document.model.nuclides.first else { return }
+                    let updated = Nuclide(id: first.id, name: first.name, halfLife: max(0, hl))
+                    let rest = Array(state.document.model.nuclides.dropFirst())
+                    state.document.model = state.document.model.with(nuclides: [updated] + rest)
+                }
+
             case .addCompartment(let tint):
                 .reduce { state in
-                    let id = UUID().uuidString.prefix(8).lowercased()
-                    let idStr = String(id)
+                    let idStr = String(UUID().uuidString.prefix(8).lowercased())
+                    let nuclideId = state.document.model.nuclides.first?.id ?? "n0"
                     let compartment = Compartment(
-                        id: idStr, name: "New Compartment",
+                        id: idStr, nuclideId: nuclideId, name: "New Compartment",
                         follow: false, intake: false, dispose: false, fraction: 0
                     )
-                    state.document.model = CompartmentalModel(
-                        compartments: state.document.model.compartments + [compartment],
-                        connections: state.document.model.connections
+                    state.document.model = state.document.model.with(
+                        compartments: state.document.model.compartments + [compartment]
                     )
                     state.document.visuals[idStr] = CompartmentVisuals(x: 450, y: 310, tint: tint)
                     state.selectedCompartmentId = idStr
@@ -280,37 +291,29 @@ public enum EditorFeature {
 
             case .updateCompartmentName(let id, let name):
                 .reduce { state in
-                    state.document.model = CompartmentalModel(
-                        compartments: state.document.model.compartments.map {
-                            $0.id == id ? Compartment(id: $0.id, name: name, follow: $0.follow,
-                                                      intake: $0.intake, dispose: $0.dispose,
-                                                      fraction: $0.fraction) : $0
-                        },
-                        connections: state.document.model.connections
-                    )
+                    state.document.model = state.document.model.updatingCompartment(id: id) {
+                        $0.with(name: name)
+                    }
                 }
 
             case .updateCompartmentFollow(let id, let value):
                 .reduce { state in
                     state.document.model = state.document.model.updatingCompartment(id: id) {
-                        Compartment(id: $0.id, name: $0.name, follow: value,
-                                    intake: $0.intake, dispose: $0.dispose, fraction: $0.fraction)
+                        $0.with(follow: value)
                     }
                 }
 
             case .updateCompartmentDispose(let id, let value):
                 .reduce { state in
                     state.document.model = state.document.model.updatingCompartment(id: id) {
-                        Compartment(id: $0.id, name: $0.name, follow: $0.follow,
-                                    intake: $0.intake, dispose: value, fraction: $0.fraction)
+                        $0.with(dispose: value)
                     }
                 }
 
             case .updateCompartmentIntake(let id, let value):
                 .reduce { state in
                     state.document.model = state.document.model.updatingCompartment(id: id) {
-                        Compartment(id: $0.id, name: $0.name, follow: $0.follow,
-                                    intake: value, dispose: $0.dispose, fraction: $0.fraction)
+                        $0.with(intake: value)
                     }
                 }
 
@@ -324,7 +327,7 @@ public enum EditorFeature {
 
             case .deleteCompartment(let id):
                 .reduce { state in
-                    state.document.model = CompartmentalModel(
+                    state.document.model = state.document.model.with(
                         compartments: state.document.model.compartments.filter { $0.id != id },
                         connections: state.document.model.connections.filter {
                             $0.from != id && $0.to != id
@@ -350,8 +353,7 @@ public enum EditorFeature {
                             break
                         }
                         let conn = CompartmentConnection(from: fromId, to: id, rate: 0.1)
-                        state.document.model = CompartmentalModel(
-                            compartments: state.document.model.compartments,
+                        state.document.model = state.document.model.with(
                             connections: state.document.model.connections + [conn]
                         )
                         let newIdx = state.document.model.connections.count - 1
@@ -369,13 +371,9 @@ public enum EditorFeature {
                 .reduce { state in
                     guard idx < state.document.model.connections.count else { return }
                     let old = state.document.model.connections[idx]
-                    let updated = CompartmentConnection(from: old.from, to: old.to, rate: rate)
                     var conns = state.document.model.connections
-                    conns[idx] = updated
-                    state.document.model = CompartmentalModel(
-                        compartments: state.document.model.compartments,
-                        connections: conns
-                    )
+                    conns[idx] = CompartmentConnection(from: old.from, to: old.to, rate: rate)
+                    state.document.model = state.document.model.with(connections: conns)
                 }
 
             case .deleteLink(let idx):
@@ -383,10 +381,7 @@ public enum EditorFeature {
                     guard idx < state.document.model.connections.count else { return }
                     var conns = state.document.model.connections
                     conns.remove(at: idx)
-                    state.document.model = CompartmentalModel(
-                        compartments: state.document.model.compartments,
-                        connections: conns
-                    )
+                    state.document.model = state.document.model.with(connections: conns)
                     if state.selectedLinkIndex == idx { state.selectedLinkIndex = nil }
                 }
 

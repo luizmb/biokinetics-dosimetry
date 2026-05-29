@@ -375,16 +375,41 @@ struct InspectorPanel: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "square.and.pencil")
-                .font(.largeTitle)
-                .foregroundStyle(.quaternary)
-            Text("Select a compartment or link\nto inspect its properties")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 0) {
+            // Document properties header
+            HStack {
+                Image(systemName: "doc.text")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(viewModel.documentName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Text("Document")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Divider()
+
+            // Half-life field (only shown for single-nuclide documents)
+            infoSection("Half-life (days)") {
+                TextField("Half-life", value: Binding(
+                    get: { viewModel.halfLife },
+                    set: { viewModel.dispatch(.updateHalfLife($0)) }
+                ), format: .number.precision(.fractionLength(4)))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 13, design: .monospaced))
+                .decimalKeyboard()
+            }
+
+            Spacer()
         }
-        .padding(32)
         .frame(maxWidth: .infinity)
     }
 }

@@ -17,10 +17,11 @@ final class SolverBenchmarks: XCTestCase {
         let xmlURL = try XCTUnwrap(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
         let xmlData = try Data(contentsOf: xmlURL)
         let loaded = try loadIpenXml(using: XMLDecoder())(xmlData).map { $0.toCompartmentalModel() }.get()
-        let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
         let halfLife = 1_642_500_000_000.0
-        let step = 1
-        let final = 1000
+        let nuclide = loaded.nuclides.first.map { Nuclide(id: $0.id, name: $0.name, halfLife: halfLife) }
+            ?? Nuclide(id: "n0", name: "Imported", halfLife: halfLife)
+        let modelWithHL = loaded.with(nuclides: [nuclide] + Array(loaded.nuclides.dropFirst()))
+        let model = modelWithHL.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
         let solvers: [(name: String, method: SolverMethod)] = [
             ("Birchall (perTime, concurrent) ", .birchall(composition: .perTime)),
@@ -30,12 +31,7 @@ final class SolverBenchmarks: XCTestCase {
         ]
 
         for solver in solvers {
-            let calculator = BiokineticsSimulationPlan(
-                step: step,
-                halfLife: halfLife,
-                final: final,
-                solver: solver.method
-            )
+            let calculator = BiokineticsSimulationPlan(step: 1, final: 1000, solver: solver.method)
             let start = Date()
             _ = await solve(plan: calculator, model: model).run()
             let elapsed = Date().timeIntervalSince(start)

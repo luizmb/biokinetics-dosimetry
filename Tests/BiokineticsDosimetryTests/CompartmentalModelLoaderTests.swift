@@ -42,10 +42,11 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         let data = try Data(contentsOf: url)
         let loaded = try loadIpenXml(using: XMLDecoder())(data).map { $0.toCompartmentalModel() }.get()
 
-        let model = loaded.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
-
         let halfLife = 4.5e9 * 365.0
-        let calculator = BiokineticsSimulationPlan(step: 1, halfLife: halfLife, final: 10)
+        let modelWithHL = withHalfLife(halfLife, in: loaded)
+        let model = modelWithHL.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
+
+        let calculator = BiokineticsSimulationPlan(step: 1, final: 10)
         let result = await solve(plan: calculator, model: model).run()
 
         XCTAssertEqual(result.count, 12, "stepCount+2 rows expected")
@@ -60,5 +61,16 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         let plasmaT1 = result[1][plasmaIndex]
         XCTAssertGreaterThan(plasmaT1, 0)
         XCTAssertLessThan(plasmaT1, 1.0, "Plasma activity decreases as transfer kicks in")
+    }
+
+    // MARK: - Helpers
+
+    private func withHalfLife(_ halfLife: Double, in model: CompartmentalModel) -> CompartmentalModel {
+        guard let first = model.nuclides.first else {
+            let n = Nuclide(id: "n0", name: "Imported", halfLife: halfLife)
+            return model.with(nuclides: [n])
+        }
+        let updated = Nuclide(id: first.id, name: first.name, halfLife: halfLife)
+        return model.with(nuclides: [updated] + Array(model.nuclides.dropFirst()))
     }
 }

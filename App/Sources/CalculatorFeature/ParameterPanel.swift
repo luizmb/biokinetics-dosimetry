@@ -34,6 +34,36 @@ struct ParameterPanel: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Variant picker (only visible when the document has named variants)
+                    if !viewModel.variants.isEmpty {
+                        paramSection("Variant") {
+                            VStack(spacing: 0) {
+                                let allKeys = [nil as String?] + viewModel.variants.map(Optional.some)
+                                ForEach(Array(allKeys.enumerated()), id: \.0) { idx, key in
+                                    let label = key ?? "Base model"
+                                    let isSelected = viewModel.selectedVariant == key
+                                    HStack {
+                                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                                        Text(label)
+                                            .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 9)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { viewModel.dispatch(.selectVariant(key)) }
+                                    if idx < allKeys.count - 1 { Divider() }
+                                }
+                            }
+                            .background(Color.platformSecondaryGroupedBackground,
+                                         in: RoundedRectangle(cornerRadius: 10))
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(.separator, lineWidth: 0.5))
+                        }
+                    }
+
                     // Algorithm picker
                     paramSection("Method") {
                         VStack(spacing: 0) {
