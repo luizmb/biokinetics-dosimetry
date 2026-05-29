@@ -8,18 +8,21 @@ import RungeKutta
 ///
 /// Returns a `DeferredTask` — nothing executes until `.run()` is called.
 /// The returned matrix has shape `[stepCount + 2][compartmentCount]`:
-/// rows are time points `0, step, 2·step, …, final`, columns are compartments
+/// rows are time points `0, step, 2·step, …, (stepCount+1)·step`, columns are compartments
 /// in the same order as `model.compartments`.
 ///
+/// Radioactive decay constants are derived from each compartment's parent `Nuclide`
+/// inside the model — `plan` no longer carries a `halfLife` parameter.
+///
 /// - Parameters:
-///   - plan: Simulation configuration (step, halfLife, final, solver method).
-///   - model: The compartmental model to simulate. Must have exactly one intake
+///   - plan: Simulation configuration (step, final, solver method).
+///   - model: The compartmental model to simulate. Must have at least one intake
 ///     compartment set via `updatingCompartment(id:_:)` before calling.
 public func solve(
     plan: BiokineticsSimulationPlan,
     model: CompartmentalModel
 ) -> DeferredTask<[[Double]]> {
-    let system = model.linearSystem(decay: decayConstant(halfLife: plan.halfLife))
+    let system = model.linearSystem()
     let step = plan.step
     let stepCount = plan.stepCount
     let solver = plan.solver
@@ -45,14 +48,14 @@ public func solve(
 private func birchallPerTime(
     A: Matrix<Double>,
     x0: [Double],
-    step: Int,
+    step: Double,
     stepCount: Int
 ) async -> [[Double]] {
     let outputCount = stepCount + 2
     return await withTaskGroup(of: (Int, [Double]).self, returning: [[Double]].self) { group in
         for i in 0 ..< outputCount {
             group.addTask {
-                let row = Birchall.matrixExponential(Double(i * step) * A).apply(to: x0)
+                let row = Birchall.matrixExponential(Double(i) * step * A).apply(to: x0)
                 return (i, row)
             }
         }
@@ -67,10 +70,10 @@ private func birchallPerTime(
 private func birchallSemigroup(
     A: Matrix<Double>,
     x0: [Double],
-    step: Int,
+    step: Double,
     stepCount: Int
 ) -> [[Double]] {
-    Birchall.matrixExponential(Double(step) * A).actions(on: x0, count: stepCount + 1)
+    Birchall.matrixExponential(step * A).actions(on: x0, count: stepCount + 1)
 }
 
 // MARK: - Runge-Kutta paths
@@ -81,7 +84,7 @@ private func birchallSemigroup(
 private func rungeKutta4(
     A: Matrix<Double>,
     x0: [Double],
-    step: Int,
+    step: Double,
     stepCount: Int,
     h: Double
 ) -> [[Double]] {
@@ -89,20 +92,20 @@ private func rungeKutta4(
         from: x0.asAcceleratedVector,
         derivative: { _, y in A.apply(to: y) },
         step: h,
-        through: Double((stepCount + 1) * step)
+        through: Double(stepCount + 1) * step
     )
-    let stepsPerOutput = Int((Double(step) / h).rounded())
+    let stepsPerOutput = Int((step / h).rounded())
     return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state.storage }
 }
 
 private func rungeKutta45(
     A: Matrix<Double>,
     x0: [Double],
-    step: Int,
+    step: Double,
     stepCount: Int,
     tolerance: Double
 ) -> [[Double]] {
-    let outputTimes = (0 ... stepCount + 1).map { Double($0 * step) }
+    let outputTimes = (0 ... stepCount + 1).map { Double($0) * step }
     return RungeKutta45.trajectory(
         at: outputTimes,
         from: x0.asAcceleratedVector,

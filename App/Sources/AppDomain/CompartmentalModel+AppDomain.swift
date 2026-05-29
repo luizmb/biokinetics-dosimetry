@@ -7,7 +7,6 @@ public extension CompartmentalModel {
         return ModelDocument(
             name: "Imported Model",
             description: "",
-            halfLife: 0,
             model: self,
             visuals: visuals
         )

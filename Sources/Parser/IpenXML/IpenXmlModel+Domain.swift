@@ -4,21 +4,25 @@ import FP
 extension IpenXmlModel {
     /// Maps this IPEN XML model to the domain `CompartmentalModel`.
     ///
-    /// All compartments start with `intake = false` and `fraction = 0`.
-    /// Set the intake compartment after loading via
-    /// `CompartmentalModel.updatingCompartment(id:_:)`.
+    /// IPEN XML files are always single-nuclide: a synthetic `Nuclide` with `id "n0"`
+    /// and `halfLife 0` is created and assigned to every compartment. Set the
+    /// nuclide's half-life after loading via the document inspector, and set the
+    /// intake compartment via `CompartmentalModel.updatingCompartment(id:_:)`.
     public func toCompartmentalModel() -> CompartmentalModel {
-        CompartmentalModel(
-            compartments: compartments.map(\.toDomain),
+        let nuclide = Nuclide(id: "n0", name: "Imported", halfLife: 0)
+        return CompartmentalModel(
+            nuclides: [nuclide],
+            compartments: compartments.map { $0.toDomain(nuclideId: nuclide.id) },
             connections: connections.flatMap(\.toDomain)
         )
     }
 }
 
 extension IpenXmlCompartment {
-    var toDomain: Compartment {
+    func toDomain(nuclideId: String) -> Compartment {
         Compartment(
             id: String(number),
+            nuclideId: nuclideId,
             name: name,
             follow: follow,
             intake: false,

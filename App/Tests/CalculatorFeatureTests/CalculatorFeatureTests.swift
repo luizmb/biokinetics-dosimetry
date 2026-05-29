@@ -323,6 +323,8 @@ struct CalculatorFeatureMapActionTests {
     @Test func allViewActionsMapWithoutCrash() {
         let viewActions: [CalculatorFeature.ViewModel.ViewAction] = [
             .calculate,
+            .selectVariant(nil),
+            .selectVariant("Type F"),
             .setSolver(.birchall(composition: .perTime)),
             .setFinalDay(100),
             .setStepSize(0.5),

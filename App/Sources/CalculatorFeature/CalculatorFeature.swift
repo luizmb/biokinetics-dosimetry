@@ -16,6 +16,8 @@ public enum CalculatorFeature {
 
     public struct State: Sendable, Equatable {
         public var document: ModelDocument = .empty
+        /// The variant key to use for calculation (nil = base model).
+        public var selectedVariant: String? = nil
         public var solver: SolverMethod = .birchall(composition: .perTime)
         public var finalDay: Int = 200
         public var stepSize: Double = 1.0
@@ -42,6 +44,7 @@ public enum CalculatorFeature {
     public enum Action: Sendable {
         case load(ModelDocument)
         case calculate
+        case selectVariant(String?)
         case resultsReady([[Double]])
         case resultsFailed(String)
         case setSolver(SolverMethod)
@@ -89,6 +92,10 @@ public enum CalculatorFeature {
             public var documentName: String = ""
             public var halfLife: Double = 0
             public var compartmentNames: [String] = []
+            /// Sorted variant keys available for this document (empty = no variants).
+            public var variants: [String] = []
+            /// The variant key currently selected for calculation (nil = base model).
+            public var selectedVariant: String? = nil
             public var solver: SolverMethod = .birchall(composition: .perTime)
             public var finalDay: Int = 200
             public var stepSize: Double = 1.0
@@ -106,6 +113,7 @@ public enum CalculatorFeature {
         @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case calculate
+            case selectVariant(String?)
             case setSolver(SolverMethod)
             case setFinalDay(Int)
             case setStepSize(Double)
@@ -146,6 +154,8 @@ public enum CalculatorFeature {
             documentName: doc.name,
             halfLife: doc.halfLife,
             compartmentNames: doc.model.compartments.map(\.name),
+            variants: doc.variants.keys.sorted(),
+            selectedVariant: state.selectedVariant,
             solver: state.solver,
             finalDay: state.finalDay,
             stepSize: state.stepSize,
@@ -163,16 +173,17 @@ public enum CalculatorFeature {
 
     public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
         switch va {
-        case .calculate:              .calculate
-        case .setSolver(let s):       .setSolver(s)
-        case .setFinalDay(let d):     .setFinalDay(d)
-        case .setStepSize(let s):     .setStepSize(s)
-        case .setTolerance(let t):    .setTolerance(t)
-        case .setLogX(let v):         .setLogX(v)
-        case .setLogY(let v):         .setLogY(v)
-        case .toggleSeries(let id):   .toggleSeries(id)
-        case .setActiveView(let v):   .setActiveView(v)
-        case .toggleParamPanel:       .toggleParamPanel
+        case .calculate:                .calculate
+        case .selectVariant(let k):     .selectVariant(k)
+        case .setSolver(let s):         .setSolver(s)
+        case .setFinalDay(let d):       .setFinalDay(d)
+        case .setStepSize(let s):       .setStepSize(s)
+        case .setTolerance(let t):      .setTolerance(t)
+        case .setLogX(let v):           .setLogX(v)
+        case .setLogY(let v):           .setLogY(v)
+        case .toggleSeries(let id):     .toggleSeries(id)
+        case .setActiveView(let v):     .setActiveView(v)
+        case .toggleParamPanel:         .toggleParamPanel
         }
     }
 
@@ -192,6 +203,8 @@ public enum CalculatorFeature {
                     state.isCalculating = false
                     state.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
                 }
+            case .selectVariant(let key):
+                C.reduce { $0.selectedVariant = key }
             case .calculate:
                 // Capture pre-mutation state in phase 1 (@MainActor — context.stateBefore is safe here)
                 calculateConsequence(context: context)
@@ -235,16 +248,18 @@ public enum CalculatorFeature {
     ) -> Consequence<State, Environment, Action> {
         typealias C = Consequence<State, Environment, Action>
         let snapshot = context.stateBefore
-        let doc = snapshot?.document ?? State().document
+        let state = snapshot ?? State()
+        let doc = state.document
+        // Resolve variant model: use named variant if selected, else base model.
+        let model = state.selectedVariant.flatMap { doc.variants[$0] } ?? doc.model
         let plan = BiokineticsSimulationPlan(
-            step: 1,
-            halfLife: doc.halfLife,
-            final: snapshot?.finalDay ?? 200,
-            solver: snapshot?.solver ?? .rungeKutta45(tolerance: 1e-6)
+            step: state.stepSize,
+            final: Double(state.finalDay),
+            solver: state.solver
         )
         return C.reduce { $0.isCalculating = true; $0.error = nil }
             .produce { ctx in
-                .task { Action.resultsReady(await ctx.environment.solve(plan, doc.model).run()) }
+                .task { Action.resultsReady(await ctx.environment.solve(plan, model).run()) }
             }
     }
 
