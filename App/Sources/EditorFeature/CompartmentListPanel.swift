@@ -28,15 +28,29 @@ struct CompartmentListPanel: View {
 
             ScrollViewReader { proxy in
                 List {
-                    // Compartments section
-                    Section {
-                        ForEach(viewModel.compartments) { comp in
-                            compartmentRow(comp: comp, proxy: proxy)
+                    if viewModel.nuclides.count > 1 {
+                        // Multi-nuclide: group compartments under each nuclide
+                        ForEach(viewModel.nuclides) { nuclide in
+                            let comps = viewModel.compartments.filter { $0.nuclideId == nuclide.id }
+                            Section {
+                                ForEach(comps) { comp in
+                                    compartmentRow(comp: comp, proxy: proxy)
+                                }
+                            } header: {
+                                nuclideHeader(nuclide: nuclide)
+                            }
                         }
-                    } header: {
-                        Text("Compartments")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                    } else {
+                        // Single-nuclide: flat list
+                        Section {
+                            ForEach(viewModel.compartments) { comp in
+                                compartmentRow(comp: comp, proxy: proxy)
+                            }
+                        } header: {
+                            Text("Compartments")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     // Links section
@@ -72,6 +86,22 @@ struct CompartmentListPanel: View {
                    value: viewModel.selectedCompartmentId)
         .animation(.spring(response: 0.2, dampingFraction: 0.9),
                    value: viewModel.selectedLinkIndex)
+    }
+
+    // MARK: - Nuclide section header
+
+    @ViewBuilder
+    private func nuclideHeader(nuclide: EditorFeature.ViewModel.NuclideRow) -> some View {
+        HStack(spacing: 4) {
+            Text(nuclide.name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            if nuclide.halfLife > 0 {
+                Text("· T½ \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 
     // MARK: - Rows
