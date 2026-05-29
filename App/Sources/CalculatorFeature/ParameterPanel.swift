@@ -139,6 +139,11 @@ struct ParameterPanel: View {
 
             Divider()
 
+            // Duration warning
+            if viewModel.durationWarning != .none {
+                durationWarningBanner
+            }
+
             // Calculate button
             Button {
                 viewModel.dispatch(.calculate)
@@ -150,7 +155,14 @@ struct ParameterPanel: View {
                             Text("Calculating…")
                         }
                     } else {
-                        Label("Calculate", systemImage: "play.fill")
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.fill")
+                            Text("Calculate")
+                            if viewModel.durationWarning == .none {
+                                Text("· \(viewModel.estimatedDurationLabel)")
+                                    .foregroundStyle(.secondary.opacity(0.8))
+                            }
+                        }
                     }
                 }
                 .font(.system(size: 14, weight: .semibold))
@@ -162,6 +174,38 @@ struct ParameterPanel: View {
             .disabled(viewModel.isCalculating)
         }
         .background(Color.platformGroupedBackground)
+    }
+
+    // MARK: - Duration warning banner
+
+    @ViewBuilder
+    private var durationWarningBanner: some View {
+        let (icon, tint, message): (String, Color, String) = {
+            switch viewModel.durationWarning {
+            case .brief:
+                return ("clock", .secondary, "Est. \(viewModel.estimatedDurationLabel)")
+            case .slow:
+                return ("exclamationmark.triangle", .orange, "Est. \(viewModel.estimatedDurationLabel) — may be slow")
+            case .veryLong:
+                return ("exclamationmark.triangle.fill", .red, "Est. \(viewModel.estimatedDurationLabel) — this will take a long time")
+            case .none:
+                return ("", .clear, "")
+            }
+        }()
+
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(message)
+                .font(.system(size: 11.5))
+                .foregroundStyle(tint)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.08))
     }
 
     // MARK: - Helpers

@@ -59,7 +59,13 @@ public enum EditorFeature {
         case setInspectorTab(InspectorTab)
         // Document-level mutations
         case updateHalfLife(Double)
+        // Nuclide management
+        case addNuclide
+        case updateNuclideName(id: String, name: String)
+        case updateNuclideHalfLife(id: String, halfLife: Double)
+        case deleteNuclide(id: String)
         // Compartment mutations
+        case setCompartmentNuclide(compartmentId: String, nuclideId: String)
         case addCompartment(CompartmentTint)
         case updateCompartmentName(id: String, name: String)
         case updateCompartmentFollow(id: String, value: Bool)
@@ -92,6 +98,8 @@ public enum EditorFeature {
     public final class ViewModel {
         public struct CompartmentRow: Identifiable, Sendable, Equatable {
             public var id: String
+            /// The id of the nuclide this compartment belongs to.
+            public var nuclideId: String
             public var name: String
             public var tint: CompartmentTint
             public var x, y: Double
@@ -111,9 +119,21 @@ public enum EditorFeature {
             public var rate: Double
         }
 
+        /// A summary row for one nuclide in the model.
+        public struct NuclideRow: Identifiable, Sendable, Equatable {
+            public var id: String
+            public var name: String
+            public var halfLife: Double
+            public var compartmentCount: Int
+            /// True when the model has more than one nuclide (so this one can be deleted).
+            public var canDelete: Bool
+        }
+
         public struct ViewState: Sendable, Equatable {
             public var documentName: String = ""
+            /// Shortcut for the primary nuclide's half-life; kept for the toolbar badge.
             public var halfLife: Double = 0
+            public var nuclides: [NuclideRow] = []
             public var compartments: [CompartmentRow] = []
             public var links: [LinkRow] = []
             public var selectedCompartmentId: String?
@@ -133,8 +153,14 @@ public enum EditorFeature {
             case selectCompartment(String?)
             case selectLink(Int?)
             case setInspectorTab(InspectorTab)
-            case updateHalfLife(Double)
+            // Nuclide management
+            case addNuclide
+            case updateNuclideName(id: String, name: String)
+            case updateNuclideHalfLife(id: String, halfLife: Double)
+            case deleteNuclide(id: String)
+            // Compartment mutations
             case addCompartment(CompartmentTint)
+            case setCompartmentNuclide(compartmentId: String, nuclideId: String)
             case updateCompartmentName(id: String, name: String)
             case updateCompartmentFollow(id: String, value: Bool)
             case updateCompartmentDispose(id: String, value: Bool)
@@ -158,10 +184,19 @@ public enum EditorFeature {
 
     public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
         let doc = state.document
+        let canDelete = doc.model.nuclides.count > 1
+        let nuclides = doc.model.nuclides.map { n -> ViewModel.NuclideRow in
+            let count = doc.model.compartments.filter { $0.nuclideId == n.id }.count
+            return ViewModel.NuclideRow(
+                id: n.id, name: n.name, halfLife: n.halfLife,
+                compartmentCount: count, canDelete: canDelete
+            )
+        }
         let compartments = doc.model.compartments.map { c -> ViewModel.CompartmentRow in
             let vis = doc.visuals[c.id]
             return ViewModel.CompartmentRow(
                 id: c.id,
+                nuclideId: c.nuclideId,
                 name: c.name,
                 tint: vis?.tint ?? .steel,
                 x: vis?.x ?? 450,
@@ -190,6 +225,7 @@ public enum EditorFeature {
         return ViewModel.ViewState(
             documentName: doc.name,
             halfLife: doc.halfLife,
+            nuclides: nuclides,
             compartments: compartments,
             links: links,
             selectedCompartmentId: state.selectedCompartmentId,
@@ -207,27 +243,31 @@ public enum EditorFeature {
 
     public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
         switch va {
-        case .selectCompartment(let id):               .selectCompartment(id)
-        case .selectLink(let idx):                     .selectLink(idx)
-        case .setInspectorTab(let tab):                .setInspectorTab(tab)
-        case .updateHalfLife(let hl):                  .updateHalfLife(hl)
-        case .addCompartment(let tint):                .addCompartment(tint)
-        case .updateCompartmentName(let id, let n):    .updateCompartmentName(id: id, name: n)
-        case .updateCompartmentFollow(let id, let v):  .updateCompartmentFollow(id: id, value: v)
-        case .updateCompartmentDispose(let id, let v): .updateCompartmentDispose(id: id, value: v)
-        case .updateCompartmentIntake(let id, let v):  .updateCompartmentIntake(id: id, value: v)
-        case .moveCompartment(let id, let x, let y):   .moveCompartment(id: id, x: x, y: y)
-        case .deleteCompartment(let id):               .deleteCompartment(id: id)
-        case .beginLinking:                            .beginLinking
-        case .linkStep(let id):                        .linkStep(id)
-        case .cancelLinking:                           .cancelLinking
-        case .updateLinkRate(let idx, let r):          .updateLinkRate(index: idx, rate: r)
-        case .deleteLink(let idx):                     .deleteLink(index: idx)
-        case .setCanvasTransform(let ox, let oy, let s): .setCanvasTransform(offsetX: ox, offsetY: oy, scale: s)
-        case .toggleLeftPanel:                         .toggleLeftPanel
-        case .toggleRightPanel:                        .toggleRightPanel
-        case .toggleKValues:                           .toggleKValues
-        case .save:                                    .save
+        case .selectCompartment(let id):                           .selectCompartment(id)
+        case .selectLink(let idx):                                 .selectLink(idx)
+        case .setInspectorTab(let tab):                            .setInspectorTab(tab)
+        case .addNuclide:                                          .addNuclide
+        case .updateNuclideName(let id, let n):                    .updateNuclideName(id: id, name: n)
+        case .updateNuclideHalfLife(let id, let hl):               .updateNuclideHalfLife(id: id, halfLife: hl)
+        case .deleteNuclide(let id):                               .deleteNuclide(id: id)
+        case .addCompartment(let tint):                            .addCompartment(tint)
+        case .setCompartmentNuclide(let cId, let nId):             .setCompartmentNuclide(compartmentId: cId, nuclideId: nId)
+        case .updateCompartmentName(let id, let n):                .updateCompartmentName(id: id, name: n)
+        case .updateCompartmentFollow(let id, let v):              .updateCompartmentFollow(id: id, value: v)
+        case .updateCompartmentDispose(let id, let v):             .updateCompartmentDispose(id: id, value: v)
+        case .updateCompartmentIntake(let id, let v):              .updateCompartmentIntake(id: id, value: v)
+        case .moveCompartment(let id, let x, let y):               .moveCompartment(id: id, x: x, y: y)
+        case .deleteCompartment(let id):                           .deleteCompartment(id: id)
+        case .beginLinking:                                        .beginLinking
+        case .linkStep(let id):                                    .linkStep(id)
+        case .cancelLinking:                                       .cancelLinking
+        case .updateLinkRate(let idx, let r):                      .updateLinkRate(index: idx, rate: r)
+        case .deleteLink(let idx):                                 .deleteLink(index: idx)
+        case .setCanvasTransform(let ox, let oy, let s):           .setCanvasTransform(offsetX: ox, offsetY: oy, scale: s)
+        case .toggleLeftPanel:                                     .toggleLeftPanel
+        case .toggleRightPanel:                                    .toggleRightPanel
+        case .toggleKValues:                                       .toggleKValues
+        case .save:                                                .save
         }
     }
 
@@ -269,6 +309,55 @@ public enum EditorFeature {
                     let updated = Nuclide(id: first.id, name: first.name, halfLife: max(0, hl))
                     let rest = Array(state.document.model.nuclides.dropFirst())
                     state.document.model = state.document.model.with(nuclides: [updated] + rest)
+                }
+
+            case .addNuclide:
+                .reduce { state in
+                    let id = String(UUID().uuidString.prefix(8).lowercased())
+                    let nuclide = Nuclide(id: id, name: "New Nuclide", halfLife: 0)
+                    state.document.model = state.document.model.with(
+                        nuclides: state.document.model.nuclides + [nuclide]
+                    )
+                }
+
+            case .updateNuclideName(let id, let name):
+                .reduce { state in
+                    state.document.model = state.document.model.with(
+                        nuclides: state.document.model.nuclides.map {
+                            $0.id == id ? Nuclide(id: $0.id, name: name, halfLife: $0.halfLife) : $0
+                        }
+                    )
+                }
+
+            case .updateNuclideHalfLife(let id, let hl):
+                .reduce { state in
+                    state.document.model = state.document.model.with(
+                        nuclides: state.document.model.nuclides.map {
+                            $0.id == id ? Nuclide(id: $0.id, name: $0.name, halfLife: max(0, hl)) : $0
+                        }
+                    )
+                }
+
+            case .deleteNuclide(let id):
+                .reduce { state in
+                    guard state.document.model.nuclides.count > 1 else { return }
+                    let remaining = state.document.model.nuclides.filter { $0.id != id }
+                    let fallbackId = remaining.first?.id ?? "n0"
+                    state.document.model = CompartmentalModel(
+                        nuclides: remaining,
+                        compartments: state.document.model.compartments.map {
+                            $0.nuclideId == id ? $0.with(nuclideId: fallbackId) : $0
+                        },
+                        connections: state.document.model.connections
+                    )
+                }
+
+            case .setCompartmentNuclide(let compartmentId, let nuclideId):
+                .reduce { state in
+                    guard state.document.model.nuclides.contains(where: { $0.id == nuclideId }) else { return }
+                    state.document.model = state.document.model.updatingCompartment(id: compartmentId) {
+                        $0.with(nuclideId: nuclideId)
+                    }
                 }
 
             case .addCompartment(let tint):
