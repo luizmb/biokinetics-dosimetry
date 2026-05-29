@@ -2,8 +2,10 @@
 ///
 /// Use these in unit tests and SwiftUI previews instead of inline closures.
 #if DEBUG
-import Darwin // exp
-import FP     // DeferredTask
+import Darwin  // exp
+import Domain  // BiokineticsSimulationPlan
+import FP      // DeferredTask
+import Solver  // Solver.solve
 
 public extension CalculatorFeature.Environment {
 
@@ -41,6 +43,22 @@ public extension CalculatorFeature.Environment {
     /// empty model or zero-duration plan.
     static var alwaysFails: CalculatorFeature.Environment {
         .init { _, _ in DeferredTask { [] } }
+    }
+
+    /// Runs the real Birchall solver (perTime composition) for every solve request.
+    ///
+    /// Use in snapshot and integration tests where you want actual solver output
+    /// rather than pre-seeded fake curves.  Results match the `ipen-validator`
+    /// C# reference to within `1e-5`.
+    static var realBirchall: CalculatorFeature.Environment {
+        .init { plan, model in
+            let realPlan = BiokineticsSimulationPlan(
+                step: plan.step,
+                final: plan.final,
+                solver: .birchall(composition: .perTime)
+            )
+            return DeferredTask { await Solver.solve(plan: realPlan, model: model).run() }
+        }
     }
 }
 
