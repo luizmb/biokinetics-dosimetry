@@ -265,42 +265,41 @@ struct HomeFeatureSnapshotTests {
 
     private let env = HomeModule.Environment.alwaysFails
 
-    private func snap<F: Feature>(
+    private static let iPhoneLayout = SwiftUISnapshotLayout.fixed(width: 390,  height: 844)
+    private static let iPadLayout   = SwiftUISnapshotLayout.fixed(width: 1194, height: 834)
+
+    private func snapBoth<F: Feature>(
         _ feature: TestFeature<F>,
-        named name: String,
+        named baseName: String,
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(
-                of: feature.view,
-                as: .image(layout: .fixed(width: 390, height: 844)),
-                named: name,
-                file: file,
-                testName: testName,
-                line: line
-            )
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 
     @Test func snapshotIdleState() async {
         let feature = TestFeature<HomeFeature>(environment: env)
-        await snap(feature, named: "home-idle")
+        await snapBoth(feature, named: "home-idle")
     }
 
     @Test func snapshotLoadedDocuments() async {
         var initial = HomeFeature.initialState()
         initial.documents = .loaded([.iodo131, .validation])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
-        await snap(feature, named: "home-loaded")
+        await snapBoth(feature, named: "home-loaded")
     }
 
     @Test func snapshotEmptyDocumentList() async {
         var initial = HomeFeature.initialState()
         initial.documents = .loaded([])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
-        await snap(feature, named: "home-empty")
+        await snapBoth(feature, named: "home-empty")
     }
 
     @Test func snapshotFilePickerOpen() async {
@@ -308,7 +307,7 @@ struct HomeFeatureSnapshotTests {
         initial.documents = .loaded([.iodo131])
         initial.filePicker = .loading(previous: nil)
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
-        await snap(feature, named: "home-file-picker-open")
+        await snapBoth(feature, named: "home-file-picker-open")
     }
 
     @Test func snapshotImportFailed() async {
@@ -316,7 +315,14 @@ struct HomeFeatureSnapshotTests {
         var initial = HomeFeature.initialState()
         initial.documents = .failed(error: err, previous: [.iodo131])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
-        await snap(feature, named: "home-import-error")
+        await snapBoth(feature, named: "home-import-error")
+    }
+
+    @Test func snapshotLoadingDocuments() async {
+        var initial = HomeFeature.initialState()
+        initial.documents = .loading(previous: [.iodo131])
+        let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "home-loading")
     }
 }
 #endif
