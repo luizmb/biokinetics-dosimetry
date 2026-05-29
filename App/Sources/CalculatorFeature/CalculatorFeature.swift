@@ -108,6 +108,10 @@ public enum CalculatorFeature {
             public var logY: Bool = true
             public var activeView: CalcView = .chart
             public var isParamPanelVisible: Bool = true
+            /// Estimated solve time for the current parameters and model.
+            public var durationWarning: BiokineticsSimulationPlan.DurationWarning = .none
+            /// Human-readable estimate string, e.g. "~45 s" or "< 1 s".
+            public var estimatedDurationLabel: String = ""
         }
 
         @dynamicMemberLookup
@@ -150,6 +154,16 @@ public enum CalculatorFeature {
             ViewModel.ReportRow(id: idx, day: Double(idx), values: row)
         }
 
+        let plan = BiokineticsSimulationPlan(
+            step: state.stepSize,
+            final: Double(state.finalDay),
+            solver: state.solver
+        )
+        let n = doc.model.compartments.count
+        let estimatedSeconds = plan.estimatedDuration(compartmentCount: n)
+        let durationWarning = plan.durationWarning(compartmentCount: n)
+        let estimatedDurationLabel = Self.formatDuration(estimatedSeconds)
+
         return ViewModel.ViewState(
             documentName: doc.name,
             halfLife: doc.halfLife,
@@ -167,8 +181,22 @@ public enum CalculatorFeature {
             logX: state.logX,
             logY: state.logY,
             activeView: state.activeView,
-            isParamPanelVisible: state.isParamPanelVisible
+            isParamPanelVisible: state.isParamPanelVisible,
+            durationWarning: durationWarning,
+            estimatedDurationLabel: estimatedDurationLabel
         )
+    }
+
+    // MARK: - Duration formatting
+
+    static func formatDuration(_ seconds: TimeInterval) -> String {
+        switch seconds {
+        case ..<1:    "< 1 s"
+        case ..<10:   "~\(Int(seconds.rounded())) s"
+        case ..<60:   "~\(Int((seconds / 5).rounded()) * 5) s"
+        case ..<3600: "~\(Int((seconds / 60).rounded())) min"
+        default:      "> 1 h"
+        }
     }
 
     public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
