@@ -24,7 +24,8 @@ import SwiftUI
 @MainActor
 struct ValidationChartSnapshotTests {
 
-    private static let layout = SwiftUISnapshotLayout.fixed(width: 800, height: 500)
+    private static let iPhoneLayout = SwiftUISnapshotLayout.fixed(width: 390,  height: 844)
+    private static let iPadLayout   = SwiftUISnapshotLayout.fixed(width: 1194, height: 834)
 
     // MARK: - Model builder
 
@@ -51,22 +52,18 @@ struct ValidationChartSnapshotTests {
 
     // MARK: - Snapshot helper
 
-    private func snap<F: Feature>(
+    private func snapBoth<F: Feature>(
         _ feature: TestFeature<F>,
-        named name: String,
+        named baseName: String,
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(
-                of: feature.view,
-                as: .image(layout: Self.layout),
-                named: name,
-                file: file,
-                testName: testName,
-                line: line
-            )
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 
@@ -88,7 +85,7 @@ struct ValidationChartSnapshotTests {
         ).run()
         initial.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: .alwaysFails)
-        await snap(feature, named: "validation-hl0")
+        await snapBoth(feature, named: "validation-hl0")
     }
 
     /// Radioactive decay (halfLife = 5 d): all compartments decline after peak,
@@ -107,7 +104,7 @@ struct ValidationChartSnapshotTests {
         ).run()
         initial.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: .alwaysFails)
-        await snap(feature, named: "validation-hl5")
+        await snapBoth(feature, named: "validation-hl5")
     }
 }
 #endif
