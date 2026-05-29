@@ -116,6 +116,8 @@ let package = Package(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
+                .product(name: "Domain",            package: "BiokineticsDosimetry"),
+                .product(name: "Solver",            package: "BiokineticsDosimetry"),
                 .product(name: "SwiftRex",          package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
                 .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
