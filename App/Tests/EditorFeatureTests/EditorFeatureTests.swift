@@ -543,46 +543,36 @@ import SwiftUI
 @MainActor
 struct EditorFeatureSnapshotTests {
 
-    private static let snapshotLayout = SwiftUISnapshotLayout.fixed(width: 900, height: 600)
+    private static let iPhoneLayout = SwiftUISnapshotLayout.fixed(width: 390,  height: 844)
+    private static let iPadLayout   = SwiftUISnapshotLayout.fixed(width: 1194, height: 834)
 
-    private func snap<F: Feature>(
+    private func snapBoth<F: Feature>(
         _ feature: TestFeature<F>,
-        named name: String,
+        named baseName: String,
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(
-                of: feature.view,
-                as: .image(layout: Self.snapshotLayout),
-                named: name,
-                file: file,
-                testName: testName,
-                line: line
-            )
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 
+    // MARK: - Baseline states
+
     @Test func snapshotDefaultDocument() async {
         let feature = TestFeature<EditorFeature>(environment: ())
-        await snap(feature, named: "default-document")
+        await snapBoth(feature, named: "default-document")
     }
 
     @Test func snapshotValidationDocument() async {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
-        await snap(feature, named: "validation-document")
-    }
-
-    @Test func snapshotWithCompartmentSelected() async {
-        var initial = EditorFeature.initialState()
-        initial.document = .validation
-        initial.selectedCompartmentId = "A"
-        initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
-        await snap(feature, named: "compartment-selected")
+        await snapBoth(feature, named: "validation-document")
     }
 
     @Test func snapshotWithPanelsHidden() async {
@@ -591,7 +581,87 @@ struct EditorFeatureSnapshotTests {
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = false
         let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
-        await snap(feature, named: "panels-hidden")
+        await snapBoth(feature, named: "panels-hidden")
+    }
+
+    @Test func snapshotLeftPanelHidden() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.isLeftPanelVisible = false
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "left-panel-hidden")
+    }
+
+    @Test func snapshotRightPanelHidden() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.isLeftPanelVisible = true
+        initial.isRightPanelVisible = false
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "right-panel-hidden")
+    }
+
+    // MARK: - Inspector: compartment selection + tabs
+
+    @Test func snapshotWithCompartmentSelected() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.selectedCompartmentId = "A"
+        initial.inspectorTab = .details
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "compartment-selected")
+    }
+
+    @Test func snapshotCompartmentRelationshipsTab() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.selectedCompartmentId = "A"
+        initial.inspectorTab = .relationships
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "compartment-relationships-tab")
+    }
+
+    // MARK: - Inspector: link selection + tabs
+
+    @Test func snapshotLinkSelected() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.selectedLinkIndex = 0
+        initial.inspectorTab = .details
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "link-selected")
+    }
+
+    @Test func snapshotLinkRelationshipsTab() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.selectedLinkIndex = 0
+        initial.inspectorTab = .relationships
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "link-relationships-tab")
+    }
+
+    @Test func snapshotInspectorEmpty() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "inspector-empty")
+    }
+
+    // MARK: - Canvas overlays
+
+    @Test func snapshotKValuesVisible() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.showKValues = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "k-values-visible")
     }
 
     @Test func snapshotDuringLinking() async {
@@ -599,7 +669,61 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.linkingState = .awaitingTo(fromId: "A")
         let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
-        await snap(feature, named: "linking-in-progress")
+        await snapBoth(feature, named: "linking-in-progress")
+    }
+
+    @Test func snapshotLinkingAwaitingFrom() async {
+        var initial = EditorFeature.initialState()
+        initial.document = .validation
+        initial.linkingState = .awaitingFrom
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "linking-awaiting-from")
+    }
+
+    // MARK: - Multi-nuclide document (phase 2)
+
+    @Test func snapshotMultiNuclideDocument() async {
+        var initial = EditorFeature.initialState()
+        initial.document = Self.multiNuclideDoc
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "multi-nuclide-document")
+    }
+
+    @Test func snapshotMultiNuclideCompartmentInspector() async {
+        var initial = EditorFeature.initialState()
+        initial.document = Self.multiNuclideDoc
+        initial.selectedCompartmentId = "k2"
+        initial.inspectorTab = .details
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        await snapBoth(feature, named: "multi-nuclide-compartment-inspector")
+    }
+
+    // MARK: - Fixtures
+
+    private static var multiNuclideDoc: ModelDocument {
+        let n1 = Nuclide(id: "n1", name: "I-131",  halfLife: 8.02)
+        let n2 = Nuclide(id: "n2", name: "Cs-137", halfLife: 30.17)
+        let comps = [
+            Compartment(id: "p1", nuclideId: "n1", name: "Plasma",  follow: true, intake: true,  dispose: false, fraction: 1.0),
+            Compartment(id: "t1", nuclideId: "n1", name: "Thyroid", follow: true, intake: false, dispose: false, fraction: 0),
+            Compartment(id: "b2", nuclideId: "n2", name: "Blood",   follow: true, intake: true,  dispose: false, fraction: 1.0),
+            Compartment(id: "k2", nuclideId: "n2", name: "Kidney",  follow: true, intake: false, dispose: false, fraction: 0),
+        ]
+        let connections = [
+            CompartmentConnection(from: "p1", to: "t1", rate: 0.866),
+            CompartmentConnection(from: "b2", to: "k2", rate: 0.12),
+        ]
+        return ModelDocument(
+            name: "Multi-Nuclide",
+            model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: connections),
+            visuals: [
+                "p1": CompartmentVisuals(x: 180, y: 200, tint: .steel),
+                "t1": CompartmentVisuals(x: 380, y: 200, tint: .crimson),
+                "b2": CompartmentVisuals(x: 180, y: 400, tint: .amber),
+                "k2": CompartmentVisuals(x: 380, y: 400, tint: .forest),
+            ]
+        )
     }
 }
 #endif

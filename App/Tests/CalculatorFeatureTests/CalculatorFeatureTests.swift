@@ -355,72 +355,217 @@ import SwiftUI
 @MainActor
 struct CalculatorFeatureSnapshotTests {
 
-    /// `solve` is never actually called since all snapshot tests
-    /// pre-seed `State.results` directly.
+    /// `solve` is never actually called since all snapshot tests pre-seed `State.results` directly.
     private let env: CalculatorFeature.Environment = .alwaysFails
-    private static let snapshotLayout = SwiftUISnapshotLayout.fixed(width: 800, height: 600)
 
-    /// Helper that wraps snapshot capture in `ignoringActions` to suppress
-    /// lifecycle-triggered view actions (`.onAppear` etc.) from polluting the test queue.
-    private func snap<F: Feature>(
+    private static let iPhoneLayout = SwiftUISnapshotLayout.fixed(width: 390,  height: 844)
+    private static let iPadLayout   = SwiftUISnapshotLayout.fixed(width: 1194, height: 834)
+
+    /// Captures one iPhone and one iPad snapshot inside a single `ignoringActions` block.
+    private func snapBoth<F: Feature>(
         _ feature: TestFeature<F>,
-        named name: String,
+        named baseName: String,
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(
-                of: feature.view,
-                as: .image(layout: Self.snapshotLayout),
-                named: name,
-                file: file,
-                testName: testName,
-                line: line
-            )
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 
+    // MARK: - Baseline states
+
     @Test func snapshotIdleState() async {
         let feature = TestFeature<CalculatorFeature>(environment: env)
-        await snap(feature, named: "idle")
+        await snapBoth(feature, named: "idle")
     }
 
     @Test func snapshotWithDocument() async {
         var initial = CalculatorFeature.initialState()
         initial.document = .validation
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
-        await snap(feature, named: "loaded-validation")
+        await snapBoth(feature, named: "loaded-validation")
     }
 
     @Test func snapshotAfterCalculate() async {
         var initial = CalculatorFeature.initialState()
         initial.document = .validation
-        // Pre-seed plausible decay curves so the chart is populated.
-        // Behavior correctness is covered by the unit tests above.
         initial.results = (0..<201).map { step -> [Double] in
             let t = Double(step)
             return [exp(-0.05 * t), max(0.0, exp(-0.08 * t) - 0.1), max(0.0, exp(-0.11 * t) - 0.2)]
         }
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
-        await snap(feature, named: "chart-results")
+        await snapBoth(feature, named: "chart-results")
     }
 
     @Test func snapshotReportTab() async {
         var initial = CalculatorFeature.initialState()
         initial.document = .validation
         initial.activeView = .report
-        // Pre-seed results so the report table is populated
         initial.results = Array(repeating: [1.0, 0.5, 0.0], count: 5)
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
-        await snap(feature, named: "report-results")
+        await snapBoth(feature, named: "report-results")
     }
 
     @Test func snapshotParamPanelHidden() async {
         var initial = CalculatorFeature.initialState()
         initial.isParamPanelVisible = false
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
-        await snap(feature, named: "param-panel-hidden")
+        await snapBoth(feature, named: "param-panel-hidden")
+    }
+
+    // MARK: - Calculation states
+
+    @Test func snapshotCalculating() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.isCalculating = true
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "calculating")
+    }
+
+    @Test func snapshotError() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.error = "Solver diverged: matrix is singular"
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "error-state")
+    }
+
+    // MARK: - Solver variants (ParameterPanel layout changes per solver)
+
+    @Test func snapshotSolverRK4() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.solver = .rungeKutta4(stepSize: 0.5)
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "solver-rk4")
+    }
+
+    @Test func snapshotSolverRK45() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.solver = .rungeKutta45(tolerance: 1e-8)
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "solver-rk45")
+    }
+
+    @Test func snapshotSolverBirchallSemigroup() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.solver = .birchall(composition: .semigroup)
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "solver-birchall-semigroup")
+    }
+
+    // MARK: - Chart variants
+
+    @Test func snapshotLogLinear() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.logX = false
+        initial.logY = false
+        initial.results = (0..<201).map { step -> [Double] in
+            let t = Double(step)
+            return [exp(-0.05 * t), max(0.0, exp(-0.08 * t) - 0.1), max(0.0, exp(-0.11 * t) - 0.2)]
+        }
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "log-linear")
+    }
+
+    @Test func snapshotSeriesFiltered() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.results = (0..<201).map { step -> [Double] in
+            let t = Double(step)
+            return [exp(-0.05 * t), max(0.0, exp(-0.08 * t) - 0.1), max(0.0, exp(-0.11 * t) - 0.2)]
+        }
+        initial.visibleSeriesIds = ["A"]
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "series-filtered")
+    }
+
+    @Test func snapshotReportEmpty() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .validation
+        initial.activeView = .report
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "report-empty")
+    }
+
+    // MARK: - Duration warning banners
+    // Calibrated to trigger each severity level via RK4 on iodo131 (n=9 compartments):
+    //   brief    → h=0.1,  final=1000 → 4.64e-6 × 81 × 10_000  ≈  3.8 s
+    //   slow     → h=0.01, final=1000 → 4.64e-6 × 81 × 100_000 ≈ 37.6 s
+    //   veryLong → h=0.001,final=1000 → 4.64e-6 × 81 × 1_000_000 ≈ 376 s
+
+    @Test func snapshotDurationBrief() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .iodo131
+        initial.solver = .rungeKutta4(stepSize: 0.1)
+        initial.finalDay = 1000
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "duration-brief")
+    }
+
+    @Test func snapshotDurationSlow() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .iodo131
+        initial.solver = .rungeKutta4(stepSize: 0.01)
+        initial.finalDay = 1000
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "duration-slow")
+    }
+
+    @Test func snapshotDurationVeryLong() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = .iodo131
+        initial.solver = .rungeKutta4(stepSize: 0.001)
+        initial.finalDay = 1000
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "duration-very-long")
+    }
+
+    // MARK: - Variant picker
+
+    @Test func snapshotWithVariants() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = Self.docWithVariants
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "with-variants")
+    }
+
+    @Test func snapshotWithVariantSelected() async {
+        var initial = CalculatorFeature.initialState()
+        initial.document = Self.docWithVariants
+        initial.selectedVariant = "Type F"
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "variant-selected")
+    }
+
+    // MARK: - Fixtures
+
+    private static var docWithVariants: ModelDocument {
+        let base = ModelDocument.validation
+        let typeF = base.model
+        let typeM = CompartmentalModel(
+            nuclides: base.model.nuclides,
+            compartments: base.model.compartments,
+            connections: base.model.connections.map { c in
+                CompartmentConnection(from: c.from, to: c.to, rate: c.rate * 0.5)
+            }
+        )
+        return ModelDocument(
+            id: base.id,
+            name: "Uranium (Variants)",
+            model: base.model,
+            variants: ["Type F": typeF, "Type M": typeM],
+            visuals: base.visuals
+        )
     }
 }
 #endif
