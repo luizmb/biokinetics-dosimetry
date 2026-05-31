@@ -28,6 +28,15 @@ public enum EditorFeature {
         /// Canvas viewport: logical offset and zoom scale.
         public var canvasOffset: CanvasPoint = CanvasPoint(x: 0, y: 0)
         public var canvasScale: Double = 1.0
+        /// Origin captured when a compartment drag begins; nil when no drag is in progress.
+        public var compartmentDragOrigin: CompartmentDragOrigin? = nil
+        /// Canvas-pan origin (nil when no pan is in progress).
+        public var canvasPanOrigin: CanvasPoint? = nil
+        /// Canvas scale at pinch-gesture start (nil when no pinch is in progress).
+        public var canvasPinchOriginScale: Double? = nil
+        /// iPhone sheet presentation flags.
+        public var isInspectorSheetOpen: Bool = false
+        public var isModelListSheetOpen: Bool = false
 
         public init() {
         }
@@ -46,6 +55,11 @@ public enum EditorFeature {
     public struct CanvasPoint: Sendable, Equatable {
         public var x, y: Double
         public init(x: Double, y: Double) { self.x = x; self.y = y }
+    }
+
+    public struct CompartmentDragOrigin: Sendable, Equatable {
+        public var id: String
+        public var x, y: Double
     }
 
     // MARK: - Action
@@ -72,6 +86,8 @@ public enum EditorFeature {
         case updateCompartmentDispose(id: String, value: Bool)
         case updateCompartmentIntake(id: String, value: Bool)
         case moveCompartment(id: String, x: Double, y: Double)
+        case beginCompartmentDrag(id: String, x: Double, y: Double)
+        case endCompartmentDrag
         case deleteCompartment(id: String)
         // Link mutations
         case beginLinking
@@ -81,10 +97,17 @@ public enum EditorFeature {
         case deleteLink(index: Int)
         // Canvas
         case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
+        case beginCanvasPan(originX: Double, originY: Double)
+        case endCanvasPan
+        case beginCanvasPinch(originScale: Double)
+        case endCanvasPinch
         // Panels
         case toggleLeftPanel
         case toggleRightPanel
         case toggleKValues
+        // Sheet presentation (iPhone)
+        case setInspectorSheet(Bool)
+        case setModelListSheet(Bool)
         // Save
         case save
     }
@@ -146,6 +169,27 @@ public enum EditorFeature {
             public var canvasOffsetX: Double = 0
             public var canvasOffsetY: Double = 0
             public var canvasScale: Double = 1
+            /// Non-nil while a compartment drag is active; holds the canvas position at drag start.
+            public var compartmentDragOriginId: String? = nil
+            public var compartmentDragOriginX: Double = 0
+            public var compartmentDragOriginY: Double = 0
+            /// Non-nil while a canvas pan is in progress; holds the offset at gesture start.
+            public var canvasPanOriginX: Double? = nil
+            public var canvasPanOriginY: Double? = nil
+            /// Non-nil while a pinch is in progress; holds the scale at gesture start.
+            public var canvasPinchOriginScale: Double? = nil
+            /// iPhone sheet flags.
+            public var isInspectorSheetOpen: Bool = false
+            public var isModelListSheetOpen: Bool = false
+
+            // MARK: Pre-computed label strings
+
+            /// Banner message shown during guided link creation, or nil when not linking.
+            public var linkingBannerText: String? = nil
+            /// Footer text in the left panel (e.g. "Selected · Plasma" or nil).
+            public var selectionFooterLabel: String? = nil
+            /// Structural and completeness issues in the current model.
+            public var validationIssues: [CompartmentalModel.ValidationIssue] = []
         }
 
         @dynamicMemberLookup
@@ -166,6 +210,8 @@ public enum EditorFeature {
             case updateCompartmentDispose(id: String, value: Bool)
             case updateCompartmentIntake(id: String, value: Bool)
             case moveCompartment(id: String, x: Double, y: Double)
+            case beginCompartmentDrag(id: String, x: Double, y: Double)
+            case endCompartmentDrag
             case deleteCompartment(id: String)
             case beginLinking
             case linkStep(String)
@@ -173,9 +219,15 @@ public enum EditorFeature {
             case updateLinkRate(index: Int, rate: Double)
             case deleteLink(index: Int)
             case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
+            case beginCanvasPan(originX: Double, originY: Double)
+            case endCanvasPan
+            case beginCanvasPinch(originScale: Double)
+            case endCanvasPinch
             case toggleLeftPanel
             case toggleRightPanel
             case toggleKValues
+            case setInspectorSheet(Bool)
+            case setModelListSheet(Bool)
             case save
         }
     }
@@ -222,6 +274,24 @@ public enum EditorFeature {
                 rate: conn.rate
             )
         }
+        let linkingBannerText: String? = {
+            switch state.linkingState {
+            case .idle:        nil
+            case .awaitingFrom: "Tap the source compartment"
+            case .awaitingTo:   "Now tap the destination compartment"
+            }
+        }()
+        let selectionFooterLabel: String? = {
+            if let id = state.selectedCompartmentId,
+               let name = doc.model.compartments.first(where: { $0.id == id })?.name {
+                return "Selected · \(name)"
+            }
+            if let idx = state.selectedLinkIndex {
+                return "Selected · K\(idx + 1)"
+            }
+            return nil
+        }()
+
         return ViewModel.ViewState(
             documentName: doc.name,
             halfLife: doc.halfLife,
@@ -237,7 +307,18 @@ public enum EditorFeature {
             linkingState: state.linkingState,
             canvasOffsetX: state.canvasOffset.x,
             canvasOffsetY: state.canvasOffset.y,
-            canvasScale: state.canvasScale
+            canvasScale: state.canvasScale,
+            compartmentDragOriginId: state.compartmentDragOrigin?.id,
+            compartmentDragOriginX:  state.compartmentDragOrigin?.x ?? 0,
+            compartmentDragOriginY:  state.compartmentDragOrigin?.y ?? 0,
+            canvasPanOriginX:        state.canvasPanOrigin?.x,
+            canvasPanOriginY:        state.canvasPanOrigin?.y,
+            canvasPinchOriginScale:  state.canvasPinchOriginScale,
+            isInspectorSheetOpen:    state.isInspectorSheetOpen,
+            isModelListSheetOpen:    state.isModelListSheetOpen,
+            linkingBannerText: linkingBannerText,
+            selectionFooterLabel: selectionFooterLabel,
+            validationIssues: doc.model.validationIssues
         )
     }
 
@@ -257,6 +338,8 @@ public enum EditorFeature {
         case .updateCompartmentDispose(let id, let v):             .updateCompartmentDispose(id: id, value: v)
         case .updateCompartmentIntake(let id, let v):              .updateCompartmentIntake(id: id, value: v)
         case .moveCompartment(let id, let x, let y):               .moveCompartment(id: id, x: x, y: y)
+        case .beginCompartmentDrag(let id, let x, let y):         .beginCompartmentDrag(id: id, x: x, y: y)
+        case .endCompartmentDrag:                                  .endCompartmentDrag
         case .deleteCompartment(let id):                           .deleteCompartment(id: id)
         case .beginLinking:                                        .beginLinking
         case .linkStep(let id):                                    .linkStep(id)
@@ -264,9 +347,15 @@ public enum EditorFeature {
         case .updateLinkRate(let idx, let r):                      .updateLinkRate(index: idx, rate: r)
         case .deleteLink(let idx):                                 .deleteLink(index: idx)
         case .setCanvasTransform(let ox, let oy, let s):           .setCanvasTransform(offsetX: ox, offsetY: oy, scale: s)
+        case .beginCanvasPan(let ox, let oy):                     .beginCanvasPan(originX: ox, originY: oy)
+        case .endCanvasPan:                                        .endCanvasPan
+        case .beginCanvasPinch(let s):                            .beginCanvasPinch(originScale: s)
+        case .endCanvasPinch:                                      .endCanvasPinch
         case .toggleLeftPanel:                                     .toggleLeftPanel
         case .toggleRightPanel:                                    .toggleRightPanel
         case .toggleKValues:                                       .toggleKValues
+        case .setInspectorSheet(let v):                           .setInspectorSheet(v)
+        case .setModelListSheet(let v):                           .setModelListSheet(v)
         case .save:                                                .save
         }
     }
@@ -400,11 +489,19 @@ public enum EditorFeature {
                 }
 
             case .updateCompartmentIntake(let id, let value):
+                // Setting intake=true also sets fraction=1.0 so the solver has a non-zero
+                // initial condition. Clearing it resets fraction to 0.
                 .reduce { state in
                     state.document.model = state.document.model.updatingCompartment(id: id) {
-                        $0.with(intake: value)
+                        $0.with(intake: value).with(fraction: value ? 1.0 : 0)
                     }
                 }
+
+            case .beginCompartmentDrag(let id, let x, let y):
+                .reduce { $0.compartmentDragOrigin = CompartmentDragOrigin(id: id, x: x, y: y) }
+
+            case .endCompartmentDrag:
+                .reduce { $0.compartmentDragOrigin = nil }
 
             case .moveCompartment(let id, let x, let y):
                 .reduce { state in
@@ -479,6 +576,24 @@ public enum EditorFeature {
                     state.canvasOffset = CanvasPoint(x: ox, y: oy)
                     state.canvasScale = max(0.2, min(5.0, scale))
                 }
+
+            case .beginCanvasPan(let ox, let oy):
+                .reduce { $0.canvasPanOrigin = CanvasPoint(x: ox, y: oy) }
+
+            case .endCanvasPan:
+                .reduce { $0.canvasPanOrigin = nil }
+
+            case .beginCanvasPinch(let s):
+                .reduce { $0.canvasPinchOriginScale = s }
+
+            case .endCanvasPinch:
+                .reduce { $0.canvasPinchOriginScale = nil }
+
+            case .setInspectorSheet(let v):
+                .reduce { $0.isInspectorSheetOpen = v }
+
+            case .setModelListSheet(let v):
+                .reduce { $0.isModelListSheetOpen = v }
 
             case .toggleLeftPanel:
                 .reduce { $0.isLeftPanelVisible.toggle() }

@@ -1,50 +1,56 @@
 import AppDomain
 import SwiftUI
+import UIComponents
 
-// MARK: - CompartmentListPanel
+// MARK: - EditorModelListPanel (pure)
 
-/// Left sidebar: scrollable list of compartments and links, with a delete
-/// button anchored at the bottom when something is selected.
-struct CompartmentListPanel: View {
-    let viewModel: EditorFeature.ViewModel
+struct EditorModelListPanel: View {
+    let nuclides: [EditorFeature.ViewModel.NuclideRow]
+    let compartments: [EditorFeature.ViewModel.CompartmentRow]
+    let links: [EditorFeature.ViewModel.LinkRow]
+    let selectedCompartmentId: String?
+    let selectedLinkIndex: Int?
+    let selectionFooterLabel: String?
+    var onSelectCompartment: (String?) -> Void
+    var onSelectLink: (Int?) -> Void
+    var onDeleteSelected: () -> Void
+
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.glassTokens) private var g
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Model")
+                Text("MODEL")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+                    .kerning(0.6)
+                    .foregroundStyle(g.faint)
                 Spacer()
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
 
-            Divider()
+            GlassDivider()
 
             ScrollViewReader { proxy in
                 List {
-                    if viewModel.nuclides.count > 1 {
-                        // Multi-nuclide: group compartments under each nuclide
-                        ForEach(viewModel.nuclides) { nuclide in
-                            let comps = viewModel.compartments.filter { $0.nuclideId == nuclide.id }
+                    if nuclides.count > 1 {
+                        ForEach(nuclides) { nuclide in
+                            let comps = compartments.filter { $0.nuclideId == nuclide.id }
                             Section {
                                 ForEach(comps) { comp in
-                                    compartmentRow(comp: comp, proxy: proxy)
+                                    compartmentRow(comp, proxy: proxy)
                                 }
                             } header: {
-                                nuclideHeader(nuclide: nuclide)
+                                nuclideHeader(nuclide)
                             }
                         }
                     } else {
-                        // Single-nuclide: flat list
                         Section {
-                            ForEach(viewModel.compartments) { comp in
-                                compartmentRow(comp: comp, proxy: proxy)
+                            ForEach(compartments) { comp in
+                                compartmentRow(comp, proxy: proxy)
                             }
                         } header: {
                             Text("Compartments")
@@ -53,10 +59,9 @@ struct CompartmentListPanel: View {
                         }
                     }
 
-                    // Links section
                     Section {
-                        ForEach(viewModel.links) { link in
-                            linkRow(link: link)
+                        ForEach(links) { link in
+                            linkRow(link)
                         }
                     } header: {
                         Text("Transfers")
@@ -66,32 +71,29 @@ struct CompartmentListPanel: View {
                 }
                 .listStyle(.sidebar)
                 .scrollContentBackground(.hidden)
-                .onChange(of: viewModel.selectedCompartmentId) { _, id in
+                .onChange(of: selectedCompartmentId) { _, id in
                     if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
                 }
-                .onChange(of: viewModel.selectedLinkIndex) { _, idx in
+                .onChange(of: selectedLinkIndex) { _, idx in
                     if let idx { withAnimation { proxy.scrollTo("link-\(idx)", anchor: .center) } }
                 }
             }
 
             // Delete footer
-            if viewModel.selectedCompartmentId != nil || viewModel.selectedLinkIndex != nil {
-                Divider()
+            if selectionFooterLabel != nil {
+                GlassDivider()
                 deleteFooter
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
             }
         }
         .background(Color.platformGroupedBackground)
-        .animation(.spring(response: 0.2, dampingFraction: 0.9),
-                   value: viewModel.selectedCompartmentId)
-        .animation(.spring(response: 0.2, dampingFraction: 0.9),
-                   value: viewModel.selectedLinkIndex)
+        .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
     }
 
-    // MARK: - Nuclide section header
+    // MARK: - Nuclide header
 
-    @ViewBuilder
-    private func nuclideHeader(nuclide: EditorFeature.ViewModel.NuclideRow) -> some View {
+    private func nuclideHeader(_ nuclide: EditorFeature.ViewModel.NuclideRow) -> some View {
         HStack(spacing: 4) {
             Text(nuclide.name)
                 .font(.caption.weight(.semibold))
@@ -104,18 +106,17 @@ struct CompartmentListPanel: View {
         }
     }
 
-    // MARK: - Rows
+    // MARK: - Compartment row
 
-    @ViewBuilder
     private func compartmentRow(
-        comp: EditorFeature.ViewModel.CompartmentRow,
+        _ comp: EditorFeature.ViewModel.CompartmentRow,
         proxy: ScrollViewProxy
     ) -> some View {
-        let isSelected = viewModel.selectedCompartmentId == comp.id
-        HStack(spacing: 10) {
+        let isSelected = selectedCompartmentId == comp.id
+        return HStack(spacing: 10) {
             Circle()
-                .fill(comp.tint.fillColor(dark: colorScheme == .dark))
-                .overlay(Circle().strokeBorder(comp.tint.strokeColor(dark: colorScheme == .dark),
+                .fill(comp.tint.background(dark: colorScheme == .dark))
+                .overlay(Circle().strokeBorder(comp.tint.border(dark: colorScheme == .dark),
                                                lineWidth: 0.5))
                 .frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 1) {
@@ -134,24 +135,23 @@ struct CompartmentListPanel: View {
         }
         .contentShape(Rectangle())
         .listRowBackground(
-            isSelected
-                ? Color.accentColor.opacity(0.08)
-                : Color.clear
+            isSelected ? Color.accentColor.opacity(0.08) : Color.clear
         )
         .id(comp.id)
-        .onTapGesture { viewModel.dispatch(.selectCompartment(comp.id)) }
+        .onTapGesture { onSelectCompartment(comp.id) }
     }
 
-    @ViewBuilder
-    private func linkRow(link: EditorFeature.ViewModel.LinkRow) -> some View {
-        let isSelected = viewModel.selectedLinkIndex == link.id
-        HStack(spacing: 8) {
+    // MARK: - Link row
+
+    private func linkRow(_ link: EditorFeature.ViewModel.LinkRow) -> some View {
+        let isSelected = selectedLinkIndex == link.id
+        return HStack(spacing: 8) {
             Image(systemName: "arrow.forward")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
             Text("K\(link.id + 1)")
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(link.fromTint.badgeColor(dark: colorScheme == .dark))
+                .foregroundStyle(link.fromTint.indicator(dark: colorScheme == .dark))
             Text("\(link.fromName) → \(link.toName)")
                 .font(.system(size: 11.5))
                 .lineLimit(1)
@@ -162,37 +162,24 @@ struct CompartmentListPanel: View {
         }
         .contentShape(Rectangle())
         .listRowBackground(
-            isSelected
-                ? Color.accentColor.opacity(0.08)
-                : Color.clear
+            isSelected ? Color.accentColor.opacity(0.08) : Color.clear
         )
         .id("link-\(link.id)")
-        .onTapGesture { viewModel.dispatch(.selectLink(link.id)) }
+        .onTapGesture { onSelectLink(link.id) }
     }
 
-    // MARK: - Footer
+    // MARK: - Delete footer
 
     private var deleteFooter: some View {
         HStack {
-            if let id = viewModel.selectedCompartmentId,
-               let comp = viewModel.compartments.first(where: { $0.id == id }) {
-                Label("Selected · \(comp.name)", systemImage: "square.fill")
+            if let label = selectionFooterLabel {
+                Label(label, systemImage: selectedCompartmentId != nil ? "square.fill" : "arrow.forward")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            } else if let idx = viewModel.selectedLinkIndex {
-                Label("Selected · K\(idx + 1)", systemImage: "arrow.forward")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
             Spacer()
-            Button(role: .destructive) {
-                if let id = viewModel.selectedCompartmentId {
-                    viewModel.dispatch(.deleteCompartment(id: id))
-                } else if let idx = viewModel.selectedLinkIndex {
-                    viewModel.dispatch(.deleteLink(index: idx))
-                }
-            } label: {
+            Button(role: .destructive, action: onDeleteSelected) {
                 Label("Delete", systemImage: "trash")
                     .font(.caption.weight(.medium))
             }
@@ -202,7 +189,7 @@ struct CompartmentListPanel: View {
         .padding(.vertical, 10)
     }
 
-    // MARK: - Helpers
+    // MARK: - Flag chip
 
     private func flagChip(_ text: String) -> some View {
         Text(text)
@@ -219,7 +206,7 @@ struct CompartmentListPanel: View {
 extension Double {
     var scientificString: String {
         let exp = self == 0 ? 0 : Int(floor(log10(abs(self))))
-        let m = self == 0 ? 0 : self / pow(10, Double(exp))
+        let m = self == 0 ? 0.0 : self / pow(10, Double(exp))
         return String(format: "%.2fe%+03d", m, exp)
     }
 }

@@ -27,7 +27,7 @@ public struct CompartmentVisuals: Hashable, Codable, Sendable {
 /// Half-life lives on each `Nuclide` inside `model` — `ModelDocument` no longer
 /// carries a top-level `halfLife` field. For single-nuclide documents the
 /// primary nuclide is `model.nuclides.first`.
-public struct ModelDocument: Identifiable, Hashable, Sendable {
+public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     public var id: UUID
     public var name: String
     public var description: String

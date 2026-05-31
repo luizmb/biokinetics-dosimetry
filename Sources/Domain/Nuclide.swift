@@ -10,7 +10,7 @@ import FPMacros
 /// Decay-chain models (U-238 → Th-234 → …) contain one entry per member of
 /// the chain; cross-nuclide `CompartmentConnection`s encode the production rates.
 @Lenses(init: .public)
-public struct Nuclide: Hashable, Identifiable, Sendable {
+public struct Nuclide: Hashable, Identifiable, Codable, Sendable {
     /// Stable identifier used to link compartments to this nuclide.
     public let id: String
     /// Human-readable nuclide name (e.g. "I-131", "U-238").
