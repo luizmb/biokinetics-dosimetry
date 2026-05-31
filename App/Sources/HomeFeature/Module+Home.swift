@@ -38,6 +38,8 @@ public enum HomeModule {
         case openFilePicker
         case filePickerDismissed
         // Document management
+        case loadDocuments
+        case loadResult(Result<[ModelDocument], PersistenceError>)
         case newDocument
         case importXML(Data)
         case importResult(Result<ModelDocument, DecodingError>)
@@ -50,9 +52,21 @@ public enum HomeModule {
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var xmlDecoder: DataDecoderFactory & Sendable
-        public init(xmlDecoder: DataDecoderFactory & Sendable) {
-            self.xmlDecoder = xmlDecoder
+        public var xmlDecoder:        DataDecoderFactory & Sendable
+        public var saveDocument:      @Sendable (ModelDocument) -> Result<Void, PersistenceError>
+        public var loadAllDocuments:  @Sendable () -> Result<[ModelDocument], PersistenceError>
+        public var deleteDocument:    @Sendable (UUID) -> Result<Void, PersistenceError>
+
+        public init(
+            xmlDecoder:       DataDecoderFactory & Sendable,
+            saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>    = { _ in .success(()) },
+            loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError> = { .success([]) },
+            deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>        = { _ in .success(()) }
+        ) {
+            self.xmlDecoder       = xmlDecoder
+            self.saveDocument     = saveDocument
+            self.loadAllDocuments = loadAllDocuments
+            self.deleteDocument   = deleteDocument
         }
     }
 

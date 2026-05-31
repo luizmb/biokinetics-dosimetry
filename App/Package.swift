@@ -5,6 +5,8 @@ let package = Package(
     name: "BiokineticsDosimetryApp",
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
+        .library(name: "Style",              targets: ["Style"]),
+        .library(name: "UIComponents",       targets: ["UIComponents"]),
         .library(name: "AppDomain",          targets: ["AppDomain"]),
         .library(name: "NavigationFeature",  targets: ["NavigationFeature"]),
         .library(name: "HomeFeature",        targets: ["HomeFeature"]),
@@ -22,6 +24,19 @@ let package = Package(
     ],
     targets: [
 
+        // MARK: - Design system (previously a standalone DesignSystem package)
+
+        .target(
+            name: "Style",
+            path: "Sources/Style"
+        ),
+
+        .target(
+            name: "UIComponents",
+            dependencies: ["Style"],
+            path: "Sources/UIComponents"
+        ),
+
         // MARK: - Shared visual + domain types used by all feature targets
 
         .target(
@@ -29,6 +44,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Domain", package: "BiokineticsDosimetry"),
                 .product(name: "FP",     package: "FP"),
+                "Style",
             ]
         ),
 
@@ -53,6 +69,7 @@ let package = Package(
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "SwiftRex",              package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                "UIComponents",
             ]
         ),
 
@@ -64,6 +81,7 @@ let package = Package(
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.Concurrency",    package: "SwiftRex"),
+                "UIComponents",
             ]
         ),
 
@@ -77,6 +95,7 @@ let package = Package(
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.Concurrency",    package: "SwiftRex"),
+                "UIComponents",
             ]
         ),
 
@@ -97,6 +116,7 @@ let package = Package(
                 .product(name: "FP",                    package: "FP"),
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "XMLCoder",              package: "XMLCoder"),
+                "UIComponents",
             ]
         ),
 
@@ -106,22 +126,22 @@ let package = Package(
             name: "EditorFeatureTests",
             dependencies: [
                 "EditorFeature",
-                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
-                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex.Testing",     package: "SwiftRex"),
+                .product(name: "SnapshotTesting",      package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
-                .product(name: "Domain",            package: "BiokineticsDosimetry"),
-                .product(name: "Solver",            package: "BiokineticsDosimetry"),
-                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "Domain",               package: "BiokineticsDosimetry"),
+                .product(name: "Solver",               package: "BiokineticsDosimetry"),
+                .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
-                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex.Testing",     package: "SwiftRex"),
+                .product(name: "SnapshotTesting",      package: "swift-snapshot-testing"),
             ]
         ),
         .testTarget(
@@ -132,12 +152,12 @@ let package = Package(
                 "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(name: "FP",                package: "FP"),
-                .product(name: "Core",              package: "NetworkTools"),
-                .product(name: "SwiftRex",          package: "SwiftRex"),
+                .product(name: "FP",                   package: "FP"),
+                .product(name: "Core",                 package: "NetworkTools"),
+                .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                .product(name: "SwiftRex.Testing",  package: "SwiftRex"),
-                .product(name: "SnapshotTesting",   package: "swift-snapshot-testing"),
+                .product(name: "SwiftRex.Testing",     package: "SwiftRex"),
+                .product(name: "SnapshotTesting",      package: "swift-snapshot-testing"),
             ]
         ),
     ],
