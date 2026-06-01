@@ -40,20 +40,37 @@ public extension MainStore {
     /// Builds the app store wired to the given environment.
     /// Call `.app(environment: .live)` at the entry point; pass a mock environment in tests.
     @MainActor static func app(world: World) -> MainStoreType {
-        Store(
+        let store = Store(
             initial: AppState(),
             behavior: NavigationFeature.behavior().lift()
                 <> Module.home.lift().behavior
                 <> Module.editor.lift().behavior
                 <> Module.calculator.lift().behavior
-                <> bridgeBehavior(),
+                <> bridgeBehavior()
+                <> saveEditorOnBackBehavior(),
             environment: world
         )
+        // Load persisted documents as the very first action.
+        store.dispatch(.home(.loadDocuments))
+        return store
     }
 
 }
 
 // MARK: - Bridge behavior
+
+/// When the user navigates back from the Editor to Home, save the edited document.
+/// Dispatches `.home(.saveDocument)` which both updates the Home list and persists to disk.
+private func saveEditorOnBackBehavior() -> Behavior<AppAction, AppState, World> {
+    .handle { action, context in
+        guard case .navigation(.setPath(let newPath)) = action,
+              newPath.isEmpty,
+              context.stateBefore?.navigation.path.last == .editor,
+              let doc = context.stateBefore?.editor.document
+        else { return .doNothing }
+        return .produce { _ in .just(.home(.saveDocument(doc))) }
+    }
+}
 
 /// Intercepts Home actions that imply navigation and dispatches the appropriate
 /// route push + target-feature document load. Lives here — not inside NavigationFeature —

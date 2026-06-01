@@ -142,11 +142,25 @@ struct EditorFeatureBehaviorTests {
         }
     }
 
-    @Test func updateCompartmentIntake() {
+    @Test func updateCompartmentIntakeSetsIntakeAndFraction() {
         let initial = loaded()
+        // Enabling intake also sets fraction=1.0 so the solver has non-zero initial conditions.
         store(initial: initial).dispatch(.updateCompartmentIntake(id: "B", value: true)) { state in
             state.document.model = state.document.model.updatingCompartment(id: "B") {
-                $0.with(intake: true)
+                $0.with(intake: true).with(fraction: 1.0)
+            }
+        }
+    }
+
+    @Test func updateCompartmentIntakeClearsFractionOnDisable() {
+        var initial = loaded()
+        // Disabling intake resets fraction to 0.
+        initial.document.model = initial.document.model.updatingCompartment(id: "A") {
+            $0.with(intake: true).with(fraction: 1.0)
+        }
+        store(initial: initial).dispatch(.updateCompartmentIntake(id: "A", value: false)) { state in
+            state.document.model = state.document.model.updatingCompartment(id: "A") {
+                $0.with(intake: false).with(fraction: 0)
             }
         }
     }

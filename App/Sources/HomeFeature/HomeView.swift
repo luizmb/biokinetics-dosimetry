@@ -1,247 +1,437 @@
 import AppDomain
 import SwiftRexArchitecture
 import SwiftUI
+import UIComponents
 import UniformTypeIdentifiers
 
-// MARK: - HomeView
+// MARK: - HomeView (container — thin SwiftRex wrapper)
 
 @BoundTo(HomeFeature.self)
 public struct HomeView: View {
-    @Environment(\.horizontalSizeClass) private var hSize
-
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 16)
-                cardGrid
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 48)
-            }
-        }
-        .background(Color.platformGroupedBackground.ignoresSafeArea())
-        .navigationTitle("")
-        .inlineNavigationTitle()
-        .fileImporter(
-            isPresented: Binding(
+        HomeContent(
+            cards: viewModel.cards.loadedOrPrevious ?? [],
+            isLoading: viewModel.cards.is(.loading),
+            importErrorMessage: viewModel.importErrorMessage,
+            isFilePickerPresented: Binding(
                 get: { viewModel.filePicker.is(.loading) },
-                // Only dispatch filePickerDismissed if still .loading — avoids a spurious
-                // dismiss when importXML already moved us to .loaded(()).
                 set: { presenting in
                     if !presenting && viewModel.filePicker.is(.loading) {
                         viewModel.dispatch(.filePickerDismissed)
                     }
                 }
             ),
+            onOpenFilePicker: { viewModel.dispatch(.openFilePicker) },
+            onNewDocument:    { viewModel.dispatch(.newDocument) },
+            onEdit:           { viewModel.dispatch(.editDocument($0)) },
+            onCalculate:      { viewModel.dispatch(.calculateDocument($0)) },
+            onDelete:         { viewModel.dispatch(.deleteDocument($0)) },
+            onImportXML:      { viewModel.dispatch(.importXML($0)) }
+        )
+    }
+}
+
+// MARK: - HomeContent (pure view — no SwiftRex dependency)
+
+struct HomeContent: View {
+    // MARK: Props
+    let cards: [HomeFeature.ViewModel.DocumentCard]
+    let isLoading: Bool
+    let importErrorMessage: String?
+    @Binding var isFilePickerPresented: Bool
+    var onOpenFilePicker: () -> Void
+    var onNewDocument:    () -> Void
+    var onEdit:           (ModelDocument) -> Void
+    var onCalculate:      (ModelDocument) -> Void
+    var onDelete:         (ModelDocument.ID) -> Void
+    var onImportXML:      (Data) -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isCompact: Bool { hSize == .compact }
+
+    var body: some View {
+        ZStack {
+            GlassAppBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    if let msg = importErrorMessage {
+                        GBanner(tone: .danger,
+                                systemImage: "exclamationmark.triangle",
+                                message: msg)
+                            .padding(.horizontal, isCompact ? 16 : 36)
+                            .padding(.bottom, 8)
+                    }
+                    contentArea
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: $isFilePickerPresented,
             allowedContentTypes: [UTType(filenameExtension: "xml") ?? .data]
         ) { result in
             if case .success(let url) = result,
                url.startAccessingSecurityScopedResource(),
                let data = try? Data(contentsOf: url) {
                 url.stopAccessingSecurityScopedResource()
-                viewModel.dispatch(.importXML(data))
+                onImportXML(data)
             }
         }
-        .alert(
-            "Import Error",
-            isPresented: Binding(
-                get: { viewModel.cards.is(.failed) },
-                set: { _ in }
-            ),
-            presenting: viewModel.cards.failed?.0.localizedDescription
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { msg in
-            Text(msg)
-        }
+        .inlineNavigationTitle()
     }
 
     // MARK: - Header
 
+    @ViewBuilder
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Biokinetics")
-                    .font(.largeTitle.bold())
-                Text("& Dosimetry")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                viewModel.dispatch(.openFilePicker)
-            } label: {
-                Label("Open XML", systemImage: "doc.badge.arrow.up")
-                    .font(.subheadline.weight(.medium))
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+        let vPad: CGFloat = isCompact ? 6 : 28
+        let hPad: CGFloat = isCompact ? 16 : 36
 
-            Button {
-                viewModel.dispatch(.newDocument)
-            } label: {
-                Label("New", systemImage: "plus")
-                    .font(.subheadline.weight(.medium))
+        VStack(alignment: .leading, spacing: 0) {
+            // Action pills row
+            HStack(spacing: 8) {
+                Spacer()
+                GPill(intensity: 0.85, action: onOpenFilePicker) {
+                    Label("Open XML", systemImage: "doc.badge.arrow.up")
+                        .font(.system(size: isCompact ? 14 : 15, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, isCompact ? 13 : 16)
+                        .frame(height: isCompact ? 38 : 42)
+                }
+                GButton("New", icon: Image(systemName: "plus"),
+                        size: isCompact ? .sm : .md, action: onNewDocument)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            .padding(.horizontal, hPad)
+            .padding(.top, isCompact ? 4 : 8)
+
+            // Large title
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Biokinetics")
+                    .font(.system(size: isCompact ? 40 : 44, weight: .heavy))
+                    .tracking(-1.4)
+                    .foregroundStyle(.primary)
+                Text("& Dosimetry")
+                    .font(.system(size: isCompact ? 20 : 22, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, hPad)
+            .padding(.top, 4)
+            .padding(.bottom, vPad)
         }
     }
 
-    // MARK: - Card grid
+    // MARK: - Content area (grid vs list)
 
     @ViewBuilder
-    private var cardGrid: some View {
-        let columns: [GridItem] = hSize == .compact
-            ? [GridItem(.flexible())]
-            : Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+    private var contentArea: some View {
+        let hPad: CGFloat = isCompact ? 16 : 36
 
-        LazyVGrid(columns: columns, spacing: 16) {
-            newModelTile
-            ForEach(viewModel.cards.loadedOrPrevious ?? []) { card in
-                ModelCard(card: card) {
-                    viewModel.dispatch(.editDocument(card.document))
-                } onCalculate: {
-                    viewModel.dispatch(.calculateDocument(card.document))
-                } onDelete: {
-                    viewModel.dispatch(.deleteDocument(card.id))
+        if isCompact {
+            compactList.padding(.horizontal, hPad).padding(.bottom, 48)
+        } else {
+            regularGrid.padding(.horizontal, hPad).padding(.bottom, 48)
+        }
+    }
+
+    // MARK: - Compact (iPhone-style flat list)
+
+    private var compactList: some View {
+        VStack(spacing: 14) {
+            newModelBox(big: cards.isEmpty)
+            if isLoading {
+                loadingSpinner
+            } else if !cards.isEmpty {
+                GCard(cornerRadius: 22, intensity: 0.5,
+                      tint: colorScheme == .dark
+                            ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.34)
+                            : Color.white.opacity(0.42)) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(cards.enumerated()), id: \.1.id) { idx, card in
+                            if idx > 0 { GlassDivider() }
+                            HomeListRow(
+                                card: card,
+                                onEdit:    { onEdit(card.document) },
+                                onCalculate: { onCalculate(card.document) },
+                                onDelete:  { onDelete(card.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    private var newModelTile: some View {
-        Button {
-            viewModel.dispatch(.newDocument)
-        } label: {
-            VStack(spacing: 12) {
+    // MARK: - Regular (iPad 3-column grid)
+
+    private var regularGrid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 3),
+            spacing: 20
+        ) {
+            newModelBox(big: false)
+            if isLoading {
+                loadingSpinnerCard
+            } else {
+                ForEach(cards) { card in
+                    HomeModelCard(
+                        card: card,
+                        onEdit:      { onEdit(card.document) },
+                        onCalculate: { onCalculate(card.document) },
+                        onDelete:    { onDelete(card.id) }
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - New model box
+
+    private func newModelBox(big: Bool) -> some View {
+        Button(action: onNewDocument) {
+            VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
+                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6]))
                         .foregroundStyle(.tertiary)
-                        .frame(width: 52, height: 52)
+                        .frame(width: 60, height: 60)
                     Image(systemName: "plus")
-                        .font(.title2.weight(.light))
+                        .font(.system(size: 22, weight: .light))
                         .foregroundStyle(.secondary)
                 }
                 Text("New blank model")
-                    .font(.subheadline.weight(.medium))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 164)
+            .frame(minHeight: big ? 220 : 132)
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6]))
-                    .foregroundStyle(.quaternary)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        style: StrokeStyle(lineWidth: 2, dash: [6]),
+                        antialiased: true
+                    )
+                    .foregroundStyle(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.22)
+                            : Color.black.opacity(0.20)
+                    )
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.03)
+                            : Color.white.opacity(0.28)
+                    )
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Loading
+
+    private var loadingSpinner: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Loading documents…")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    private var loadingSpinnerCard: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Loading…")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 164)
+        .glassBackground(cornerRadius: 20)
     }
 }
 
-// MARK: - ModelCard
+// MARK: - HomeListRow (compact flat-list card)
 
-private struct ModelCard: View {
+private struct HomeListRow: View {
     let card: HomeFeature.ViewModel.DocumentCard
     var onEdit: () -> Void
     var onCalculate: () -> Void
     var onDelete: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    private var dark: Bool { colorScheme == .dark }
+    @Environment(\.glassTokens) private var g
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            tintSwatchRow
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
-
-            Divider().opacity(0.4)
+            HStack(alignment: .center, spacing: 10) {
+                SwatchCluster(tints: card.tints)
+                Spacer()
+                if card.halfLife > 0 {
+                    GPill(intensity: 0.7) {
+                        Text("T½ \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(g.muted)
+                            .padding(.horizontal, 11)
+                            .frame(height: 26)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name)
-                    .font(.headline)
-                    .lineLimit(1)
+                    .font(.system(size: 20, weight: .bold))
+                    .tracking(-0.3)
                 if !card.description.isEmpty {
                     Text(card.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .font(.system(size: 14.5))
+                        .foregroundStyle(g.muted)
                 }
-                HStack(spacing: 8) {
-                    Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
-                    Label("\(card.connectionCount)", systemImage: "arrow.triangle.branch")
+                HStack(spacing: 16) {
+                    countStat(systemImage: "square.stack.3d.up", n: card.compartmentCount)
+                    countStat(systemImage: "arrow.triangle.branch", n: card.connectionCount)
                 }
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .padding(.top, 7)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
 
-            Divider().opacity(0.4)
+            GlassDivider()
 
             HStack(spacing: 0) {
-                actionBtn("Edit", icon: "pencil", action: onEdit)
-                Divider().frame(height: 36)
-                actionBtn("Calculate", icon: "waveform.path.ecg", action: onCalculate)
-                Divider().frame(height: 36)
-                actionBtn("", icon: "trash", role: .destructive, width: 44, action: onDelete)
-            }
-        }
-        .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(dark ? 0.28 : 0.07), radius: 8, y: 3)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-
-    private var tintSwatchRow: some View {
-        HStack {
-            HStack(spacing: -6) {
-                ForEach(Array(card.tints.prefix(5).enumerated()), id: \.0) { idx, tint in
-                    Circle()
-                        .fill(tint.fillColor(dark: dark))
-                        .overlay(Circle().strokeBorder(tint.strokeColor(dark: dark), lineWidth: 0.5))
-                        .frame(width: 22, height: 22)
-                        .zIndex(Double(5 - idx))
-                }
-            }
-            Spacer()
-            if card.halfLife > 0 {
-                Text("T½ \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(.quaternary, in: Capsule())
+                actionBtn("Edit",      systemImage: "pencil",           accent: true,  action: onEdit)
+                GlassVDivider().frame(height: 26)
+                actionBtn("Calculate", systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
+                GlassVDivider().frame(height: 26)
+                actionBtn("",          systemImage: "trash",             accent: false, danger: true, action: onDelete)
+                    .frame(width: 52)
             }
         }
     }
 
-    @ViewBuilder
     private func actionBtn(
         _ label: String,
-        icon: String,
-        role: ButtonRole? = nil,
-        width: CGFloat? = nil,
+        systemImage: String,
+        accent: Bool,
+        danger: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button(role: role, action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 12, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 12, weight: .medium)) }
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .medium))
+                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)) }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 40)
+            .foregroundStyle(danger
+                             ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
+                             : g.accent)
+            .frame(maxWidth: label.isEmpty ? nil : .infinity)
+            .frame(height: 46)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(role == .destructive ? .red : .accentColor)
-        .frame(width: width)
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func countStat(systemImage: String, n: Int) -> some View {
+        Label("\(n)", systemImage: systemImage)
+            .font(.system(size: 13.5))
+            .foregroundStyle(g.faint)
+    }
+}
+
+// MARK: - HomeModelCard (iPad grid card)
+
+private struct HomeModelCard: View {
+    let card: HomeFeature.ViewModel.DocumentCard
+    var onEdit: () -> Void
+    var onCalculate: () -> Void
+    var onDelete: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.glassTokens) private var g
+
+    var body: some View {
+        GCard(cornerRadius: 20, intensity: 0.55,
+              tint: colorScheme == .dark
+                    ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.40)
+                    : Color.white.opacity(0.50)) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Swatches + half-life
+                HStack {
+                    SwatchCluster(tints: card.tints)
+                    Spacer()
+                    if card.halfLife > 0 {
+                        GPill(intensity: 0.7) {
+                            Text("T½ \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                                .font(.system(size: 12.5, weight: .semibold))
+                                .foregroundStyle(g.muted)
+                                .padding(.horizontal, 11)
+                                .frame(height: 26)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+
+                // Name + description + counts
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(card.name)
+                        .font(.system(size: 20, weight: .bold))
+                        .tracking(-0.3)
+                    if !card.description.isEmpty {
+                        Text(card.description)
+                            .font(.system(size: 14.5))
+                            .foregroundStyle(g.muted)
+                    }
+                    HStack(spacing: 16) {
+                        Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
+                        Label("\(card.connectionCount)", systemImage: "arrow.triangle.branch")
+                    }
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(g.faint)
+                    .padding(.top, 8)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                GlassDivider()
+
+                // Action row
+                HStack(spacing: 0) {
+                    gridActionBtn("Edit",      systemImage: "pencil",            action: onEdit)
+                    GlassVDivider().frame(height: 26)
+                    gridActionBtn("Calculate", systemImage: "waveform.path.ecg", action: onCalculate)
+                    GlassVDivider().frame(height: 26)
+                    gridActionBtn("",          systemImage: "trash", danger: true, action: onDelete)
+                        .frame(width: 48)
+                }
+            }
+        }
+    }
+
+    private func gridActionBtn(
+        _ label: String,
+        systemImage: String,
+        danger: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage).font(.system(size: 13, weight: .medium))
+                if !label.isEmpty { Text(label).font(.system(size: 14.5, weight: .semibold)) }
+            }
+            .foregroundStyle(danger
+                             ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
+                             : g.accent)
+            .frame(maxWidth: label.isEmpty ? nil : .infinity)
+            .frame(height: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

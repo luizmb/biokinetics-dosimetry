@@ -12,7 +12,14 @@ where Action == HomeFeature.Action,
         lift(
             action:      AppAction.prism.home,
             state:       AppState.lens.home,
-            environment: \.xmlDecoder >>> HomeFeature.Environment.init
+            environment: { world in
+                HomeModule.Environment(
+                    xmlDecoder:       world.xmlDecoder,
+                    saveDocument:     world.saveDocument,
+                    loadAllDocuments: world.loadAllDocuments,
+                    deleteDocument:   world.deleteDocument
+                )
+            }
         )
     }
 }
