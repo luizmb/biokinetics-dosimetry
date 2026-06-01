@@ -39,6 +39,7 @@ public struct HomeView: View {
             onCancelNewDocument: { viewModel.dispatch(.dismissCreationSheet) },
             onEdit:              { viewModel.dispatch(.editDocument($0)) },
             onCalculate:         { viewModel.dispatch(.calculateDocument($0)) },
+            onDuplicate:         { viewModel.dispatch(.duplicateDocument($0)) },
             onDelete:            { viewModel.dispatch(.deleteDocument($0)) },
             onImportFile: { ext, data in
                 switch ext.lowercased() {
@@ -62,12 +63,13 @@ struct HomeContent: View {
     @Binding var isCreationSheetPresented: Bool
     @Binding var draftField: ModelField
     @Binding var draftName: String
-    var onOpenFilePicker:    () -> Void
-    var onOpenCreationSheet: () -> Void
+    var onOpenFilePicker:     () -> Void
+    var onOpenCreationSheet:  () -> Void
     var onConfirmNewDocument: () -> Void
     var onCancelNewDocument: () -> Void
     var onEdit:              (ModelDocument) -> Void
     var onCalculate:         (ModelDocument) -> Void
+    var onDuplicate:         (ModelDocument.ID) -> Void
     var onDelete:            (ModelDocument.ID) -> Void
     var onImportFile:        (String, Data) -> Void
 
@@ -188,9 +190,10 @@ struct HomeContent: View {
                             if idx > 0 { GlassDivider() }
                             HomeListRow(
                                 card: card,
-                                onEdit:    { onEdit(card.document) },
+                                onEdit:      { onEdit(card.document) },
                                 onCalculate: { onCalculate(card.document) },
-                                onDelete:  { onDelete(card.id) }
+                                onDuplicate: { onDuplicate(card.id) },
+                                onDelete:    { onDelete(card.id) }
                             )
                         }
                     }
@@ -215,6 +218,7 @@ struct HomeContent: View {
                         card: card,
                         onEdit:      { onEdit(card.document) },
                         onCalculate: { onCalculate(card.document) },
+                        onDuplicate: { onDuplicate(card.id) },
                         onDelete:    { onDelete(card.id) }
                     )
                 }
@@ -294,9 +298,10 @@ struct HomeContent: View {
 
 private struct HomeListRow: View {
     let card: HomeFeature.ViewModel.DocumentCard
-    var onEdit: () -> Void
+    var onEdit:      () -> Void
     var onCalculate: () -> Void
-    var onDelete: () -> Void
+    var onDuplicate: () -> Void
+    var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -345,6 +350,9 @@ private struct HomeListRow: View {
                 GlassVDivider().frame(height: 26)
                 actionBtn("Calculate", systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
                 GlassVDivider().frame(height: 26)
+                actionBtn("",          systemImage: "doc.on.doc",        accent: false, action: onDuplicate)
+                    .frame(width: 52)
+                GlassVDivider().frame(height: 26)
                 actionBtn("",          systemImage: "trash",             accent: false, danger: true, action: onDelete)
                     .frame(width: 52)
             }
@@ -385,9 +393,10 @@ private struct HomeListRow: View {
 
 private struct HomeModelCard: View {
     let card: HomeFeature.ViewModel.DocumentCard
-    var onEdit: () -> Void
+    var onEdit:      () -> Void
     var onCalculate: () -> Void
-    var onDelete: () -> Void
+    var onDuplicate: () -> Void
+    var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -443,6 +452,9 @@ private struct HomeModelCard: View {
                     gridActionBtn("Edit",      systemImage: "pencil",            action: onEdit)
                     GlassVDivider().frame(height: 26)
                     gridActionBtn("Calculate", systemImage: "waveform.path.ecg", action: onCalculate)
+                    GlassVDivider().frame(height: 26)
+                    gridActionBtn("",          systemImage: "doc.on.doc",         action: onDuplicate)
+                        .frame(width: 48)
                     GlassVDivider().frame(height: 26)
                     gridActionBtn("",          systemImage: "trash", danger: true, action: onDelete)
                         .frame(width: 48)

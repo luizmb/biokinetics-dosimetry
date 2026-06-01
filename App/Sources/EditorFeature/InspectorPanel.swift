@@ -31,6 +31,7 @@ struct NuclideEditBinding {
 struct EditorInspectorPanel: View {
     // Data props (read-only)
     @Binding var documentName: String
+    @Binding var documentDescription: String
     @Binding var field: ModelField
     let lingo: FieldLingo
     let nuclides:             [EditorFeature.ViewModel.NuclideRow]
@@ -356,6 +357,15 @@ struct EditorInspectorPanel: View {
                 TextField("Model name", text: $documentName)
                     .padding(.horizontal, 14)
                     .frame(height: 44)
+            }
+            .padding(.bottom, 14)
+
+            GLabel("Description")
+            GCard(cornerRadius: 12, intensity: 0.5) {
+                TextField("Optional description", text: $documentDescription, axis: .vertical)
+                    .lineLimit(3...5)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
             }
             .padding(.bottom, 18)
 

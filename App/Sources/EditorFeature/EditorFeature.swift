@@ -73,6 +73,7 @@ public enum EditorFeature {
         case setInspectorTab(InspectorTab)
         // Document-level mutations
         case renameDocument(String)
+        case updateDescription(String)
         case updateField(ModelField)
         case updateHalfLife(Double)
         // Nuclide management
@@ -156,6 +157,7 @@ public enum EditorFeature {
 
         public struct ViewState: Sendable, Equatable {
             public var documentName: String = ""
+            public var documentDescription: String = ""
             public var field: ModelField = .generic
             public var lingo: FieldLingo = ModelField.generic.lingo
             /// Shortcut for the primary nuclide's half-life; kept for the toolbar badge.
@@ -202,6 +204,7 @@ public enum EditorFeature {
             case selectLink(Int?)
             case setInspectorTab(InspectorTab)
             case renameDocument(String)
+            case updateDescription(String)
             case updateField(ModelField)
             // Nuclide management
             case addNuclide
@@ -300,6 +303,7 @@ public enum EditorFeature {
 
         return ViewModel.ViewState(
             documentName: doc.name,
+            documentDescription: doc.description,
             field: doc.field,
             lingo: doc.field.lingo,
             halfLife: doc.halfLife,
@@ -336,6 +340,7 @@ public enum EditorFeature {
         case .selectLink(let idx):                                 .selectLink(idx)
         case .setInspectorTab(let tab):                            .setInspectorTab(tab)
         case .renameDocument(let n):                               .renameDocument(n)
+        case .updateDescription(let d):                            .updateDescription(d)
         case .updateField(let f):                                  .updateField(f)
         case .addNuclide:                                          .addNuclide
         case .updateNuclideName(let id, let n):                    .updateNuclideName(id: id, name: n)
@@ -405,6 +410,9 @@ public enum EditorFeature {
             case .renameDocument(let name):
                 .reduce { $0.document.name = name }
 
+            case .updateDescription(let desc):
+                .reduce { $0.document.description = desc }
+
             case .updateField(let f):
                 .reduce { $0.document.field = f }
 
@@ -419,7 +427,7 @@ public enum EditorFeature {
             case .addNuclide:
                 .reduce { state in
                     let id = String(UUID().uuidString.prefix(8).lowercased())
-                    let nuclide = Nuclide(id: id, name: "New Nuclide", halfLife: 0)
+                    let nuclide = Nuclide(id: id, name: "New \(state.document.field.lingo.substanceName)", halfLife: 0)
                     state.document.model = state.document.model.with(
                         nuclides: state.document.model.nuclides + [nuclide]
                     )

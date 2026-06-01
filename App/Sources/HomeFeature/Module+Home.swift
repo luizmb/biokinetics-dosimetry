@@ -55,6 +55,7 @@ public enum HomeModule {
         case importCSV(Data)
         case importResult(Result<ModelDocument, DecodingError>)
         case saveDocument(ModelDocument)
+        case duplicateDocument(ModelDocument.ID)
         case deleteDocument(ModelDocument.ID)
         case edit(document: ModelDocument)
         case calculate(document: ModelDocument)
