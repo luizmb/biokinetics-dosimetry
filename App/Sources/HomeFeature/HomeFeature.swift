@@ -35,6 +35,7 @@ public enum HomeFeature {
             public var id: UUID
             public var name: String
             public var description: String
+            public var field: ModelField
             public var halfLife: Double
             public var compartmentCount: Int
             public var connectionCount: Int
@@ -74,6 +75,7 @@ public enum HomeFeature {
                         id: doc.id,
                         name: doc.name,
                         description: doc.description,
+                        field: doc.field,
                         halfLife: doc.halfLife,
                         compartmentCount: doc.model.compartments.count,
                         connectionCount: doc.model.connections.count,
@@ -145,10 +147,13 @@ public enum HomeFeature {
                                 ctx.environment.xmlDecoder
                                     .dataDecoder(for: IpenXmlModel.self)(data)
                                     .map { xmlModel -> ModelDocument in
-                                        var doc = xmlModel.toCompartmentalModel().asModelDocument
-                                        if let name = xmlModel.modelo?.name, !name.isEmpty { doc.name = name }
-                                        if let desc = xmlModel.modelo?.description, !desc.isEmpty { doc.description = desc }
-                                        return doc
+                                        let model = xmlModel.toCompartmentalModel()
+                                        return ModelDocument(
+                                            name: xmlModel.modelo?.name ?? "Imported Model",
+                                            description: xmlModel.modelo?.description ?? "",
+                                            model: model,
+                                            visuals: Self.visuals(from: xmlModel, model: model)
+                                        )
                                     }
                             )
                         )
@@ -198,4 +203,65 @@ public enum HomeFeature {
     }
 
     public typealias Content = HomeView
+
+    // MARK: - Visual layout helpers
+
+    /// Builds `CompartmentVisuals` for an imported IPEN XML model.
+    ///
+    /// **Strategy (in priority order):**
+    /// 1. If every compartment has `PosLeft`/`PosTop` data, use those CBT
+    ///    pixel coordinates scaled to the 900×620 canvas. This preserves the
+    ///    original topology layout designed by the model author.
+    /// 2. Fallback: circular layout with radius 165 — small enough that the
+    ///    full circle fits inside the iPhone's default visible canvas window
+    ///    (canvas x ∈ [255, 645] at scale=1, offset=0).
+    private static func visuals(
+        from xmlModel: IpenXmlModel,
+        model: CompartmentalModel
+    ) -> [String: CompartmentVisuals] {
+        let tints = CompartmentTint.allCases
+
+        // Collect raw CBT centre-points for every compartment that has position data.
+        let rawPos: [Int: (x: Double, y: Double)] = xmlModel.compartments.reduce(into: [:]) { d, c in
+            guard let left = c.posLeft, let top = c.posTop else { return }
+            let cx = Double(left) + Double(c.posWidth  ?? 100) * 0.5
+            let cy = Double(top)  + Double(c.posHeight ?? 50)  * 0.5
+            d[c.number] = (cx, cy)
+        }
+
+        let margin = 50.0   // canvas-unit padding on each side
+        let canvasW = 900.0, canvasH = 620.0
+
+        var xmlPos: [Int: (x: Double, y: Double)] = [:]
+        if rawPos.count == xmlModel.compartments.count {
+            // Normalise from actual data bounds → fit everything inside the canvas.
+            let xs = rawPos.values.map(\.x), ys = rawPos.values.map(\.y)
+            let minX = xs.min() ?? 0, maxX = xs.max() ?? 1
+            let minY = ys.min() ?? 0, maxY = ys.max() ?? 1
+            let rangeX = max(maxX - minX, 1), rangeY = max(maxY - minY, 1)
+            // Uniform scale so relative positions are preserved (no distortion).
+            let scale = min((canvasW - 2 * margin) / rangeX,
+                            (canvasH - 2 * margin) / rangeY)
+            // Center the scaled model in the canvas.
+            let offsetX = (canvasW - rangeX * scale) / 2
+            let offsetY = (canvasH - rangeY * scale) / 2
+            for (number, p) in rawPos {
+                xmlPos[number] = ((p.x - minX) * scale + offsetX,
+                                  (p.y - minY) * scale + offsetY)
+            }
+        }
+
+        let useXML = xmlPos.count == xmlModel.compartments.count
+        let cx = 450.0, cy = 310.0, radius = 165.0
+        return Dictionary(uniqueKeysWithValues: model.compartments.enumerated().map { idx, comp in
+            let pos: (Double, Double)
+            if useXML, let n = Int(comp.id), let p = xmlPos[n] {
+                pos = p
+            } else {
+                let angle = 2 * .pi * Double(idx) / Double(max(model.compartments.count, 1)) - .pi / 2
+                pos = (cx + radius * cos(angle), cy + radius * sin(angle))
+            }
+            return (comp.id, CompartmentVisuals(x: pos.0, y: pos.1, tint: tints[idx % tints.count]))
+        })
+    }
 }

@@ -93,6 +93,7 @@ public enum CalculatorFeature {
 
         public struct ViewState: Sendable, Equatable {
             public var documentName: String = ""
+            public var lingo: FieldLingo = ModelField.generic.lingo
             public var halfLife: Double = 0
             public var compartmentNames: [String] = []
             /// Sorted variant keys available for this document (empty = no variants).
@@ -208,6 +209,7 @@ public enum CalculatorFeature {
 
         return ViewModel.ViewState(
             documentName: doc.name,
+            lingo: doc.field.lingo,
             halfLife: doc.halfLife,
             compartmentNames: doc.model.compartments.map(\.name),
             variants: doc.variants.keys.sorted(),

@@ -72,6 +72,8 @@ public enum EditorFeature {
         case selectLink(Int?)
         case setInspectorTab(InspectorTab)
         // Document-level mutations
+        case renameDocument(String)
+        case updateField(ModelField)
         case updateHalfLife(Double)
         // Nuclide management
         case addNuclide
@@ -154,6 +156,8 @@ public enum EditorFeature {
 
         public struct ViewState: Sendable, Equatable {
             public var documentName: String = ""
+            public var field: ModelField = .generic
+            public var lingo: FieldLingo = ModelField.generic.lingo
             /// Shortcut for the primary nuclide's half-life; kept for the toolbar badge.
             public var halfLife: Double = 0
             public var nuclides: [NuclideRow] = []
@@ -197,6 +201,8 @@ public enum EditorFeature {
             case selectCompartment(String?)
             case selectLink(Int?)
             case setInspectorTab(InspectorTab)
+            case renameDocument(String)
+            case updateField(ModelField)
             // Nuclide management
             case addNuclide
             case updateNuclideName(id: String, name: String)
@@ -294,6 +300,8 @@ public enum EditorFeature {
 
         return ViewModel.ViewState(
             documentName: doc.name,
+            field: doc.field,
+            lingo: doc.field.lingo,
             halfLife: doc.halfLife,
             nuclides: nuclides,
             compartments: compartments,
@@ -327,6 +335,8 @@ public enum EditorFeature {
         case .selectCompartment(let id):                           .selectCompartment(id)
         case .selectLink(let idx):                                 .selectLink(idx)
         case .setInspectorTab(let tab):                            .setInspectorTab(tab)
+        case .renameDocument(let n):                               .renameDocument(n)
+        case .updateField(let f):                                  .updateField(f)
         case .addNuclide:                                          .addNuclide
         case .updateNuclideName(let id, let n):                    .updateNuclideName(id: id, name: n)
         case .updateNuclideHalfLife(let id, let hl):               .updateNuclideHalfLife(id: id, halfLife: hl)
@@ -391,6 +401,12 @@ public enum EditorFeature {
 
             case .setInspectorTab(let tab):
                 .reduce { $0.inspectorTab = tab }
+
+            case .renameDocument(let name):
+                .reduce { $0.document.name = name }
+
+            case .updateField(let f):
+                .reduce { $0.document.field = f }
 
             case .updateHalfLife(let hl):
                 .reduce { state in
@@ -489,11 +505,21 @@ public enum EditorFeature {
                 }
 
             case .updateCompartmentIntake(let id, let value):
-                // Setting intake=true also sets fraction=1.0 so the solver has a non-zero
-                // initial condition. Clearing it resets fraction to 0.
+                // Toggle the intake flag, then redistribute fractions equally among all
+                // intake compartments so the sum stays at 1.0 by default.
+                // The user can reduce individual fractions afterwards (e.g. for inhalation
+                // models where some fraction is exhaled).  The sum must never exceed 1.0.
                 .reduce { state in
                     state.document.model = state.document.model.updatingCompartment(id: id) {
-                        $0.with(intake: value).with(fraction: value ? 1.0 : 0)
+                        $0.with(intake: value).with(fraction: 0)   // temporary 0; will be set below
+                    }
+                    let intakeIds = state.document.model.compartments.filter(\.intake).map(\.id)
+                    let n = intakeIds.count
+                    let equalFraction = n > 0 ? 1.0 / Double(n) : 0
+                    for iid in intakeIds {
+                        state.document.model = state.document.model.updatingCompartment(id: iid) {
+                            $0.with(fraction: equalFraction)
+                        }
                     }
                 }
 

@@ -56,6 +56,16 @@ public struct EditorView: View {
             )
         }
 
+        let documentNameBinding = Binding(
+            get: { viewModel.documentName },
+            set: { viewModel.dispatch(.renameDocument($0)) }
+        )
+
+        let fieldBinding = Binding(
+            get: { viewModel.field },
+            set: { viewModel.dispatch(.updateField($0)) }
+        )
+
         // Nuclide field bindings — one entry per nuclide in the document.
         let nuclideBindings: [NuclideEditBinding] = viewModel.nuclides.map { n in
             NuclideEditBinding(
@@ -74,7 +84,9 @@ public struct EditorView: View {
         }
 
         return EditorContent(
-            documentName:       viewModel.documentName,
+            documentName:       documentNameBinding,
+            field:              fieldBinding,
+            lingo:              viewModel.lingo,
             halfLife:           viewModel.halfLife,
             nuclides:           viewModel.nuclides,
             compartments:       viewModel.compartments,
@@ -134,7 +146,9 @@ public struct EditorView: View {
 
 struct EditorContent: View {
     // MARK: Read-only view state
-    let documentName: String
+    var documentName: Binding<String>
+    var field: Binding<ModelField>
+    let lingo: FieldLingo
     let halfLife: Double
     let nuclides: [EditorFeature.ViewModel.NuclideRow]
     let compartments: [EditorFeature.ViewModel.CompartmentRow]
@@ -201,7 +215,7 @@ struct EditorContent: View {
             GlassAppBackground()
             if isCompact { compactLayout } else { regularLayout }
         }
-        .navigationTitle(documentName)
+        .navigationTitle(documentName.wrappedValue)
         .toolbar { toolbarItems }
     }
 
@@ -211,7 +225,7 @@ struct EditorContent: View {
         HStack(spacing: 0) {
             if isLeftPanelVisible {
                 EditorModelListPanel(
-                    nuclides: nuclides, compartments: compartments, links: links,
+                    lingo: lingo, nuclides: nuclides, compartments: compartments, links: links,
                     selectedCompartmentId: selectedCompartmentId,
                     selectedLinkIndex: selectedLinkIndex,
                     selectionFooterLabel: selectionFooterLabel,
@@ -248,6 +262,9 @@ struct EditorContent: View {
 
             if isRightPanelVisible {
                 EditorInspectorPanel(
+                    documentName: documentName,
+                    field: field,
+                    lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,
                     links: links,
@@ -396,6 +413,9 @@ struct EditorContent: View {
         return NavigationStack {
             ScrollView {
                 EditorInspectorPanel(
+                    documentName: documentName,
+                    field: field,
+                    lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,
                     links: links,
@@ -437,7 +457,7 @@ struct EditorContent: View {
     private var modelListSheet: some View {
         NavigationStack {
             EditorModelListPanel(
-                nuclides: nuclides, compartments: compartments, links: links,
+                lingo: lingo, nuclides: nuclides, compartments: compartments, links: links,
                 selectedCompartmentId: selectedCompartmentId,
                 selectedLinkIndex: selectedLinkIndex,
                 selectionFooterLabel: selectionFooterLabel,
@@ -507,22 +527,14 @@ struct EditorContent: View {
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .platformNavigationLeading) {
-            HStack(spacing: 6) {
-                if halfLife > 0 {
-                    Text("T½ \(halfLife.formatted(.number.precision(.fractionLength(1)))) d")
-                        .font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(.quaternary, in: Capsule())
-                }
-                if !validationIssues.isEmpty {
-                    let errorCount = validationIssues.filter { $0.severity == .error }.count
-                    let tint: Color = errorCount > 0 ? .orange : .yellow
-                    Label("\(validationIssues.count)", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(tint)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(tint.opacity(0.12), in: Capsule())
-                }
+            if !validationIssues.isEmpty {
+                let errorCount = validationIssues.filter { $0.severity == .error }.count
+                let tint: Color = errorCount > 0 ? .orange : .yellow
+                Label("\(validationIssues.count)", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(tint.opacity(0.12), in: Capsule())
             }
         }
         ToolbarItemGroup(placement: .platformNavigationTrailing) {

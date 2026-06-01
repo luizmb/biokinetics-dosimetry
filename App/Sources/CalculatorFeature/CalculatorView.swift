@@ -59,6 +59,7 @@ public struct CalculatorView: View {
 
         return CalculatorContent(
             documentName:         viewModel.documentName,
+            lingo:                viewModel.lingo,
             halfLife:             viewModel.halfLife,
             variants:             viewModel.variants,
             solver:               viewModel.solver,
@@ -96,6 +97,7 @@ public struct CalculatorView: View {
 struct CalculatorContent: View {
     // MARK: Read-only view state
     let documentName: String
+    let lingo: FieldLingo
     let halfLife: Double
     let variants: [String]
     let solver: SolverMethod
@@ -301,7 +303,7 @@ struct CalculatorContent: View {
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .platformNavigationLeading) {
             if halfLife > 0 {
-                Text("T½ \(halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) d")
                     .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(.quaternary, in: Capsule())
