@@ -14,10 +14,12 @@ public extension CompartmentalModel {
 }
 
 /// Assigns a circular layout and cycling tints to freshly imported compartments.
-private func defaultVisuals(for model: CompartmentalModel) -> [String: CompartmentVisuals] {
+func defaultVisuals(for model: CompartmentalModel) -> [String: CompartmentVisuals] {
     let tints = CompartmentTint.allCases
     let count = model.compartments.count
-    let cx = 450.0, cy = 310.0, radius = 220.0
+    // radius 165: the full circle fits inside the iPhone visible canvas
+    // window (canvas x ∈ [255, 645] at default scale=1, offset=0).
+    let cx = 450.0, cy = 310.0, radius = 165.0
     return model.compartments.enumerated().reduce(into: [String: CompartmentVisuals]()) { dict, pair in
         let (idx, compartment) = pair
         let angle = 2 * Double.pi * Double(idx) / Double(max(count, 1)) - Double.pi / 2
