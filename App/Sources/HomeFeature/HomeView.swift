@@ -271,7 +271,7 @@ private struct HomeListRow: View {
                 Spacer()
                 if card.halfLife > 0 {
                     GPill(intensity: 0.7) {
-                        Text("T½ \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                        Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
                             .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(g.muted)
                             .padding(.horizontal, 11)
@@ -367,7 +367,7 @@ private struct HomeModelCard: View {
                     Spacer()
                     if card.halfLife > 0 {
                         GPill(intensity: 0.7) {
-                            Text("T½ \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                            Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
                                 .font(.system(size: 12.5, weight: .semibold))
                                 .foregroundStyle(g.muted)
                                 .padding(.horizontal, 11)

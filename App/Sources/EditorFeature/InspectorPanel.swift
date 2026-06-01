@@ -30,6 +30,9 @@ struct NuclideEditBinding {
 
 struct EditorInspectorPanel: View {
     // Data props (read-only)
+    @Binding var documentName: String
+    @Binding var field: ModelField
+    let lingo: FieldLingo
     let nuclides:             [EditorFeature.ViewModel.NuclideRow]
     let compartments:         [EditorFeature.ViewModel.CompartmentRow]
     let links:                [EditorFeature.ViewModel.LinkRow]
@@ -152,22 +155,22 @@ struct EditorInspectorPanel: View {
         GLabel("Flags")
         GCard(cornerRadius: 16, intensity: 0.5) {
             VStack(spacing: 0) {
-                flagRow("Track",       dot: Color(hex: 0x3B9BFF), isOn: bindings.follow)
+                flagRow("Track",                  dot: Color(hex: 0x3B9BFF), isOn: bindings.follow)
                 GlassDivider()
-                flagRow("Elimination", dot: Color(hex: 0xF59E0B), isOn: bindings.dispose)
+                flagRow(lingo.eliminationLabel,   dot: Color(hex: 0xF59E0B), isOn: bindings.dispose)
                 GlassDivider()
-                flagRow("Intake",      dot: Color(hex: 0x34C759), isOn: bindings.intake)
+                flagRow(lingo.intakeLabel,        dot: Color(hex: 0x34C759), isOn: bindings.intake)
             }
         }
         .padding(.bottom, 14)
 
         if let nuclideIdBinding = bindings.nuclideId {
-            GLabel("Nuclide")
+            GLabel(lingo.substanceName)
             GRadioList(
                 selection: nuclideIdBinding,
                 options: nuclides.map { n in
                     GRadioOption(value: n.id, label: n.name,
-                                 detail: n.halfLife > 0 ? "T½ \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d" : nil)
+                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d" : nil)
                 }
             )
         }
@@ -265,7 +268,7 @@ struct EditorInspectorPanel: View {
         _ link: EditorFeature.ViewModel.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
-        GLabel("Rate (day⁻¹)")
+        GLabel("Rate (\(lingo.rateUnit))")
         GCard(cornerRadius: 12, intensity: 0.5) {
             TextField("Rate", value: bindings.rate, format: .number)
                 .padding(.horizontal, 14)
@@ -335,6 +338,14 @@ struct EditorInspectorPanel: View {
             }
             .padding(.bottom, 16)
 
+            GLabel("Name")
+            GCard(cornerRadius: 12, intensity: 0.5) {
+                TextField("Model name", text: $documentName)
+                    .padding(.horizontal, 14)
+                    .frame(height: 44)
+            }
+            .padding(.bottom, 18)
+
             if !validationIssues.isEmpty {
                 GLabel("Issues")
                 GCard(cornerRadius: 16, intensity: 0.5) {
@@ -348,7 +359,28 @@ struct EditorInspectorPanel: View {
                 .padding(.bottom, 18)
             }
 
-            GLabel("Nuclides")
+            GLabel("Field")
+            GCard(cornerRadius: 16, intensity: 0.5) {
+                VStack(spacing: 0) {
+                    ForEach(Array(ModelField.allCases.enumerated()), id: \.1) { idx, f in
+                        if idx > 0 { GlassDivider() }
+                        HStack {
+                            Text(f.lingo.fieldName).font(.system(size: 15))
+                            Spacer()
+                            if field == f {
+                                Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(g.accent)
+                            }
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 11)
+                        .contentShape(Rectangle())
+                        .onTapGesture { field = f }
+                    }
+                }
+            }
+            .padding(.bottom, 18)
+
+            GLabel(lingo.substancesLabel)
             GCard(cornerRadius: 16, intensity: 0.5) {
                 VStack(spacing: 0) {
                     ForEach(Array(nuclideBindings.enumerated()), id: \.1.id) { idx, nb in
@@ -387,7 +419,7 @@ struct EditorInspectorPanel: View {
                 }
             }
             HStack(spacing: 6) {
-                Text("T½").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                Text(lingo.halfLifeLabel).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
                 TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
                     .font(.system(size: 12, design: .monospaced))
                     .decimalKeyboard()
