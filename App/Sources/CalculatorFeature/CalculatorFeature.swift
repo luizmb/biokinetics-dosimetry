@@ -158,10 +158,11 @@ public enum CalculatorFeature {
 
         var series: [ViewModel.Series] = []
         if let results = state.results {
+            let displayTrajectory = doc.model.displayTrajectory(from: results, step: state.stepSize)
             series = compartments.enumerated().compactMap { globalIdx, comp -> ViewModel.Series? in
                 let compIdx = doc.model.compartments.firstIndex { $0.id == comp.id } ?? globalIdx
-                let points = results.enumerated().map { stepIdx, row -> ViewModel.SeriesPoint in
-                    ViewModel.SeriesPoint(day: Double(stepIdx), value: compIdx < row.count ? row[compIdx] : 0)
+                let points = displayTrajectory.enumerated().map { stepIdx, row -> ViewModel.SeriesPoint in
+                    ViewModel.SeriesPoint(day: Double(stepIdx) * state.stepSize, value: compIdx < row.count ? row[compIdx] : 0)
                 }
                 let tint = doc.visuals[comp.id]?.tint ?? .steel
                 let visible = state.visibleSeriesIds.isEmpty || state.visibleSeriesIds.contains(comp.id)
