@@ -55,6 +55,11 @@ struct EditorInspectorPanel: View {
     var onDeleteSelected:    () -> Void
     var onAddNuclide:        () -> Void
     var onDeleteNuclide:     (String) -> Void
+    var onAddVariant:        (String) -> Void
+    var onDeleteVariant:     (String) -> Void
+    var onSelectEditingVariant: (String?) -> Void
+    let variants: [String]
+    let editingVariant: String?
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -382,6 +387,29 @@ struct EditorInspectorPanel: View {
                 .padding(.bottom, 18)
             }
 
+            GLabel("Variants")
+            GCard(cornerRadius: 16, intensity: 0.5) {
+                VStack(spacing: 0) {
+                    variantRow(key: nil, label: "Base model")
+                    ForEach(variants, id: \.self) { key in
+                        GlassDivider()
+                        variantRow(key: key, label: key)
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+
+            Button {
+                let name = "Variant \(variants.count + 1)"
+                onAddVariant(name)
+            } label: {
+                Label("Add variant", systemImage: "plus.circle")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(g.accent)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.bottom, 18)
+
             GLabel("Field")
             GCard(cornerRadius: 16, intensity: 0.5) {
                 VStack(spacing: 0) {
@@ -426,6 +454,29 @@ struct EditorInspectorPanel: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
+    }
+
+    private func variantRow(key: String?, label: String) -> some View {
+        let isEditing = editingVariant == key
+        return HStack {
+            Text(label).font(.system(size: 15))
+            Spacer()
+            if isEditing {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(g.accent)
+            }
+            if key != nil {
+                Button(role: .destructive) { onDeleteVariant(key!) } label: {
+                    Image(systemName: "minus.circle.fill").foregroundStyle(.red.opacity(0.8))
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
+        .background(isEditing ? g.accent.opacity(0.06) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture { onSelectEditingVariant(key) }
     }
 
     @ViewBuilder
