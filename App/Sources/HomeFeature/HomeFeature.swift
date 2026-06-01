@@ -186,7 +186,7 @@ public enum HomeFeature {
                 }
                 .produce { ctx in
                     _ = ctx.environment.saveDocument(newDoc)
-                    return .empty
+                    return .just(.edit(document: newDoc))
                 }
 
             case .importXML(let data):
