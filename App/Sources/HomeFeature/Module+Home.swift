@@ -42,6 +42,8 @@ public enum HomeModule {
         case loadResult(Result<[ModelDocument], PersistenceError>)
         case newDocument
         case importXML(Data)
+        case importJSON(Data)
+        case importCSV(Data)
         case importResult(Result<ModelDocument, DecodingError>)
         case saveDocument(ModelDocument)
         case deleteDocument(ModelDocument.ID)
@@ -53,17 +55,20 @@ public enum HomeModule {
 
     public struct Environment: Sendable {
         public var xmlDecoder:        DataDecoderFactory & Sendable
+        public var jsonDecoder:       DataDecoderFactory & Sendable
         public var saveDocument:      @Sendable (ModelDocument) -> Result<Void, PersistenceError>
         public var loadAllDocuments:  @Sendable () -> Result<[ModelDocument], PersistenceError>
         public var deleteDocument:    @Sendable (UUID) -> Result<Void, PersistenceError>
 
         public init(
             xmlDecoder:       DataDecoderFactory & Sendable,
+            jsonDecoder:      DataDecoderFactory & Sendable,
             saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>    = { _ in .success(()) },
             loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError> = { .success([]) },
             deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>        = { _ in .success(()) }
         ) {
             self.xmlDecoder       = xmlDecoder
+            self.jsonDecoder      = jsonDecoder
             self.saveDocument     = saveDocument
             self.loadAllDocuments = loadAllDocuments
             self.deleteDocument   = deleteDocument

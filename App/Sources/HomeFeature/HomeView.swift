@@ -26,7 +26,13 @@ public struct HomeView: View {
             onEdit:           { viewModel.dispatch(.editDocument($0)) },
             onCalculate:      { viewModel.dispatch(.calculateDocument($0)) },
             onDelete:         { viewModel.dispatch(.deleteDocument($0)) },
-            onImportXML:      { viewModel.dispatch(.importXML($0)) }
+            onImportFile: { ext, data in
+                switch ext.lowercased() {
+                case "json": viewModel.dispatch(.importJSON(data))
+                case "csv":  viewModel.dispatch(.importCSV(data))
+                default:     viewModel.dispatch(.importXML(data))  // xml + unknown
+                }
+            }
         )
     }
 }
@@ -44,7 +50,7 @@ struct HomeContent: View {
     var onEdit:           (ModelDocument) -> Void
     var onCalculate:      (ModelDocument) -> Void
     var onDelete:         (ModelDocument.ID) -> Void
-    var onImportXML:      (Data) -> Void
+    var onImportFile:     (String, Data) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -69,14 +75,18 @@ struct HomeContent: View {
         }
         .fileImporter(
             isPresented: $isFilePickerPresented,
-            allowedContentTypes: [UTType(filenameExtension: "xml") ?? .data]
+            allowedContentTypes: [
+                UTType(filenameExtension: "xml")  ?? .data,
+                UTType(filenameExtension: "json") ?? .json,
+                UTType(filenameExtension: "csv")  ?? .commaSeparatedText,
+            ]
         ) { result in
-            if case .success(let url) = result,
-               url.startAccessingSecurityScopedResource(),
-               let data = try? Data(contentsOf: url) {
-                url.stopAccessingSecurityScopedResource()
-                onImportXML(data)
-            }
+            guard case .success(let url) = result,
+                  url.startAccessingSecurityScopedResource(),
+                  let data = try? Data(contentsOf: url) else { return }
+            let ext = url.pathExtension
+            url.stopAccessingSecurityScopedResource()
+            onImportFile(ext, data)
         }
         .inlineNavigationTitle()
     }

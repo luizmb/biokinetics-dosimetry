@@ -56,6 +56,8 @@ public enum HomeFeature {
             case filePickerDismissed
             case newDocument
             case importXML(Data)
+            case importJSON(Data)
+            case importCSV(Data)
             case editDocument(ModelDocument)
             case calculateDocument(ModelDocument)
             case deleteDocument(ModelDocument.ID)
@@ -97,6 +99,8 @@ public enum HomeFeature {
         case .filePickerDismissed:        .filePickerDismissed
         case .newDocument:                .newDocument
         case .importXML(let d):           .importXML(d)
+        case .importJSON(let d):          .importJSON(d)
+        case .importCSV(let d):           .importCSV(d)
         case .editDocument(let doc):      .edit(document: doc)
         case .calculateDocument(let doc): .calculate(document: doc)
         case .deleteDocument(let id):     .deleteDocument(id)
@@ -166,6 +170,29 @@ public enum HomeFeature {
                                     }
                             )
                         )
+                    }
+
+            case .importJSON(let data):
+                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                    .produce { ctx in
+                        .just(.importResult(ctx.environment.jsonDecoder.dataDecoder(for: ModelDocument.self)(data)))
+                    }
+
+            case .importCSV(let data):
+                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                    .produce { _ in
+                        let result = parseCSVRateMatrix(data: data)
+                            .map { model -> ModelDocument in
+                                var doc = model.asModelDocument
+                                doc.name = "Imported CSV Model"
+                                return doc
+                            }
+                            .mapError { err in
+                                DecodingError.dataCorrupted(
+                                    DecodingError.Context(codingPath: [], debugDescription: err.localizedDescription)
+                                )
+                            }
+                        return .just(.importResult(result))
                     }
 
             case let .importResult(result):
