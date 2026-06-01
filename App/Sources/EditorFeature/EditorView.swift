@@ -120,6 +120,8 @@ public struct EditorView: View {
             canvasPinchOriginScale:  viewModel.canvasPinchOriginScale,
             isInspectorSheetOpen:    viewModel.isInspectorSheetOpen,
             isModelListSheetOpen:    viewModel.isModelListSheetOpen,
+            variants:                viewModel.variants,
+            editingVariant:          viewModel.editingVariant,
             onSelectCompartment: { viewModel.dispatch(.selectCompartment($0)) },
             onSelectLink:        { viewModel.dispatch(.selectLink($0)) },
             onToggleLeftPanel:   { viewModel.dispatch(.toggleLeftPanel) },
@@ -142,7 +144,10 @@ public struct EditorView: View {
             onSetInspectorSheet:     { viewModel.dispatch(.setInspectorSheet($0)) },
             onSetModelListSheet:     { viewModel.dispatch(.setModelListSheet($0)) },
             onAddNuclide:            { viewModel.dispatch(.addNuclide) },
-            onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) }
+            onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) },
+            onAddVariant:            { viewModel.dispatch(.addVariant(name: $0)) },
+            onDeleteVariant:         { viewModel.dispatch(.deleteVariant(name: $0)) },
+            onSelectEditingVariant:  { viewModel.dispatch(.selectEditingVariant($0)) }
         )
         .inlineNavigationTitle()
     }
@@ -187,6 +192,8 @@ struct EditorContent: View {
     let canvasPinchOriginScale: Double?
     let isInspectorSheetOpen: Bool
     let isModelListSheetOpen: Bool
+    let variants: [String]
+    let editingVariant: String?
 
     // MARK: One-way action callbacks
     var onSelectCompartment: (String?) -> Void
@@ -212,6 +219,9 @@ struct EditorContent: View {
     var onSetModelListSheet: (Bool) -> Void
     var onAddNuclide: () -> Void
     var onDeleteNuclide: (String) -> Void
+    var onAddVariant: (String) -> Void
+    var onDeleteVariant: (String) -> Void
+    var onSelectEditingVariant: (String?) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -291,7 +301,12 @@ struct EditorContent: View {
                         else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                     },
                     onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide
+                    onDeleteNuclide: onDeleteNuclide,
+                    onAddVariant: onAddVariant,
+                    onDeleteVariant: onDeleteVariant,
+                    onSelectEditingVariant: onSelectEditingVariant,
+                    variants: variants,
+                    editingVariant: editingVariant
                 )
                 .frame(width: 326)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -444,7 +459,12 @@ struct EditorContent: View {
                         else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                     },
                     onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide
+                    onDeleteNuclide: onDeleteNuclide,
+                    onAddVariant: onAddVariant,
+                    onDeleteVariant: onDeleteVariant,
+                    onSelectEditingVariant: onSelectEditingVariant,
+                    variants: variants,
+                    editingVariant: editingVariant
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)

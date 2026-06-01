@@ -37,8 +37,36 @@ public enum EditorFeature {
         /// iPhone sheet presentation flags.
         public var isInspectorSheetOpen: Bool = false
         public var isModelListSheetOpen: Bool = false
+        /// The variant key currently being edited (nil = base model).
+        public var editingVariant: String? = nil
 
         public init() {
+        }
+
+        // MARK: Variant-aware model access
+
+        /// The model currently being edited — base model or a named variant.
+        var currentModel: CompartmentalModel {
+            editingVariant.flatMap { document.variants[$0] } ?? document.model
+        }
+
+        /// Writes the model back to the correct slot (base or variant).
+        mutating func setCurrentModel(_ model: CompartmentalModel) {
+            if let key = editingVariant {
+                document.variants[key] = model
+            } else {
+                document.model = model
+            }
+        }
+
+        /// Propagates any nuclide change on the base model to all variants.
+        mutating func syncNuclidesToVariants() {
+            let nuclides = document.model.nuclides
+            for key in document.variants.keys {
+                if let v = document.variants[key] {
+                    document.variants[key] = v.with(nuclides: nuclides)
+                }
+            }
         }
     }
 
@@ -104,6 +132,11 @@ public enum EditorFeature {
         case endCanvasPan
         case beginCanvasPinch(originScale: Double)
         case endCanvasPinch
+        // Variants
+        case addVariant(name: String)
+        case deleteVariant(name: String)
+        case renameVariant(old: String, new: String)
+        case selectEditingVariant(String?)
         // Panels
         case toggleLeftPanel
         case toggleRightPanel
@@ -187,6 +220,10 @@ public enum EditorFeature {
             /// iPhone sheet flags.
             public var isInspectorSheetOpen: Bool = false
             public var isModelListSheetOpen: Bool = false
+            /// Sorted variant keys for the document (empty = no variants).
+            public var variants: [String] = []
+            /// Which variant is currently being edited (nil = base model).
+            public var editingVariant: String? = nil
 
             // MARK: Pre-computed label strings
 
@@ -237,6 +274,11 @@ public enum EditorFeature {
             case toggleKValues
             case setInspectorSheet(Bool)
             case setModelListSheet(Bool)
+            // Variants
+            case addVariant(name: String)
+            case deleteVariant(name: String)
+            case renameVariant(old: String, new: String)
+            case selectEditingVariant(String?)
             case save
         }
     }
@@ -245,15 +287,16 @@ public enum EditorFeature {
 
     public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
         let doc = state.document
+        let editingModel = state.currentModel
         let canDelete = doc.model.nuclides.count > 1
         let nuclides = doc.model.nuclides.map { n -> ViewModel.NuclideRow in
-            let count = doc.model.compartments.filter { $0.nuclideId == n.id }.count
+            let count = editingModel.compartments.filter { $0.nuclideId == n.id }.count
             return ViewModel.NuclideRow(
                 id: n.id, name: n.name, halfLife: n.halfLife,
                 compartmentCount: count, canDelete: canDelete
             )
         }
-        let compartments = doc.model.compartments.map { c -> ViewModel.CompartmentRow in
+        let compartments = editingModel.compartments.map { c -> ViewModel.CompartmentRow in
             let vis = doc.visuals[c.id]
             return ViewModel.CompartmentRow(
                 id: c.id,
@@ -269,9 +312,9 @@ public enum EditorFeature {
                 fraction: c.fraction
             )
         }
-        let links = doc.model.connections.enumerated().map { idx, conn -> ViewModel.LinkRow in
-            let fromC = doc.model.compartments.first { $0.id == conn.from }
-            let toC   = doc.model.compartments.first { $0.id == conn.to }
+        let links = editingModel.connections.enumerated().map { idx, conn -> ViewModel.LinkRow in
+            let fromC = editingModel.compartments.first { $0.id == conn.from }
+            let toC   = editingModel.compartments.first { $0.id == conn.to }
             return ViewModel.LinkRow(
                 id: idx,
                 fromId: conn.from,
@@ -292,7 +335,7 @@ public enum EditorFeature {
         }()
         let selectionFooterLabel: String? = {
             if let id = state.selectedCompartmentId,
-               let name = doc.model.compartments.first(where: { $0.id == id })?.name {
+               let name = editingModel.compartments.first(where: { $0.id == id })?.name {
                 return "Selected · \(name)"
             }
             if let idx = state.selectedLinkIndex {
@@ -328,9 +371,11 @@ public enum EditorFeature {
             canvasPinchOriginScale:  state.canvasPinchOriginScale,
             isInspectorSheetOpen:    state.isInspectorSheetOpen,
             isModelListSheetOpen:    state.isModelListSheetOpen,
+            variants:                doc.variants.keys.sorted(),
+            editingVariant:          state.editingVariant,
             linkingBannerText: linkingBannerText,
             selectionFooterLabel: selectionFooterLabel,
-            validationIssues: doc.model.validationIssues
+            validationIssues: editingModel.validationIssues
         )
     }
 
@@ -371,6 +416,10 @@ public enum EditorFeature {
         case .toggleKValues:                                       .toggleKValues
         case .setInspectorSheet(let v):                           .setInspectorSheet(v)
         case .setModelListSheet(let v):                           .setModelListSheet(v)
+        case .addVariant(let n):                                   .addVariant(name: n)
+        case .deleteVariant(let n):                                .deleteVariant(name: n)
+        case .renameVariant(let o, let n):                         .renameVariant(old: o, new: n)
+        case .selectEditingVariant(let k):                         .selectEditingVariant(k)
         case .save:                                                .save
         }
     }
@@ -440,6 +489,7 @@ public enum EditorFeature {
                             $0.id == id ? Nuclide(id: $0.id, name: name, halfLife: $0.halfLife) : $0
                         }
                     )
+                    state.syncNuclidesToVariants()
                 }
 
             case .updateNuclideHalfLife(let id, let hl):
@@ -449,6 +499,7 @@ public enum EditorFeature {
                             $0.id == id ? Nuclide(id: $0.id, name: $0.name, halfLife: max(0, hl)) : $0
                         }
                     )
+                    state.syncNuclidesToVariants()
                 }
 
             case .deleteNuclide(let id):
@@ -463,27 +514,28 @@ public enum EditorFeature {
                         },
                         connections: state.document.model.connections
                     )
+                    state.syncNuclidesToVariants()
                 }
 
             case .setCompartmentNuclide(let compartmentId, let nuclideId):
                 .reduce { state in
-                    guard state.document.model.nuclides.contains(where: { $0.id == nuclideId }) else { return }
-                    state.document.model = state.document.model.updatingCompartment(id: compartmentId) {
+                    guard state.currentModel.nuclides.contains(where: { $0.id == nuclideId }) else { return }
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: compartmentId) {
                         $0.with(nuclideId: nuclideId)
-                    }
+                    })
                 }
 
             case .addCompartment(let tint):
                 .reduce { state in
                     let idStr = String(UUID().uuidString.prefix(8).lowercased())
-                    let nuclideId = state.document.model.nuclides.first?.id ?? "n0"
+                    let nuclideId = state.currentModel.nuclides.first?.id ?? "n0"
                     let compartment = Compartment(
                         id: idStr, nuclideId: nuclideId, name: "New Compartment",
                         follow: false, intake: false, dispose: false, fraction: 0
                     )
-                    state.document.model = state.document.model.with(
-                        compartments: state.document.model.compartments + [compartment]
-                    )
+                    state.setCurrentModel(state.currentModel.with(
+                        compartments: state.currentModel.compartments + [compartment]
+                    ))
                     state.document.visuals[idStr] = CompartmentVisuals(x: 450, y: 310, tint: tint)
                     state.selectedCompartmentId = idStr
                     state.selectedLinkIndex = nil
@@ -493,41 +545,36 @@ public enum EditorFeature {
 
             case .updateCompartmentName(let id, let name):
                 .reduce { state in
-                    state.document.model = state.document.model.updatingCompartment(id: id) {
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: id) {
                         $0.with(name: name)
-                    }
+                    })
                 }
 
             case .updateCompartmentFollow(let id, let value):
                 .reduce { state in
-                    state.document.model = state.document.model.updatingCompartment(id: id) {
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: id) {
                         $0.with(follow: value)
-                    }
+                    })
                 }
 
             case .updateCompartmentDispose(let id, let value):
                 .reduce { state in
-                    state.document.model = state.document.model.updatingCompartment(id: id) {
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: id) {
                         $0.with(dispose: value)
-                    }
+                    })
                 }
 
             case .updateCompartmentIntake(let id, let value):
-                // Toggle the intake flag, then redistribute fractions equally among all
-                // intake compartments so the sum stays at 1.0 by default.
-                // The user can reduce individual fractions afterwards (e.g. for inhalation
-                // models where some fraction is exhaled).  The sum must never exceed 1.0.
                 .reduce { state in
-                    state.document.model = state.document.model.updatingCompartment(id: id) {
-                        $0.with(intake: value).with(fraction: 0)   // temporary 0; will be set below
-                    }
-                    let intakeIds = state.document.model.compartments.filter(\.intake).map(\.id)
-                    let n = intakeIds.count
-                    let equalFraction = n > 0 ? 1.0 / Double(n) : 0
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: id) {
+                        $0.with(intake: value).with(fraction: 0)
+                    })
+                    let intakeIds = state.currentModel.compartments.filter(\.intake).map(\.id)
+                    let equalFraction = intakeIds.isEmpty ? 0.0 : 1.0 / Double(intakeIds.count)
                     for iid in intakeIds {
-                        state.document.model = state.document.model.updatingCompartment(id: iid) {
+                        state.setCurrentModel(state.currentModel.updatingCompartment(id: iid) {
                             $0.with(fraction: equalFraction)
-                        }
+                        })
                     }
                 }
 
@@ -547,12 +594,12 @@ public enum EditorFeature {
 
             case .deleteCompartment(let id):
                 .reduce { state in
-                    state.document.model = state.document.model.with(
-                        compartments: state.document.model.compartments.filter { $0.id != id },
-                        connections: state.document.model.connections.filter {
+                    state.setCurrentModel(state.currentModel.with(
+                        compartments: state.currentModel.compartments.filter { $0.id != id },
+                        connections: state.currentModel.connections.filter {
                             $0.from != id && $0.to != id
                         }
-                    )
+                    ))
                     state.document.visuals.removeValue(forKey: id)
                     if state.selectedCompartmentId == id { state.selectedCompartmentId = nil }
                 }
@@ -573,10 +620,10 @@ public enum EditorFeature {
                             break
                         }
                         let conn = CompartmentConnection(from: fromId, to: id, rate: 0.1)
-                        state.document.model = state.document.model.with(
-                            connections: state.document.model.connections + [conn]
-                        )
-                        let newIdx = state.document.model.connections.count - 1
+                        state.setCurrentModel(state.currentModel.with(
+                            connections: state.currentModel.connections + [conn]
+                        ))
+                        let newIdx = state.currentModel.connections.count - 1
                         state.selectedLinkIndex = newIdx
                         state.selectedCompartmentId = nil
                         state.linkingState = .idle
@@ -589,19 +636,19 @@ public enum EditorFeature {
 
             case .updateLinkRate(let idx, let rate):
                 .reduce { state in
-                    guard idx < state.document.model.connections.count else { return }
-                    let old = state.document.model.connections[idx]
-                    var conns = state.document.model.connections
+                    guard idx < state.currentModel.connections.count else { return }
+                    let old = state.currentModel.connections[idx]
+                    var conns = state.currentModel.connections
                     conns[idx] = CompartmentConnection(from: old.from, to: old.to, rate: rate)
-                    state.document.model = state.document.model.with(connections: conns)
+                    state.setCurrentModel(state.currentModel.with(connections: conns))
                 }
 
             case .deleteLink(let idx):
                 .reduce { state in
-                    guard idx < state.document.model.connections.count else { return }
-                    var conns = state.document.model.connections
+                    guard idx < state.currentModel.connections.count else { return }
+                    var conns = state.currentModel.connections
                     conns.remove(at: idx)
-                    state.document.model = state.document.model.with(connections: conns)
+                    state.setCurrentModel(state.currentModel.with(connections: conns))
                     if state.selectedLinkIndex == idx { state.selectedLinkIndex = nil }
                 }
 
@@ -637,6 +684,38 @@ public enum EditorFeature {
 
             case .toggleKValues:
                 .reduce { $0.showKValues.toggle() }
+
+            case .addVariant(let name):
+                .reduce { state in
+                    guard !name.trimmingCharacters(in: .whitespaces).isEmpty,
+                          state.document.variants[name] == nil else { return }
+                    state.document.variants[name] = state.currentModel
+                    state.editingVariant = name
+                }
+
+            case .deleteVariant(let name):
+                .reduce { state in
+                    state.document.variants.removeValue(forKey: name)
+                    if state.editingVariant == name { state.editingVariant = nil }
+                }
+
+            case .renameVariant(let old, let new):
+                .reduce { state in
+                    guard let model = state.document.variants[old],
+                          !new.trimmingCharacters(in: .whitespaces).isEmpty,
+                          state.document.variants[new] == nil else { return }
+                    state.document.variants.removeValue(forKey: old)
+                    state.document.variants[new] = model
+                    if state.editingVariant == old { state.editingVariant = new }
+                }
+
+            case .selectEditingVariant(let key):
+                .reduce { state in
+                    guard key == nil || state.document.variants[key!] != nil else { return }
+                    state.editingVariant = key
+                    state.selectedCompartmentId = nil
+                    state.selectedLinkIndex = nil
+                }
 
             case .save:
                 .doNothing   // Handled by AppCoordinator via environment (future)
