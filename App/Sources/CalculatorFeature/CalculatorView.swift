@@ -240,7 +240,7 @@ struct CalculatorContent: View {
         case .report:
             ReportContent(
                 reportRows: reportRows, compartmentNames: compartmentNames,
-                isCompact: isCompact
+                lingo: lingo, isCompact: isCompact
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

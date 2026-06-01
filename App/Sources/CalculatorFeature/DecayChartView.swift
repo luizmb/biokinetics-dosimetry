@@ -141,7 +141,7 @@ struct DecayChartContent: View {
                 let pts = transformedPoints(s.points)
                 ForEach(pts.indices, id: \.self) { idx in
                     LineMark(
-                        x: .value("Day",      pts[idx].x),
+                        x: .value(lingo.timeUnit.displayName, pts[idx].x),
                         y: .value("Activity", pts[idx].y)
                     )
                     .foregroundStyle(by: .value("Compartment", s.name))
