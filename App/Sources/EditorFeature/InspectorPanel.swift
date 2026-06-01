@@ -11,7 +11,7 @@ struct CompartmentFieldBindings {
     var follow:    Binding<Bool>
     var dispose:   Binding<Bool>
     var intake:    Binding<Bool>
-    var nuclideId: Binding<String>?  // nil for single-nuclide documents
+    var nuclideId: Binding<String>
 }
 
 struct LinkFieldBindings {
@@ -164,15 +164,28 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 14)
 
-        if let nuclideIdBinding = bindings.nuclideId {
-            GLabel(lingo.substanceName)
+        GLabel(lingo.substanceName)
+        if nuclides.count > 1 {
             GRadioList(
-                selection: nuclideIdBinding,
+                selection: bindings.nuclideId,
                 options: nuclides.map { n in
                     GRadioOption(value: n.id, label: n.name,
                                  detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d" : nil)
                 }
             )
+        } else if let n = nuclides.first(where: { $0.id == bindings.nuclideId.wrappedValue }) {
+            GCard(cornerRadius: 12, intensity: 0.5) {
+                HStack {
+                    Text(n.name).font(.system(size: 15))
+                    Spacer()
+                    if n.halfLife > 0 {
+                        Text("\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 12)
+            }
         }
     }
 

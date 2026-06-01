@@ -21,16 +21,30 @@ public struct HomeView: View {
                     }
                 }
             ),
-            onOpenFilePicker: { viewModel.dispatch(.openFilePicker) },
-            onNewDocument:    { viewModel.dispatch(.newDocument) },
-            onEdit:           { viewModel.dispatch(.editDocument($0)) },
-            onCalculate:      { viewModel.dispatch(.calculateDocument($0)) },
-            onDelete:         { viewModel.dispatch(.deleteDocument($0)) },
+            isCreationSheetPresented: Binding(
+                get: { viewModel.isCreationSheetOpen },
+                set: { if !$0 { viewModel.dispatch(.dismissCreationSheet) } }
+            ),
+            draftField: Binding(
+                get: { viewModel.draftField },
+                set: { viewModel.dispatch(.setDraftField($0)) }
+            ),
+            draftName: Binding(
+                get: { viewModel.draftName },
+                set: { viewModel.dispatch(.setDraftName($0)) }
+            ),
+            onOpenFilePicker:   { viewModel.dispatch(.openFilePicker) },
+            onOpenCreationSheet: { viewModel.dispatch(.openCreationSheet) },
+            onConfirmNewDocument: { viewModel.dispatch(.newDocument(field: viewModel.draftField, name: viewModel.draftName)) },
+            onCancelNewDocument: { viewModel.dispatch(.dismissCreationSheet) },
+            onEdit:              { viewModel.dispatch(.editDocument($0)) },
+            onCalculate:         { viewModel.dispatch(.calculateDocument($0)) },
+            onDelete:            { viewModel.dispatch(.deleteDocument($0)) },
             onImportFile: { ext, data in
                 switch ext.lowercased() {
                 case "json": viewModel.dispatch(.importJSON(data))
                 case "csv":  viewModel.dispatch(.importCSV(data))
-                default:     viewModel.dispatch(.importXML(data))  // xml + unknown
+                default:     viewModel.dispatch(.importXML(data))
                 }
             }
         )
@@ -45,12 +59,17 @@ struct HomeContent: View {
     let isLoading: Bool
     let importErrorMessage: String?
     @Binding var isFilePickerPresented: Bool
-    var onOpenFilePicker: () -> Void
-    var onNewDocument:    () -> Void
-    var onEdit:           (ModelDocument) -> Void
-    var onCalculate:      (ModelDocument) -> Void
-    var onDelete:         (ModelDocument.ID) -> Void
-    var onImportFile:     (String, Data) -> Void
+    @Binding var isCreationSheetPresented: Bool
+    @Binding var draftField: ModelField
+    @Binding var draftName: String
+    var onOpenFilePicker:    () -> Void
+    var onOpenCreationSheet: () -> Void
+    var onConfirmNewDocument: () -> Void
+    var onCancelNewDocument: () -> Void
+    var onEdit:              (ModelDocument) -> Void
+    var onCalculate:         (ModelDocument) -> Void
+    var onDelete:            (ModelDocument.ID) -> Void
+    var onImportFile:        (String, Data) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -72,6 +91,14 @@ struct HomeContent: View {
                     contentArea
                 }
             }
+        }
+        .sheet(isPresented: $isCreationSheetPresented) {
+            NewDocumentSheet(
+                field: $draftField,
+                name: $draftName,
+                onConfirm: onConfirmNewDocument,
+                onCancel: onCancelNewDocument
+            )
         }
         .fileImporter(
             isPresented: $isFilePickerPresented,
@@ -110,7 +137,7 @@ struct HomeContent: View {
                         .frame(height: isCompact ? 38 : 42)
                 }
                 GButton("New", icon: Image(systemName: "plus"),
-                        size: isCompact ? .sm : .md, action: onNewDocument)
+                        size: isCompact ? .sm : .md, action: onOpenCreationSheet)
             }
             .padding(.horizontal, hPad)
             .padding(.top, isCompact ? 4 : 8)
@@ -198,7 +225,7 @@ struct HomeContent: View {
     // MARK: - New model box
 
     private func newModelBox(big: Bool) -> some View {
-        Button(action: onNewDocument) {
+        Button(action: onOpenCreationSheet) {
             VStack(spacing: 10) {
                 ZStack {
                     Circle()

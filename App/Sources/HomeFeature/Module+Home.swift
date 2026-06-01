@@ -23,9 +23,13 @@ public enum HomeModule {
         /// The canonical list of saved biokinetic models.
         public var documents: Loading<[ModelDocument], DecodingError> = .idle
         /// Tracks the file-picker lifecycle.
-        /// `.loading` → picker sheet visible; `.loaded(())` → file chosen, importing;
-        /// `.idle` → closed.
         public var filePicker: Loading<Terminal, Never> = .idle
+        /// Whether the new-document creation sheet is presented.
+        public var isCreationSheetOpen: Bool = false
+        /// Draft field selection in the creation sheet.
+        public var draftField: ModelField = .generic
+        /// Draft name in the creation sheet.
+        public var draftName: String = ""
 
         public init() {}
     }
@@ -37,10 +41,15 @@ public enum HomeModule {
         // File picker state machine
         case openFilePicker
         case filePickerDismissed
+        // Creation sheet
+        case openCreationSheet
+        case dismissCreationSheet
+        case setDraftField(ModelField)
+        case setDraftName(String)
         // Document management
         case loadDocuments
         case loadResult(Result<[ModelDocument], PersistenceError>)
-        case newDocument
+        case newDocument(field: ModelField, name: String)
         case importXML(Data)
         case importJSON(Data)
         case importCSV(Data)

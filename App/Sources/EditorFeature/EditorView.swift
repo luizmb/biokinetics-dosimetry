@@ -21,7 +21,7 @@ public struct EditorView: View {
         let compBindings: CompartmentFieldBindings? = viewModel.selectedCompartmentId.flatMap { id in
             guard viewModel.compartments.contains(where: { $0.id == id }) else { return nil }
             let isMultiNuclide = viewModel.nuclides.count > 1
-            return CompartmentFieldBindings(
+            return CompartmentFieldBindings(  // isMultiNuclide used to guard dispatch below
                 name: Binding(
                     get: { viewModel.compartments.first { $0.id == id }?.name ?? "" },
                     set: { viewModel.dispatch(.updateCompartmentName(id: id, name: $0)) }
@@ -38,10 +38,10 @@ public struct EditorView: View {
                     get: { viewModel.compartments.first { $0.id == id }?.intake ?? false },
                     set: { viewModel.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
-                nuclideId: isMultiNuclide ? Binding(
+                nuclideId: Binding(
                     get: { viewModel.compartments.first { $0.id == id }?.nuclideId ?? "" },
-                    set: { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) }
-                ) : nil
+                    set: { if isMultiNuclide { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
+                )
             )
         }
 

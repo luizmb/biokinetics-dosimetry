@@ -46,15 +46,21 @@ public enum HomeFeature {
         public struct ViewState: Sendable, Equatable {
             public var filePicker: Loading<Terminal, Never> = .idle
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
-            /// Non-nil when the last import attempt failed; localised message to show in banner.
             public var importErrorMessage: String? = nil
+            public var isCreationSheetOpen: Bool = false
+            public var draftField: ModelField = .generic
+            public var draftName: String = ""
         }
 
         @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case openFilePicker
             case filePickerDismissed
-            case newDocument
+            case openCreationSheet
+            case dismissCreationSheet
+            case setDraftField(ModelField)
+            case setDraftName(String)
+            case newDocument(field: ModelField, name: String)
             case importXML(Data)
             case importJSON(Data)
             case importCSV(Data)
@@ -89,7 +95,10 @@ public enum HomeFeature {
                     )
                 }
             },
-            importErrorMessage: importError
+            importErrorMessage: importError,
+            isCreationSheetOpen: state.isCreationSheetOpen,
+            draftField: state.draftField,
+            draftName: state.draftName
         )
     }
 
@@ -97,7 +106,11 @@ public enum HomeFeature {
         switch va {
         case .openFilePicker:             .openFilePicker
         case .filePickerDismissed:        .filePickerDismissed
-        case .newDocument:                .newDocument
+        case .openCreationSheet:          .openCreationSheet
+        case .dismissCreationSheet:       .dismissCreationSheet
+        case .setDraftField(let f):       .setDraftField(f)
+        case .setDraftName(let n):        .setDraftName(n)
+        case .newDocument(let f, let n):  .newDocument(field: f, name: n)
         case .importXML(let d):           .importXML(d)
         case .importJSON(let d):          .importJSON(d)
         case .importCSV(let d):           .importCSV(d)
@@ -122,6 +135,18 @@ public enum HomeFeature {
             case .filePickerDismissed:
                 return C.reduce { $0.filePicker = .idle }
 
+            case .openCreationSheet:
+                return C.reduce { $0.isCreationSheetOpen = true; $0.draftField = .generic; $0.draftName = "" }
+
+            case .dismissCreationSheet:
+                return C.reduce { $0.isCreationSheetOpen = false }
+
+            case .setDraftField(let f):
+                return C.reduce { $0.draftField = f }
+
+            case .setDraftName(let n):
+                return C.reduce { $0.draftName = n }
+
             case .loadDocuments:
                 return C.produce { ctx in
                     .just(.loadResult(ctx.environment.loadAllDocuments()))
@@ -144,13 +169,23 @@ public enum HomeFeature {
                     // On failure, leave existing state — user can still work.
                 }
 
-            case .newDocument:
-                let newDoc = ModelDocument.empty
-                return C.reduce { $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? [])) }
-                    .produce { ctx in
-                        _ = ctx.environment.saveDocument(newDoc)
-                        return .empty
-                    }
+            case .newDocument(let field, let name):
+                let lingo = field.lingo
+                let nuclide = Nuclide(id: "n0", name: lingo.substanceName, halfLife: 0)
+                let model = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
+                let newDoc = ModelDocument(
+                    name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name,
+                    field: field,
+                    model: model
+                )
+                return C.reduce {
+                    $0.isCreationSheetOpen = false
+                    $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? []))
+                }
+                .produce { ctx in
+                    _ = ctx.environment.saveDocument(newDoc)
+                    return .empty
+                }
 
             case .importXML(let data):
                 return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
