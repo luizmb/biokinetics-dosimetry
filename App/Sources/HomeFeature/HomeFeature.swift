@@ -67,6 +67,7 @@ public enum HomeFeature {
             case editDocument(ModelDocument)
             case calculateDocument(ModelDocument)
             case deleteDocument(ModelDocument.ID)
+            case duplicateDocument(ModelDocument.ID)
             case saveDocument(ModelDocument)
         }
     }
@@ -117,6 +118,7 @@ public enum HomeFeature {
         case .editDocument(let doc):      .edit(document: doc)
         case .calculateDocument(let doc): .calculate(document: doc)
         case .deleteDocument(let id):     .deleteDocument(id)
+        case .duplicateDocument(let id):  .duplicateDocument(id)
         case .saveDocument(let doc):      .saveDocument(doc)
         }
     }
@@ -127,7 +129,7 @@ public enum HomeFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         typealias C = Consequence<State, Environment, Action>
-        return .handle { action, _ in
+        return .handle { action, context in
             switch action {
             case .openFilePicker:
                 return C.reduce { $0.filePicker = $0.filePicker.startLoading() }
@@ -257,6 +259,9 @@ public enum HomeFeature {
                     return .empty
                 }
 
+            case .duplicateDocument(let id):
+                return duplicateConsequence(id: id, context: context)
+
             case .deleteDocument(let id):
                 return C.reduce { state in
                     guard let loaded = state.documents.loaded else { return }
@@ -274,6 +279,30 @@ public enum HomeFeature {
     }
 
     public typealias Content = HomeView
+
+    // MARK: - Private helpers
+
+    @MainActor
+    private static func duplicateConsequence(
+        id: ModelDocument.ID,
+        context: PreReducerContext<State>
+    ) -> Consequence<State, Environment, Action> {
+        typealias C = Consequence<State, Environment, Action>
+        guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
+            return C.reduce { _ in }
+        }
+        var mutable = original
+        mutable.id = UUID()
+        mutable.name = original.name + " (Copy)"
+        let copy = mutable
+        return C.reduce { state in
+            state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [copy])
+        }
+        .produce { ctx in
+            _ = ctx.environment.saveDocument(copy)
+            return .empty
+        }
+    }
 
     // MARK: - Visual layout helpers
 

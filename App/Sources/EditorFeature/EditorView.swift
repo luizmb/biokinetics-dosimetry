@@ -61,6 +61,11 @@ public struct EditorView: View {
             set: { viewModel.dispatch(.renameDocument($0)) }
         )
 
+        let documentDescriptionBinding = Binding(
+            get: { viewModel.documentDescription },
+            set: { viewModel.dispatch(.updateDescription($0)) }
+        )
+
         let fieldBinding = Binding(
             get: { viewModel.field },
             set: { viewModel.dispatch(.updateField($0)) }
@@ -84,9 +89,10 @@ public struct EditorView: View {
         }
 
         return EditorContent(
-            documentName:       documentNameBinding,
-            field:              fieldBinding,
-            lingo:              viewModel.lingo,
+            documentName:        documentNameBinding,
+            documentDescription: documentDescriptionBinding,
+            field:               fieldBinding,
+            lingo:               viewModel.lingo,
             halfLife:           viewModel.halfLife,
             nuclides:           viewModel.nuclides,
             compartments:       viewModel.compartments,
@@ -146,8 +152,9 @@ public struct EditorView: View {
 
 struct EditorContent: View {
     // MARK: Read-only view state
-    var documentName: Binding<String>
-    var field: Binding<ModelField>
+    var documentName:        Binding<String>
+    var documentDescription: Binding<String>
+    var field:               Binding<ModelField>
     let lingo: FieldLingo
     let halfLife: Double
     let nuclides: [EditorFeature.ViewModel.NuclideRow]
@@ -263,6 +270,7 @@ struct EditorContent: View {
             if isRightPanelVisible {
                 EditorInspectorPanel(
                     documentName: documentName,
+                    documentDescription: documentDescription,
                     field: field,
                     lingo: lingo,
                     nuclides: nuclides,
@@ -414,6 +422,7 @@ struct EditorContent: View {
             ScrollView {
                 EditorInspectorPanel(
                     documentName: documentName,
+                    documentDescription: documentDescription,
                     field: field,
                     lingo: lingo,
                     nuclides: nuclides,
