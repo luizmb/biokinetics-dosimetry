@@ -13,6 +13,7 @@ struct DecayChartContent: View {
     let logX: Bool
     let logY: Bool
     let finalDay: Int
+    let lingo: FieldLingo
     let validationIssues: [CompartmentalModel.ValidationIssue]
     var onToggleSeries: (String) -> Void
 
@@ -168,7 +169,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(pow(10, v))) d").font(.caption2)
+                        Text("\(Int(pow(10, v))) \(lingo.timeUnit.label)").font(.caption2)
                     }
                 }
             }
@@ -177,7 +178,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(v)) d").font(.caption2)
+                        Text("\(Int(v)) \(lingo.timeUnit.label)").font(.caption2)
                     }
                 }
             }
