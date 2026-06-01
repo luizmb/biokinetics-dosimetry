@@ -11,6 +11,9 @@ public struct IpenXmlCompartment: Sendable {
     /// May be absent in older files; defaults to `false`.
     public let intake: Bool
     public let dispose: Bool
+    /// Fraction of administered activity deposited in this compartment (XML field `Fracao`).
+    /// Present in newer files alongside `Incorporacao`; absent (nil) in older files.
+    public let fraction: Double?
 
     // Visual layout (reserved for future model editor UI)
     public let posLeft: Int?
@@ -26,8 +29,9 @@ public struct IpenXmlCompartment: Sendable {
         number:    Int,
         name:      String,
         follow:    Bool,
-        intake:    Bool   = false,
+        intake:    Bool    = false,
         dispose:   Bool,
+        fraction:  Double? = nil,
         posLeft:   Int?   = nil,
         posTop:    Int?   = nil,
         posWidth:  Int?   = nil,
@@ -41,6 +45,7 @@ public struct IpenXmlCompartment: Sendable {
         self.follow    = follow
         self.intake    = intake
         self.dispose   = dispose
+        self.fraction  = fraction
         self.posLeft   = posLeft
         self.posTop    = posTop
         self.posWidth  = posWidth
@@ -57,6 +62,7 @@ public struct IpenXmlCompartment: Sendable {
         case follow    = "Acompanhar"
         case intake    = "Incorporacao"
         case dispose   = "Eliminacao"
+        case fraction  = "Fracao"
         case posLeft   = "PosLeft"
         case posTop    = "PosTop"
         case posWidth  = "PosWidth"
@@ -73,8 +79,9 @@ extension IpenXmlCompartment: Decodable {
         number    = try  c.decode(Int.self,    forKey: .number)
         name      = try  c.decode(String.self, forKey: .name)
         follow    = try  c.decode(Bool.self,   forKey: .follow)
-        intake    = (try? c.decode(Bool.self,  forKey: .intake))  ?? false
+        intake    = (try? c.decode(Bool.self,   forKey: .intake))   ?? false
         dispose   = try  c.decode(Bool.self,   forKey: .dispose)
+        fraction  = try? c.decode(Double.self, forKey: .fraction)
         posLeft   = try? c.decode(Int.self,    forKey: .posLeft)
         posTop    = try? c.decode(Int.self,    forKey: .posTop)
         posWidth  = try? c.decode(Int.self,    forKey: .posWidth)
