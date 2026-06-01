@@ -7,8 +7,13 @@ extension CompartmentalModel {
 
         // MARK: Errors — solver cannot produce meaningful results
 
-        /// No compartment has `intake = true` with `fraction > 0`.
+        /// No intake compartment has a positive fraction — the solver would start
+        /// with all-zero initial conditions and produce a flat result.
         case noIntakeCompartment
+
+        /// The sum of intake fractions exceeds 1.0, which is physically impossible
+        /// (you cannot receive more activity than was administered).
+        case intakeFractionExceedsOne(totalFraction: Double)
 
         /// No compartment has `follow = true`; nothing would appear in the chart.
         case noTrackedCompartment
@@ -38,7 +43,8 @@ extension CompartmentalModel {
 
         public var severity: Severity {
             switch self {
-            case .noIntakeCompartment, .noTrackedCompartment:     .error
+            case .noIntakeCompartment, .noTrackedCompartment,
+                 .intakeFractionExceedsOne:                        .error
             case .missingHalfLife, .orphanedCompartment:          .warning
             case .danglingConnectionEndpoint, .zeroRateConnection: .info
             }
@@ -49,6 +55,8 @@ extension CompartmentalModel {
             switch self {
             case .noIntakeCompartment:
                 "No intake compartment — enable the Intake flag on the compartment that receives the administered activity."
+            case .intakeFractionExceedsOne(let total):
+                String(format: "Intake fractions sum to %.4g, which exceeds 1.0 — you cannot receive more activity than was administered. Reduce individual fractions.", total)
             case .noTrackedCompartment:
                 "No tracked compartments — enable Track on at least one compartment to see results in the chart."
             case .missingHalfLife(_, let name):
@@ -65,6 +73,7 @@ extension CompartmentalModel {
         public var systemImageName: String {
             switch self {
             case .noIntakeCompartment:            "arrow.down.to.line"
+            case .intakeFractionExceedsOne:       "exclamationmark.arrow.triangle.2.circlepath"
             case .noTrackedCompartment:           "eye.slash"
             case .missingHalfLife:                "clock.badge.exclamationmark"
             case .orphanedCompartment:            "square.dashed"
@@ -83,8 +92,15 @@ extension CompartmentalModel {
 
         // ── Errors ──────────────────────────────────────────────────────────────────
 
-        if !compartments.contains(where: { $0.intake && $0.fraction > 0 }) {
+        let intakeCompartments = compartments.filter(\.intake)
+        let totalFraction = intakeCompartments.reduce(0) { $0 + $1.fraction }
+
+        if !intakeCompartments.contains(where: { $0.fraction > 0 }) {
             issues.append(.noIntakeCompartment)
+        }
+
+        if totalFraction > 1.0 + 1e-9 {   // small epsilon for floating-point noise
+            issues.append(.intakeFractionExceedsOne(totalFraction: totalFraction))
         }
 
         if !compartments.contains(where: \.follow) {
