@@ -2,6 +2,7 @@ import AppDomain
 import FP
 import NavigationFeature
 import SwiftUI
+import UIComponents
 
 // MARK: - AppRootView
 
@@ -29,5 +30,8 @@ public struct AppRootView<Content: View>: View {
         ) {
             content()
         }
+        // Inject GlassTokens for the correct color scheme at the root.
+        // All descendant views inherit these and adapt automatically on system appearance change.
+        .glassEnvironment()
     }
 }

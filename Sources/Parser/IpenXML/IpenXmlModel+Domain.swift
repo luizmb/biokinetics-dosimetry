@@ -4,12 +4,19 @@ import FP
 extension IpenXmlModel {
     /// Maps this IPEN XML model to the domain `CompartmentalModel`.
     ///
-    /// IPEN XML files are always single-nuclide: a synthetic `Nuclide` with `id "n0"`
-    /// and `halfLife 0` is created and assigned to every compartment. Set the
-    /// nuclide's half-life after loading via the document inspector, and set the
-    /// intake compartment via `CompartmentalModel.updatingCompartment(id:_:)`.
+    /// The IPEN XML format encodes the transfer network only — it has no field
+    /// for which compartment receives the administered activity or what the
+    /// initial fraction is. All compartments are imported with `intake = false`
+    /// and `fraction = 0`.
+    ///
+    /// After importing, open the model in the Editor, select the compartment
+    /// that receives the intake (e.g. Plasma), and enable the **Intake** flag.
+    /// The Calculator will show a banner if no intake compartment is set.
+    ///
+    /// The nuclide's half-life defaults to 0 — set it via the Document inspector.
     public func toCompartmentalModel() -> CompartmentalModel {
-        let nuclide = Nuclide(id: "n0", name: "Imported", halfLife: 0)
+        let halfLife = modelo?.halfLife ?? 0
+        let nuclide = Nuclide(id: "n0", name: "Imported", halfLife: halfLife)
         return CompartmentalModel(
             nuclides: [nuclide],
             compartments: compartments.map { $0.toDomain(nuclideId: nuclide.id) },
@@ -19,15 +26,17 @@ extension IpenXmlModel {
 }
 
 extension IpenXmlCompartment {
-    func toDomain(nuclideId: String) -> Compartment {
-        Compartment(
+    func toDomain(nuclideId: String, isIntake: Bool = false) -> Compartment {
+        // Prefer the XML field if present; fall back to the graph-topology heuristic.
+        let effectiveIntake = intake || isIntake
+        return Compartment(
             id: String(number),
             nuclideId: nuclideId,
             name: name,
             follow: follow,
-            intake: false,
+            intake: effectiveIntake,
             dispose: dispose,
-            fraction: 0
+            fraction: effectiveIntake ? 1.0 : 0
         )
     }
 }

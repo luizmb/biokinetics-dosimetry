@@ -45,6 +45,8 @@ public enum HomeFeature {
         public struct ViewState: Sendable, Equatable {
             public var filePicker: Loading<Terminal, Never> = .idle
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
+            /// Non-nil when the last import attempt failed; localised message to show in banner.
+            public var importErrorMessage: String? = nil
         }
 
         @dynamicMemberLookup
@@ -63,7 +65,8 @@ public enum HomeFeature {
     // MARK: - Mappings
 
     public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
-        ViewModel.ViewState(
+        let importError: String? = state.documents.failed.map { $0.0.localizedDescription }
+        return ViewModel.ViewState(
             filePicker: state.filePicker,
             cards: state.documents.map { value in
                 value.map { doc in
@@ -81,7 +84,8 @@ public enum HomeFeature {
                         document: doc
                     )
                 }
-            }
+            },
+            importErrorMessage: importError
         )
     }
 
@@ -103,60 +107,92 @@ public enum HomeFeature {
     public static func initialState() -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        .handle { action, _ in
+        typealias C = Consequence<State, Environment, Action>
+        return .handle { action, _ in
             switch action {
             case .openFilePicker:
-                .reduce { $0.filePicker = $0.filePicker.startLoading() }
+                return C.reduce { $0.filePicker = $0.filePicker.startLoading() }
 
             case .filePickerDismissed:
-                .reduce { $0.filePicker = .idle }
+                return C.reduce { $0.filePicker = .idle }
 
-            case .newDocument:
-                .reduce { $0.documents = .loaded([.empty] + ($0.documents.loadedOrPrevious ?? [])) }
-
-            case .importXML(let data):
-                // Transition filePicker to .loaded(()) so the isPresented binding
-                // drops to false without triggering filePickerDismissed (the set
-                // closure guards on filePicker.is(.loading)).
-                .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
-                .produce { ctx in
-                    .just(
-                        .importResult(
-                            ctx.environment.xmlDecoder
-                                .dataDecoder(for: IpenXmlModel.self)(data)
-                                .map { $0.toCompartmentalModel() }
-                                .map(\.asModelDocument)
-                        )
-                    )
+            case .loadDocuments:
+                return C.produce { ctx in
+                    .just(.loadResult(ctx.environment.loadAllDocuments()))
                 }
 
+            case .loadResult(let result):
+                return C.reduce { state in
+                    if case .success(let docs) = result {
+                        state.documents = .loaded(docs)
+                    }
+                    // On failure, leave existing state — user can still work.
+                }
+
+            case .newDocument:
+                let newDoc = ModelDocument.empty
+                return C.reduce { $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? [])) }
+                    .produce { ctx in
+                        _ = ctx.environment.saveDocument(newDoc)
+                        return .empty
+                    }
+
+            case .importXML(let data):
+                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                    .produce { ctx in
+                        .just(
+                            .importResult(
+                                ctx.environment.xmlDecoder
+                                    .dataDecoder(for: IpenXmlModel.self)(data)
+                                    .map { xmlModel -> ModelDocument in
+                                        var doc = xmlModel.toCompartmentalModel().asModelDocument
+                                        if let name = xmlModel.modelo?.name, !name.isEmpty { doc.name = name }
+                                        if let desc = xmlModel.modelo?.description, !desc.isEmpty { doc.description = desc }
+                                        return doc
+                                    }
+                            )
+                        )
+                    }
+
             case let .importResult(result):
-                .reduce { state in
+                return C.reduce { state in
                     state.filePicker = .idle
                     state.documents = state.documents.applying(
                         Array.pure >>> curry(+)(state.documents.loadedOrPrevious ?? []) <£> result
                     )
                 }
+                .produce { ctx in
+                    guard case .success(let doc) = result else { return .empty }
+                    _ = ctx.environment.saveDocument(doc)
+                    return .empty
+                }
 
             case .saveDocument(let doc):
-                .reduce { state in
+                return C.reduce { state in
                     let zoom = Loading<[ModelDocument], DecodingError>.prism.loaded >>> [ModelDocument].ix(id: doc.id)
-
                     if zoom.preview(state.documents) != nil {
                         state.documents = zoom.over(const(doc))(state.documents)
                     } else {
                         state.documents = .loaded([doc])
                     }
                 }
+                .produce { ctx in
+                    _ = ctx.environment.saveDocument(doc)
+                    return .empty
+                }
 
             case .deleteDocument(let id):
-                .reduce { state in
+                return C.reduce { state in
                     guard let loaded = state.documents.loaded else { return }
                     state.documents = .loaded(loaded.filter(\.id >>> notEquals(id)))
                 }
+                .produce { ctx in
+                    _ = ctx.environment.deleteDocument(id)
+                    return .empty
+                }
 
             case .edit, .calculate:
-                .doNothing
+                return .doNothing
             }
         }
     }

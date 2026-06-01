@@ -30,6 +30,8 @@ public enum CalculatorFeature {
         public var visibleSeriesIds: Set<String> = []
         public var activeView: CalcView = .chart
         public var isParamPanelVisible: Bool = true
+        /// iPhone: whether the params bottom sheet is open.
+        public var isParamSheetOpen: Bool = false
 
         public init() {}
     }
@@ -56,6 +58,7 @@ public enum CalculatorFeature {
         case toggleSeries(String)
         case setActiveView(CalcView)
         case toggleParamPanel
+        case setParamSheet(Bool)
     }
 
     // MARK: - Environment
@@ -112,6 +115,22 @@ public enum CalculatorFeature {
             public var durationWarning: BiokineticsSimulationPlan.DurationWarning = .none
             /// Human-readable estimate string, e.g. "~45 s" or "< 1 s".
             public var estimatedDurationLabel: String = ""
+
+            // MARK: Pre-computed label strings
+
+            /// Short name of the current solver method (e.g. "Birchall", "RK4", "RK45").
+            public var solverShortName: String = "Birchall"
+            /// Calculate button title including estimate (e.g. "Calculate · < 1 s").
+            public var calculateButtonTitle: String = "Calculate"
+            /// Log/Lin toggle label for the X axis.
+            public var logXLabel: String = "Log X"
+            /// Log/Lin toggle label for the Y axis.
+            public var logYLabel: String = "Log Y"
+            /// Full duration-warning message pre-formatted for the banner, or nil when .none.
+            public var durationWarningMessage: String? = nil
+            public var isParamSheetOpen: Bool = false
+            /// All structural and completeness issues detected in the current model.
+            public var validationIssues: [CompartmentalModel.ValidationIssue] = []
         }
 
         @dynamicMemberLookup
@@ -127,6 +146,7 @@ public enum CalculatorFeature {
             case toggleSeries(String)
             case setActiveView(CalcView)
             case toggleParamPanel
+            case setParamSheet(Bool)
         }
     }
 
@@ -138,10 +158,11 @@ public enum CalculatorFeature {
 
         var series: [ViewModel.Series] = []
         if let results = state.results {
+            let displayTrajectory = doc.model.displayTrajectory(from: results, step: state.stepSize)
             series = compartments.enumerated().compactMap { globalIdx, comp -> ViewModel.Series? in
                 let compIdx = doc.model.compartments.firstIndex { $0.id == comp.id } ?? globalIdx
-                let points = results.enumerated().map { stepIdx, row -> ViewModel.SeriesPoint in
-                    ViewModel.SeriesPoint(day: Double(stepIdx), value: compIdx < row.count ? row[compIdx] : 0)
+                let points = displayTrajectory.enumerated().map { stepIdx, row -> ViewModel.SeriesPoint in
+                    ViewModel.SeriesPoint(day: Double(stepIdx) * state.stepSize, value: compIdx < row.count ? row[compIdx] : 0)
                 }
                 let tint = doc.visuals[comp.id]?.tint ?? .steel
                 let visible = state.visibleSeriesIds.isEmpty || state.visibleSeriesIds.contains(comp.id)
@@ -164,6 +185,27 @@ public enum CalculatorFeature {
         let durationWarning = plan.durationWarning(compartmentCount: n)
         let estimatedDurationLabel = Self.formatDuration(estimatedSeconds)
 
+        let solverShortName: String = {
+            switch state.solver {
+            case .birchall:    "Birchall"
+            case .rungeKutta4: "RK4"
+            case .rungeKutta45: "RK45"
+            }
+        }()
+        let calculateButtonTitle = state.isCalculating
+            ? "Calculating…"
+            : "Calculate · \(estimatedDurationLabel)"
+        let logXLabel = state.logX ? "Log X" : "Lin X"
+        let logYLabel = state.logY ? "Log Y" : "Lin Y"
+        let durationWarningMessage: String? = {
+            switch durationWarning {
+            case .none:    nil
+            case .brief:   "Est. \(estimatedDurationLabel)"
+            case .slow:    "Est. \(estimatedDurationLabel) — may be slow"
+            case .veryLong:"Est. \(estimatedDurationLabel) — this will take a long time"
+            }
+        }()
+
         return ViewModel.ViewState(
             documentName: doc.name,
             halfLife: doc.halfLife,
@@ -183,7 +225,14 @@ public enum CalculatorFeature {
             activeView: state.activeView,
             isParamPanelVisible: state.isParamPanelVisible,
             durationWarning: durationWarning,
-            estimatedDurationLabel: estimatedDurationLabel
+            estimatedDurationLabel: estimatedDurationLabel,
+            solverShortName: solverShortName,
+            calculateButtonTitle: calculateButtonTitle,
+            logXLabel: logXLabel,
+            logYLabel: logYLabel,
+            durationWarningMessage: durationWarningMessage,
+            isParamSheetOpen: state.isParamSheetOpen,
+            validationIssues: doc.model.validationIssues
         )
     }
 
@@ -212,6 +261,7 @@ public enum CalculatorFeature {
         case .toggleSeries(let id):     .toggleSeries(id)
         case .setActiveView(let v):     .setActiveView(v)
         case .toggleParamPanel:         .toggleParamPanel
+        case .setParamSheet(let v):     .setParamSheet(v)
         }
     }
 
@@ -264,6 +314,9 @@ public enum CalculatorFeature {
                 C.reduce { $0.activeView = v }
             case .toggleParamPanel:
                 C.reduce { $0.isParamPanelVisible.toggle() }
+
+            case .setParamSheet(let v):
+                C.reduce { $0.isParamSheetOpen = v }
             }
         }
     }

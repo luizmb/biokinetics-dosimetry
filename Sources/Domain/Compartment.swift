@@ -1,7 +1,7 @@
 import FPMacros
 
 @Lenses(init: .public)
-public struct Compartment: Hashable, Identifiable, Sendable {
+public struct Compartment: Hashable, Identifiable, Codable, Sendable {
     public let id: String
     /// The `Nuclide.id` this compartment belongs to.
     public let nuclideId: String
