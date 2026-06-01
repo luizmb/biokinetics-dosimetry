@@ -173,7 +173,7 @@ public enum CalculatorFeature {
         }
 
         let reportRows: [ViewModel.ReportRow] = (state.results ?? []).enumerated().map { idx, row in
-            ViewModel.ReportRow(id: idx, day: Double(idx), values: row)
+            ViewModel.ReportRow(id: idx, day: Double(idx) * state.stepSize, values: row)
         }
 
         let plan = BiokineticsSimulationPlan(

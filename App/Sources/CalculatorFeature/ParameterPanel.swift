@@ -176,6 +176,7 @@ struct ParameterContent: View {
 struct ReportContent: View {
     let reportRows: [CalculatorFeature.ViewModel.ReportRow]
     let compartmentNames: [String]
+    let lingo: FieldLingo
     let isCompact: Bool
 
     @Environment(\.glassTokens) private var g
@@ -193,7 +194,7 @@ struct ReportContent: View {
             ScrollView([.horizontal, .vertical]) {
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
-                        headerCell("Day (d)")
+                        headerCell("Time (\(lingo.timeUnit.label))")
                         ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
                     }
                     .background(Color.platformTertiaryGroupedBackground)
