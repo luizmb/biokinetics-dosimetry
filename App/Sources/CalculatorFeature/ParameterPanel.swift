@@ -27,6 +27,7 @@ struct ParameterContent: View {
     var paramBindings: ParameterBindings
 
     // Read-only display state.
+    let lingo:        FieldLingo
     let variants:     [String]
     let solver:       SolverMethod
     let isCalculating: Bool
@@ -95,7 +96,7 @@ struct ParameterContent: View {
                         .padding(.bottom, 18)
                     }
 
-                    GLabel("Duration (days)").padding(.horizontal, 18)
+                    GLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
                     HStack {
                         Text(paramBindings.finalDay.wrappedValue.formatted())
                             .font(.system(size: 20, weight: .semibold, design: .monospaced))
@@ -111,7 +112,7 @@ struct ParameterContent: View {
 
                     switch solver {
                     case .rungeKutta4, .rungeKutta45:
-                        GLabel("Step size (days)").padding(.horizontal, 18)
+                        GLabel("Step size (\(lingo.timeUnit.label))").padding(.horizontal, 18)
                         doubleField(binding: paramBindings.stepSize, dp: 4)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)

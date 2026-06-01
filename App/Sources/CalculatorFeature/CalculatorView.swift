@@ -150,6 +150,7 @@ struct CalculatorContent: View {
             if isParamPanelVisible {
                 ParameterContent(
                     paramBindings: paramBindings,
+                    lingo: lingo,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
@@ -276,6 +277,7 @@ struct CalculatorContent: View {
             ScrollView {
                 ParameterContent(
                     paramBindings: paramBindings,
+                    lingo: lingo,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
