@@ -226,6 +226,7 @@ struct CalculatorContent: View {
                         series: series, isCalculating: isCalculating,
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
                         finalDay: paramBindings.finalDay.wrappedValue,
+                        lingo: lingo,
                         validationIssues: validationIssues,
                         onToggleSeries: onToggleSeries
                     )
@@ -303,7 +304,7 @@ struct CalculatorContent: View {
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .platformNavigationLeading) {
             if halfLife > 0 {
-                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
                     .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(.quaternary, in: Capsule())

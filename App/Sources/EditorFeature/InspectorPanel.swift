@@ -170,7 +170,7 @@ struct EditorInspectorPanel: View {
                 selection: bindings.nuclideId,
                 options: nuclides.map { n in
                     GRadioOption(value: n.id, label: n.name,
-                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d" : nil)
+                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)" : nil)
                 }
             )
         } else if let n = nuclides.first(where: { $0.id == bindings.nuclideId.wrappedValue }) {
@@ -179,7 +179,7 @@ struct EditorInspectorPanel: View {
                     Text(n.name).font(.system(size: 15))
                     Spacer()
                     if n.halfLife > 0 {
-                        Text("\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d")
+                        Text("\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)")
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
@@ -436,7 +436,7 @@ struct EditorInspectorPanel: View {
                 TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
                     .font(.system(size: 12, design: .monospaced))
                     .decimalKeyboard()
-                Text("days").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(lingo.timeUnit.label).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             if nb.compartmentCount > 0 {
                 Text("\(nb.compartmentCount) compartment\(nb.compartmentCount == 1 ? "" : "s")")
