@@ -176,56 +176,92 @@ struct CalculatorContent: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isParamPanelVisible)
     }
 
-    // MARK: - Compact (iPhone: TabView + floating action buttons)
+    // MARK: - Compact (iPhone: three-tab TabView)
 
     private var compactLayout: some View {
-        ZStack(alignment: .bottomTrailing) {
-            contentTabView
-            floatingActions
-                .padding(.trailing, 18)
-                .padding(.bottom, 24)
-        }
-        .sheet(isPresented: Binding(
-            get: { isParamSheetOpen },
-            set: { onSetParamSheet($0) }
-        )) { paramsSheet }
+        compactTabView
     }
 
-    private var floatingActions: some View {
-        VStack(spacing: 12) {
-            // Params / solver config
-            GPill(intensity: 0.85, action: { onSetParamSheet(true) }) {
-                VStack(spacing: 2) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 17, weight: .medium))
-                    Text(solverShortName)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 54, height: 54)
-            }
-            // Calculate
-            GPill(intensity: isCalculating ? 0.6 : 1.0,
-                  action: isCalculating ? {} : onCalculate) {
-                Group {
-                    if isCalculating {
-                        ProgressView().tint(.secondary)
-                    } else {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(validationIssues.hasErrors ? .secondary : Color.accentColor)
+    // MARK: - Compact three-tab TabView (iPhone)
+
+    private var compactTabView: some View {
+        TabView(selection: activeView) {
+            // Chart tab
+            GCard(cornerRadius: 20, intensity: 0.55,
+                  tint: colorScheme == .dark
+                        ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
+                        : Color.white.opacity(0.40)) {
+                VStack(spacing: 0) {
+                    if !series.isEmpty && !isCalculating && error == nil {
+                        HStack(spacing: 7) {
+                            Spacer()
+                            logPill(logXLabel, binding: logX)
+                            logPill(logYLabel, binding: logY)
+                        }
+                        .padding(.horizontal, 12).padding(.top, 10)
                     }
+                    DecayChartContent(
+                        series: series, isCalculating: isCalculating,
+                        error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
+                        finalDay: paramBindings.finalDay.wrappedValue,
+                        lingo: lingo, validationIssues: validationIssues,
+                        onToggleSeries: onToggleSeries
+                    )
                 }
-                .frame(width: 60, height: 60)
             }
-            .disabled(isCalculating || validationIssues.hasErrors)
+            .padding(.horizontal, 12)
+            .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
+            .tag(CalculatorFeature.CalcView.chart)
+
+            // Report tab
+            ReportContent(
+                reportRows: reportRows, compartmentNames: compartmentNames,
+                lingo: lingo, isCompact: true
+            )
+            .tabItem { Label("Report", systemImage: "tablecells") }
+            .tag(CalculatorFeature.CalcView.report)
+
+            // Parameters tab
+            VStack(spacing: 0) {
+                ScrollView {
+                    ParameterContent(
+                        paramBindings: paramBindings,
+                        lingo: lingo,
+                        variants: variants, solver: solver,
+                        isCalculating: isCalculating,
+                        validationIssues: validationIssues,
+                        calculateButtonTitle: calculateButtonTitle,
+                        durationWarningMessage: durationWarningMessage,
+                        durationWarningTone: bannerTone(durationWarning),
+                        onSetSolver: onSetSolver,
+                        onCalculate: onCalculate
+                    )
+                }
+                GButton(
+                    isCalculating ? "Calculating…" : "Calculate",
+                    icon: isCalculating ? nil : Image(systemName: "play.fill"),
+                    size: .lg, fullWidth: true,
+                    disabled: isCalculating || validationIssues.hasErrors,
+                    action: onCalculate
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 30)
+                .padding(.top, 10)
+            }
+            .tabItem { Label("Parameters", systemImage: "slider.horizontal.3") }
+            .tag(CalculatorFeature.CalcView.parameters)
         }
     }
 
-    // MARK: - TabView (both layouts)
+    // MARK: - Two-tab TabView (iPad — no parameters tab, sidebar handles params)
 
     private var contentTabView: some View {
-        TabView(selection: activeView) {
+        // On iPad, .parameters is not a valid tab — fall back to .chart
+        let ipadBinding = Binding(
+            get: { activeView.wrappedValue == .parameters ? CalculatorFeature.CalcView.chart : activeView.wrappedValue },
+            set: { activeView.wrappedValue = $0 }
+        )
+        return TabView(selection: ipadBinding) {
             // Chart tab
             GCard(cornerRadius: 20, intensity: 0.55,
                   tint: colorScheme == .dark
