@@ -5,6 +5,7 @@ import UIComponents
 // MARK: - EditorModelListPanel (pure)
 
 struct EditorModelListPanel: View {
+    let lingo: FieldLingo
     let nuclides: [EditorFeature.ViewModel.NuclideRow]
     let compartments: [EditorFeature.ViewModel.CompartmentRow]
     let links: [EditorFeature.ViewModel.LinkRow]
@@ -99,7 +100,7 @@ struct EditorModelListPanel: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             if nuclide.halfLife > 0 {
-                Text("· T½ \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                Text("· \(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }
@@ -126,8 +127,8 @@ struct EditorModelListPanel: View {
                 if comp.follow || comp.dispose || comp.intake {
                     HStack(spacing: 4) {
                         if comp.follow  { flagChip("Track") }
-                        if comp.dispose { flagChip("Elim") }
-                        if comp.intake  { flagChip("Intake") }
+                        if comp.dispose { flagChip(lingo.eliminationLabel) }
+                        if comp.intake  { flagChip(lingo.intakeLabel) }
                     }
                 }
             }
