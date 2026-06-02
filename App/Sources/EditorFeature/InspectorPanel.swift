@@ -55,11 +55,16 @@ struct EditorInspectorPanel: View {
     var onDeleteSelected:    () -> Void
     var onAddNuclide:        () -> Void
     var onDeleteNuclide:     (String) -> Void
-    var onAddVariant:        (String) -> Void
-    var onDeleteVariant:     (String) -> Void
+    var onAddVariant:           (String) -> Void
+    var onDeleteVariant:        (String) -> Void
     var onSelectEditingVariant: (String?) -> Void
+    var onBeginVariantRename:   (String) -> Void
+    var onCommitVariantRename:  () -> Void
+    var onCancelVariantRename:  () -> Void
     let variants: [String]
     let editingVariant: String?
+    let renamingVariant: String?
+    @Binding var variantRenameDraft: String
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -456,27 +461,53 @@ struct EditorInspectorPanel: View {
         }
     }
 
+    @ViewBuilder
     private func variantRow(key: String?, label: String) -> some View {
-        let isEditing = editingVariant == key
-        return HStack {
-            Text(label).font(.system(size: 15))
-            Spacer()
-            if isEditing {
-                Image(systemName: "pencil.circle.fill")
+        let isEditing  = editingVariant == key
+        let isRenaming = key != nil && renamingVariant == key
+
+        if isRenaming {
+            HStack(spacing: 8) {
+                TextField("Variant name", text: $variantRenameDraft)
+                    .font(.system(size: 15))
+                    .submitLabel(.done)
+                    .onSubmit { onCommitVariantRename() }
+                Button("Done") { onCommitVariantRename() }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(g.accent)
-            }
-            if key != nil {
-                Button(role: .destructive) { onDeleteVariant(key!) } label: {
-                    Image(systemName: "minus.circle.fill").foregroundStyle(.red.opacity(0.8))
+                    .buttonStyle(PlainButtonStyle())
+                Button { onCancelVariantRename() } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+        } else {
+            HStack {
+                Text(label).font(.system(size: 15))
+                Spacer()
+                if isEditing {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(g.accent)
+                }
+                if let key {
+                    Button { onBeginVariantRename(key) } label: {
+                        Image(systemName: "pencil").font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    Button(role: .destructive) { onDeleteVariant(key) } label: {
+                        Image(systemName: "minus.circle.fill").foregroundStyle(.red.opacity(0.8))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .background(isEditing ? g.accent.opacity(0.06) : Color.clear)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelectEditingVariant(key) }
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
-        .background(isEditing ? g.accent.opacity(0.06) : Color.clear)
-        .contentShape(Rectangle())
-        .onTapGesture { onSelectEditingVariant(key) }
     }
 
     @ViewBuilder
