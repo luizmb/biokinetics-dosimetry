@@ -16,7 +16,7 @@ public struct World: Sendable {
     public let newId:        @Sendable () -> UUID
     public let formatDouble: @Sendable (Double, Int) -> String    // (value, decimalPlaces) — locale-aware
     public let parseDouble:  @Sendable (String) -> Double?        // locale-aware input parsing
-    public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
+    public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>
     public let saveDocument: @Sendable (ModelDocument) -> Result<Void, PersistenceError>
     public let loadAllDocuments: @Sendable () -> Result<[ModelDocument], PersistenceError>
     public let deleteDocument: @Sendable (UUID) -> Result<Void, PersistenceError>
@@ -27,7 +27,7 @@ public struct World: Sendable {
         newId:        @escaping @Sendable () -> UUID,
         formatDouble: @escaping @Sendable (Double, Int) -> String,
         parseDouble:  @escaping @Sendable (String) -> Double?,
-        solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
+        solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>,
         saveDocument: @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>,
         loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError>,
         deleteDocument: @escaping @Sendable (UUID) -> Result<Void, PersistenceError>

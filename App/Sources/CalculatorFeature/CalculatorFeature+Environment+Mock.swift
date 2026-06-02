@@ -8,20 +8,20 @@ import FP          // DeferredTask
 import Solver      // Solver.solve
 
 // Mock solver — exponential decay per compartment
-private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalModel) -> DeferredTask<[[Double]]> {
+private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>> {
     let n = model.compartments.count
     let steps = plan.stepCount + 1
     return DeferredTask {
-        (0..<steps).map { step -> [Double] in
+        .success((0..<steps).map { step -> [Double] in
             let t = Double(step) * plan.step
             return (0..<n).map { idx -> Double in
                 let k = 0.05 + Double(idx) * 0.03
                 return max(0, exp(-k * t) - Double(idx) * 0.1)
             }
-        }
+        })
     }
 }
-private let mockSolve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]> = mockDecay
+private let mockSolve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>> = mockDecay
 
 
 public extension CalculatorFeature.Environment {
@@ -33,18 +33,20 @@ public extension CalculatorFeature.Environment {
 
     /// Returns the provided data for every solve request, ignoring the plan and model.
     static func succeeds(with data: [[Double]]) -> CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { data } })
+        .init(solve: { _, _ in DeferredTask { .success(data) } })
     }
 
     static var alwaysFails: CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { [] } })
+        .init(solve: { _, _ in DeferredTask { .success([]) } })
     }
 
     static var realBirchall: CalculatorFeature.Environment {
         .init(solve: { plan, model in
-            let p = BiokineticsSimulationPlan(step: plan.step, final: plan.final,
-                                              solver: .birchall(composition: .perTime))
-            return DeferredTask { await Solver.solve(plan: p, model: model).run() }
+            Solver.solve(
+                plan: BiokineticsSimulationPlan(step: plan.step, final: plan.final,
+                                               solver: .birchall(composition: .perTime)),
+                model: model
+            ).map(Result.success)
         })
     }
 }
