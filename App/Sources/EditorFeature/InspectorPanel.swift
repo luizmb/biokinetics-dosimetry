@@ -11,6 +11,7 @@ struct CompartmentFieldBindings {
     var follow:    Binding<Bool>
     var dispose:   Binding<Bool>
     var intake:    Binding<Bool>
+    var fraction:  Binding<Double>
     var nuclideId: Binding<String>
 }
 
@@ -171,6 +172,21 @@ struct EditorInspectorPanel: View {
                 flagRow(lingo.eliminationLabel,   dot: Color(hex: 0xF59E0B), isOn: bindings.dispose)
                 GlassDivider()
                 flagRow(lingo.intakeLabel,        dot: Color(hex: 0x34C759), isOn: bindings.intake)
+                if bindings.intake.wrappedValue {
+                    GlassDivider()
+                    HStack(spacing: 10) {
+                        Circle().fill(Color(hex: 0x34C759).opacity(0.4)).frame(width: 9, height: 9)
+                        Text("Fraction (0–1)").font(.system(size: 16))
+                        Spacer()
+                        TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(4)))
+                            .font(.system(size: 15, design: .monospaced))
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                            .decimalKeyboard()
+                    }
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 10)
+                }
             }
         }
         .padding(.bottom, 14)
@@ -525,10 +541,17 @@ struct EditorInspectorPanel: View {
             }
             HStack(spacing: 6) {
                 Text(lingo.halfLifeLabel).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
-                    .font(.system(size: 12, design: .monospaced))
-                    .decimalKeyboard()
-                Text(lingo.timeUnit.label).font(.system(size: 11)).foregroundStyle(.secondary)
+                if nb.halfLife.wrappedValue == 0 && !lingo.isHalfLifeRequired {
+                    Text("None")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .onTapGesture { nb.halfLife.wrappedValue = 1 }
+                } else {
+                    TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
+                        .font(.system(size: 12, design: .monospaced))
+                        .decimalKeyboard()
+                    Text(lingo.timeUnit.label).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
             }
             if nb.compartmentCount > 0 {
                 Text("\(nb.compartmentCount) compartment\(nb.compartmentCount == 1 ? "" : "s")")

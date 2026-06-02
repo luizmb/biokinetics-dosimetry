@@ -61,6 +61,50 @@ struct CompartmentCanvasView: View {
                 // ── Fixed dot-grid backdrop ────────────────────────────────────
                 dotGrid(size: geo.size)
 
+                // ── Intake arrows — bold arrows from above for intake compartments ──
+                ForEach(compartments.filter { $0.intake }) { comp in
+                    let sz  = nodeSize(comp.id)
+                    let sp  = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
+                    let len = sz.height * 0.55 * s          // ~half compartment height
+                    let tail = CGPoint(x: sp.x, y: sp.y - sz.height/2*s - len)
+                    let intakeColor = Color(hex: 0x34C759)
+
+                    // Shaft
+                    Path { p in
+                        p.move(to: tail)
+                        p.addLine(to: CGPoint(x: sp.x, y: sp.y - sz.height/2*s - 8))
+                    }
+                    .stroke(intakeColor, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                    .allowsHitTesting(false)
+
+                    // Arrowhead (reuse existing helper)
+                    screenArrowHead(from: tail, to: sp, dstSize: sz, scale: s)
+                        .fill(intakeColor)
+                        .allowsHitTesting(false)
+
+                    // Fraction label
+                    if comp.fraction > 0 {
+                        Text(comp.fraction.formatted(.number.precision(.fractionLength(2))))
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(intakeColor)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(.regularMaterial, in: Capsule())
+                            .position(x: sp.x + sz.width/2*s*0.5 + 10,
+                                      y: (tail.y + sp.y - sz.height/2*s) / 2)
+                            .allowsHitTesting(false)
+                    }
+
+                    // Tap target — selects the compartment
+                    Color.clear
+                        .frame(width: 44, height: max(44, len))
+                        .contentShape(Rectangle())
+                        .position(x: sp.x, y: tail.y + len/2)
+                        .highPriorityGesture(TapGesture().onEnded {
+                            guard !isLinking else { return }
+                            onSelectCompartment(comp.id)
+                        })
+                }
+
                 // ── Link arrows — Path shapes in screen-space ──────────────────
                 ForEach(links.filter { isLinkVisible($0, in: viewport) }) { link in
                     let from   = screenPt(nodePos(link.fromId), hw: hw, hh: hh, s: s, ox: ox, oy: oy)

@@ -103,8 +103,8 @@ struct ParameterContent: View {
                             .foregroundStyle(g.ink)
                         Spacer()
                         GStepper(
-                            onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue / 2) },
-                            onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue * 2 }
+                            onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 1) },
+                            onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 1 }
                         )
                     }
                     .padding(.horizontal, 18)

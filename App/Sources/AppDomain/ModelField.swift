@@ -54,6 +54,10 @@ public struct FieldLingo: Sendable, Equatable {
     public let fieldName: String
     /// Default time unit for this field.
     public let timeUnit: TimeUnit
+    /// Whether a non-zero half-life is required for the model to be meaningful.
+    /// `true` for nuclear (halfLife=0 means "not yet set").
+    /// `false` for all other fields (halfLife=0 means "stable / no spontaneous elimination").
+    public let isHalfLifeRequired: Bool
 }
 
 public extension ModelField {
@@ -68,7 +72,8 @@ public extension ModelField {
                 eliminationLabel: "Elimination",
                 rateUnit:         "day⁻¹",
                 fieldName:        "Nuclear / Dosimetry",
-                timeUnit:         .days
+                timeUnit:         .days,
+                isHalfLifeRequired: true
             )
         case .pharmacology:
             FieldLingo(
@@ -79,7 +84,8 @@ public extension ModelField {
                 eliminationLabel: "Clearance",
                 rateUnit:         "h⁻¹",
                 fieldName:        "Pharmacology / PK",
-                timeUnit:         .hours
+                timeUnit:         .hours,
+                isHalfLifeRequired: false
             )
         case .toxicology:
             FieldLingo(
@@ -90,7 +96,8 @@ public extension ModelField {
                 eliminationLabel: "Excretion",
                 rateUnit:         "day⁻¹",
                 fieldName:        "Toxicology",
-                timeUnit:         .days
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         case .ecology:
             FieldLingo(
@@ -101,7 +108,8 @@ public extension ModelField {
                 eliminationLabel: "Sink",
                 rateUnit:         "day⁻¹",
                 fieldName:        "Ecology",
-                timeUnit:         .days
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         case .generic:
             FieldLingo(
@@ -112,7 +120,8 @@ public extension ModelField {
                 eliminationLabel: "Elimination",
                 rateUnit:         "day⁻¹",
                 fieldName:        "Generic",
-                timeUnit:         .days
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         }
     }
