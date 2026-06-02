@@ -160,7 +160,7 @@ private var uranium234: ModelDocument {
         field: .nuclear,
         model: model,
         variants: ["Type F": typeF, "Type M": typeM],
-        visuals: defaultVisuals(for: model)
+        visuals: uranium234Visuals(for: model)
     )
 }
 
@@ -211,7 +211,7 @@ private var hydrogen3: ModelDocument {
         description: "ICRP 56 Part 1 model for HTO inhalation or ingestion. 97% as body water (T½ bio ≈ 10 d), 3% as organically bound tritium (T½ bio ≈ 40 d). Physical T½ = 4499 d (12.32 y).",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: hydrogen3Visuals(for: model)
     )
 }
 
@@ -243,7 +243,7 @@ private var caesium137: ModelDocument {
         description: "ICRP 67 simplified systemic model for Cs-137. Fast soft-tissue pool (T½ bio ≈ 2 d) and slow skeletal pool (T½ bio ≈ 110 d). Physical T½ = 11,012 d (30.2 y).",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: caesium137Visuals(for: model)
     )
 }
 
@@ -275,7 +275,7 @@ private var iodine131: ModelDocument {
         description: "ICRP 67 model for I-131. 30% thyroid uptake (T½ bio = 80 d), remainder in other tissue (T½ bio = 12 d). Physical T½ = 8.02 d.",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: iodine131Visuals(for: model)
     )
 }
 
@@ -313,7 +313,7 @@ private var strontium90: ModelDocument {
         description: "ICRP 67 simplified model for Sr-90, a calcium-analogue bone seeker. Deposition on bone surface followed by volume incorporation and slow skeletal remodelling. Physical T½ = 10,512 d (28.8 y).",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: strontium90Visuals(for: model)
     )
 }
 

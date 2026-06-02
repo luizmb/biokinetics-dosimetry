@@ -102,10 +102,18 @@ struct ParameterContent: View {
                             .font(.system(size: 20, weight: .semibold, design: .monospaced))
                             .foregroundStyle(g.ink)
                         Spacer()
-                        GStepper(
-                            onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 1) },
-                            onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 1 }
-                        )
+                        HStack(spacing: 6) {
+                            GStepper(
+                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 20) },
+                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 20 },
+                                label: "20"
+                            )
+                            GStepper(
+                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 1) },
+                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 1 },
+                                label: "1"
+                            )
+                        }
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)

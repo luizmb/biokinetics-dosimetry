@@ -316,15 +316,25 @@ public struct GStepper: View {
     @Environment(\.glassTokens) private var g
     private let onDecrement: () -> Void
     private let onIncrement: () -> Void
+    private let label: String?
 
-    public init(onDecrement: @escaping () -> Void, onIncrement: @escaping () -> Void) {
+    public init(onDecrement: @escaping () -> Void, onIncrement: @escaping () -> Void, label: String? = nil) {
         self.onDecrement = onDecrement
         self.onIncrement = onIncrement
+        self.label = label
     }
 
     public var body: some View {
         HStack(spacing: 0) {
             stepBtn(systemImage: "minus") { onDecrement() }
+            if let label {
+                GlassVDivider().frame(height: 18)
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(g.faint)
+                    .frame(minWidth: 20)
+                    .padding(.horizontal, 6)
+            }
             GlassVDivider().frame(height: 18)
             stepBtn(systemImage: "plus")  { onIncrement() }
         }
