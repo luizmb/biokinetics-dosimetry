@@ -19,7 +19,7 @@ extension World {
             newId:        { UUID() },
             formatDouble: liveFormatDouble,
             parseDouble:  liveParseDouble,
-            solver:       { plan, model in Solver.solve(plan: plan, model: model) },
+            solver:       { plan, model in Solver.solve(plan: plan, model: model).map(Result.success) },
             saveDocument: { doc in
                 Result {
                     let dir = try biokineticsDocs()

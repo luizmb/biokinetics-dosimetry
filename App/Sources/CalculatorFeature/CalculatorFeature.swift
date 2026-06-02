@@ -70,12 +70,12 @@ public enum CalculatorFeature {
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
+        public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>
         public var formatDouble: @Sendable (Double, Int) -> String
         public var parseDouble:  @Sendable (String) -> Double?
 
         public init(
-            solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
+            solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>,
             formatDouble: @escaping @Sendable (Double, Int) -> String = { v, dp in String(format: "%.\(dp)f", v) },
             parseDouble:  @escaping @Sendable (String) -> Double?     = { Double($0) }
         ) {
@@ -415,7 +415,12 @@ public enum CalculatorFeature {
         )
         return C.reduce { $0.isCalculating = true; $0.error = nil }
             .produce { ctx in
-                .task { Action.resultsReady(await ctx.environment.solve(plan, model).run()) }
+                Effect.deferredTask(ctx.environment.solve(plan, model)) { result in
+                    switch result {
+                    case .success(let data): return .resultsReady(data)
+                    case .failure(let e):    return .resultsFailed(e.localizedDescription)
+                    }
+                }
             }
     }
 
