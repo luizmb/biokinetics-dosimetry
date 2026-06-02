@@ -223,26 +223,28 @@ struct CalculatorContent: View {
 
             // Parameters tab
             VStack(spacing: 0) {
-                ScrollView {
-                    ParameterContent(
-                        paramBindings: paramBindings,
-                        lingo: lingo,
-                        variants: variants, solver: solver,
-                        isCalculating: isCalculating,
-                        validationIssues: validationIssues,
-                        calculateButtonTitle: calculateButtonTitle,
-                        durationWarningMessage: durationWarningMessage,
-                        durationWarningTone: bannerTone(durationWarning),
-                        onSetSolver: onSetSolver,
-                        onCalculate: onCalculate
-                    )
-                }
+                ParameterContent(
+                    paramBindings: paramBindings,
+                    lingo: lingo,
+                    variants: variants, solver: solver,
+                    isCalculating: isCalculating,
+                    validationIssues: validationIssues,
+                    calculateButtonTitle: calculateButtonTitle,
+                    durationWarningMessage: durationWarningMessage,
+                    durationWarningTone: bannerTone(durationWarning),
+                    showCalculateButton: false,
+                    onSetSolver: onSetSolver,
+                    onCalculate: {}
+                )
                 GButton(
                     isCalculating ? "Calculating…" : "Calculate",
                     icon: isCalculating ? nil : Image(systemName: "play.fill"),
                     size: .lg, fullWidth: true,
                     disabled: isCalculating || validationIssues.hasErrors,
-                    action: onCalculate
+                    action: {
+                        onCalculate()
+                        activeView.wrappedValue = .chart
+                    }
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 30)
