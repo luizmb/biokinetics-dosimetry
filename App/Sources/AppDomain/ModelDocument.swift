@@ -31,6 +31,9 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     public var id: UUID
     public var name: String
     public var description: String
+    /// Scientific field that controls UI label strings (substance name, half-life label, etc.).
+    /// Does not affect the underlying math or stored data.
+    public var field: ModelField
     /// Mathematical compartmental model (nuclides + compartments + transfer rates).
     public var model: CompartmentalModel
     /// Named parameter variants (e.g. "Type F", "Type M", "Type S" for uranium).
@@ -40,16 +43,18 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     public var visuals: [String: CompartmentVisuals]
 
     public init(
-        id:       UUID                          = UUID(),
-        name:     String,
-        description: String                     = "",
-        model:    CompartmentalModel,
-        variants: [String: CompartmentalModel]  = [:],
-        visuals:  [String: CompartmentVisuals]  = [:]
+        id:          UUID                          = UUID(),
+        name:        String,
+        description: String                        = "",
+        field:       ModelField                    = .generic,
+        model:       CompartmentalModel,
+        variants:    [String: CompartmentalModel]  = [:],
+        visuals:     [String: CompartmentVisuals]  = [:]
     ) {
         self.id          = id
         self.name        = name
         self.description = description
+        self.field       = field
         self.model       = model
         self.variants    = variants
         self.visuals     = visuals
