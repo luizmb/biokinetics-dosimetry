@@ -178,7 +178,7 @@ struct EditorInspectorPanel: View {
                         Circle().fill(Color(hex: 0x34C759).opacity(0.4)).frame(width: 9, height: 9)
                         Text("Fraction (0–1)").font(.system(size: 16))
                         Spacer()
-                        TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(4)))
+                        TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(6)))
                             .font(.system(size: 15, design: .monospaced))
                             .multilineTextAlignment(.trailing)
                             .frame(width: 80)

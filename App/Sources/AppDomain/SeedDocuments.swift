@@ -35,7 +35,7 @@ private var twoCompartmentPK: ModelDocument {
         description: "Classic two-compartment pharmacokinetic model for an intravenous bolus dose. Central ⇄ Peripheral with first-order elimination from central.",
         field: .pharmacology,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: twoCompartmentPKVisuals(for: model)
     )
 }
 
@@ -71,7 +71,7 @@ private var codeineToMorphine: ModelDocument {
         description: "Two-substance pharmacokinetic model. Codeine is absorbed into plasma and partially converted to morphine via CYP2D6 metabolism (~15 %). Both substances distribute into tissue. Morphine is eliminated via urine.",
         field: .pharmacology,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: codeineToMorphineVisuals(for: model)
     )
 }
 
@@ -101,7 +101,7 @@ private var foodChainBioaccumulation: ModelDocument {
         description: "Aquatic food-chain bioaccumulation of a persistent pollutant. Substance enters the water column and biomagnifies through algae → invertebrates → fish, with slow elimination at the apex.",
         field: .ecology,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: foodChainVisuals(for: model)
     )
 }
 
@@ -125,6 +125,6 @@ private var twoCompartmentGeneric: ModelDocument {
         description: "Minimal two-compartment model. Substance enters A, distributes bidirectionally into B, and is slowly eliminated via Sink. A starting point for any field.",
         field: .generic,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: twoCompartmentGenericVisuals(for: model)
     )
 }
