@@ -32,6 +32,8 @@ public enum CalculatorFeature {
         public var isParamPanelVisible: Bool = true
         /// iPhone: whether the params bottom sheet is open.
         public var isParamSheetOpen: Bool = false
+        public var csvData: Data? = nil
+        public var pdfData: Data? = nil
 
         public init() {}
     }
@@ -59,15 +61,29 @@ public enum CalculatorFeature {
         case setActiveView(CalcView)
         case toggleParamPanel
         case setParamSheet(Bool)
+        // Export
+        case exportCSV
+        case exportPDF
+        case csvReady(Data)
+        case pdfReady(Data)
+        case exportFailed(String)
     }
 
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var solve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
+        public var solve:       @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
+        public var generateCSV: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
+        public var renderPDF:   @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
 
-        public init(solve: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>) {
-            self.solve = solve
+        public init(
+            solve:       @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
+            generateCSV: @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
+            renderPDF:   @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
+        ) {
+            self.solve       = solve
+            self.generateCSV = generateCSV
+            self.renderPDF   = renderPDF
         }
     }
 
@@ -132,6 +148,10 @@ public enum CalculatorFeature {
             public var isParamSheetOpen: Bool = false
             /// All structural and completeness issues detected in the current model.
             public var validationIssues: [CompartmentalModel.ValidationIssue] = []
+            /// Non-nil when a CSV export is ready — binds to ShareLink.
+            public var csvShareable: CSVShareable? = nil
+            /// Non-nil when a PDF export is ready — binds to ShareLink.
+            public var pdfShareable: PDFShareable? = nil
         }
 
         @dynamicMemberLookup
@@ -146,6 +166,8 @@ public enum CalculatorFeature {
             case setLogY(Bool)
             case toggleSeries(String)
             case setActiveView(CalcView)
+            case exportCSV
+            case exportPDF
             case toggleParamPanel
             case setParamSheet(Bool)
         }
@@ -237,7 +259,9 @@ public enum CalculatorFeature {
             validationIssues: doc.model.validationIssues.filter { issue in
                 if case .missingHalfLife = issue { return doc.field == .nuclear }
                 return true
-            }
+            },
+            csvShareable: state.csvData.map { CSVShareable(data: $0, filename: "\(doc.name).csv") },
+            pdfShareable: state.pdfData.map { PDFShareable(data: $0, filename: "\(doc.name).pdf") }
         )
     }
 
@@ -267,6 +291,8 @@ public enum CalculatorFeature {
         case .setActiveView(let v):     .setActiveView(v)
         case .toggleParamPanel:         .toggleParamPanel
         case .setParamSheet(let v):     .setParamSheet(v)
+        case .exportCSV:                .exportCSV
+        case .exportPDF:                .exportPDF
         }
     }
 
@@ -322,6 +348,68 @@ public enum CalculatorFeature {
 
             case .setParamSheet(let v):
                 C.reduce { $0.isParamSheetOpen = v }
+
+            case .exportCSV:
+                exportConsequence(kind: .csv, context: context)
+
+            case .exportPDF:
+                exportConsequence(kind: .pdf, context: context)
+
+            case .csvReady(let data):
+                C.reduce { $0.csvData = data }
+
+            case .pdfReady(let data):
+                C.reduce { $0.pdfData = data }
+
+            case .exportFailed:
+                C.reduce { _ in }
+            }
+        }
+    }
+
+    private enum ExportKind { case csv, pdf }
+
+    @MainActor
+    private static func exportConsequence(
+        kind: ExportKind,
+        context: PreReducerContext<State>
+    ) -> Consequence<State, Environment, Action> {
+        typealias C = Consequence<State, Environment, Action>
+        let snapshot = context.stateBefore ?? State()
+        let doc      = snapshot.document
+        let results  = snapshot.results ?? []
+        let step     = snapshot.stepSize
+        let lingo    = doc.field.lingo
+
+        let trackedCompartments = doc.model.compartments.filter { $0.follow }
+        let trackedIndices = trackedCompartments.compactMap { comp in
+            doc.model.compartments.firstIndex { $0.id == comp.id }
+        }
+        let names = trackedCompartments.map(\.name)
+        let rows: [(day: Double, values: [Double])] = results.enumerated().map { idx, row in
+            (day: Double(idx) * step,
+             values: trackedIndices.map { $0 < row.count ? row[$0] : 0 })
+        }
+        let input = CalculatorExportData(
+            documentName: doc.name, lingo: lingo, compartmentNames: names, rows: rows
+        )
+
+        return C.produce { ctx in
+            switch kind {
+            case .csv:
+                return Effect.deferredTask(ctx.environment.generateCSV(input)) { result in
+                    switch result {
+                    case .success(let data): return .csvReady(data)
+                    case .failure(let e):    return .exportFailed(e.localizedDescription)
+                    }
+                }
+            case .pdf:
+                return Effect.deferredTask(ctx.environment.renderPDF(input)) { result in
+                    switch result {
+                    case .success(let data): return .pdfReady(data)
+                    case .failure(let e):    return .exportFailed(e.localizedDescription)
+                    }
+                }
             }
         }
     }

@@ -12,7 +12,13 @@ where Action == CalculatorFeature.Action,
         lift(
             action:      AppAction.prism.calculator,
             state:       AppState.lens.calculator,
-            environment: \.solver >>> CalculatorFeature.Environment.init
+            environment: { world in
+                CalculatorFeature.Environment(
+                    solve:       world.solver,
+                    generateCSV: world.generateCSV,
+                    renderPDF:   world.renderPDF
+                )
+            }
         )
     }
 }
