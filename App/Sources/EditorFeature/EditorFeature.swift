@@ -39,6 +39,10 @@ public enum EditorFeature {
         public var isModelListSheetOpen: Bool = false
         /// The variant key currently being edited (nil = base model).
         public var editingVariant: String? = nil
+        /// The variant key currently being renamed (nil = not renaming).
+        public var renamingVariant: String? = nil
+        /// Draft name while renaming a variant.
+        public var variantRenameDraft: String = ""
 
         public init() {
         }
@@ -137,6 +141,10 @@ public enum EditorFeature {
         case deleteVariant(name: String)
         case renameVariant(old: String, new: String)
         case selectEditingVariant(String?)
+        case beginVariantRename(String)
+        case setVariantRenameDraft(String)
+        case commitVariantRename
+        case cancelVariantRename
         // Panels
         case toggleLeftPanel
         case toggleRightPanel
@@ -224,6 +232,10 @@ public enum EditorFeature {
             public var variants: [String] = []
             /// Which variant is currently being edited (nil = base model).
             public var editingVariant: String? = nil
+            /// The variant key currently being renamed (nil = not renaming).
+            public var renamingVariant: String? = nil
+            /// Draft name shown in the rename text field.
+            public var variantRenameDraft: String = ""
 
             // MARK: Pre-computed label strings
 
@@ -279,6 +291,10 @@ public enum EditorFeature {
             case deleteVariant(name: String)
             case renameVariant(old: String, new: String)
             case selectEditingVariant(String?)
+            case beginVariantRename(String)
+            case setVariantRenameDraft(String)
+            case commitVariantRename
+            case cancelVariantRename
             case save
         }
     }
@@ -373,6 +389,8 @@ public enum EditorFeature {
             isModelListSheetOpen:    state.isModelListSheetOpen,
             variants:                doc.variants.keys.sorted(),
             editingVariant:          state.editingVariant,
+            renamingVariant:         state.renamingVariant,
+            variantRenameDraft:      state.variantRenameDraft,
             linkingBannerText: linkingBannerText,
             selectionFooterLabel: selectionFooterLabel,
             validationIssues: editingModel.validationIssues.filter { issue in
@@ -425,6 +443,10 @@ public enum EditorFeature {
         case .deleteVariant(let n):                                .deleteVariant(name: n)
         case .renameVariant(let o, let n):                         .renameVariant(old: o, new: n)
         case .selectEditingVariant(let k):                         .selectEditingVariant(k)
+        case .beginVariantRename(let k):                           .beginVariantRename(k)
+        case .setVariantRenameDraft(let s):                        .setVariantRenameDraft(s)
+        case .commitVariantRename:                                 .commitVariantRename
+        case .cancelVariantRename:                                 .cancelVariantRename
         case .save:                                                .save
         }
     }
@@ -721,6 +743,34 @@ public enum EditorFeature {
                     state.selectedCompartmentId = nil
                     state.selectedLinkIndex = nil
                 }
+
+            case .beginVariantRename(let key):
+                .reduce { state in
+                    guard state.document.variants[key] != nil else { return }
+                    state.renamingVariant = key
+                    state.variantRenameDraft = key
+                }
+
+            case .setVariantRenameDraft(let draft):
+                .reduce { $0.variantRenameDraft = draft }
+
+            case .commitVariantRename:
+                .reduce { state in
+                    guard let old = state.renamingVariant else { return }
+                    let new = state.variantRenameDraft.trimmingCharacters(in: .whitespaces)
+                    guard !new.isEmpty, new != old, state.document.variants[new] == nil,
+                          let model = state.document.variants[old] else {
+                        state.renamingVariant = nil
+                        return
+                    }
+                    state.document.variants.removeValue(forKey: old)
+                    state.document.variants[new] = model
+                    if state.editingVariant == old { state.editingVariant = new }
+                    state.renamingVariant = nil
+                }
+
+            case .cancelVariantRename:
+                .reduce { $0.renamingVariant = nil }
 
             case .save:
                 .doNothing   // Handled by AppCoordinator via environment (future)

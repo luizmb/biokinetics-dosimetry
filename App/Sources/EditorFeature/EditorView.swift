@@ -122,6 +122,11 @@ public struct EditorView: View {
             isModelListSheetOpen:    viewModel.isModelListSheetOpen,
             variants:                viewModel.variants,
             editingVariant:          viewModel.editingVariant,
+            renamingVariant:         viewModel.renamingVariant,
+            variantRenameDraft:      Binding(
+                get: { viewModel.variantRenameDraft },
+                set: { viewModel.dispatch(.setVariantRenameDraft($0)) }
+            ),
             onSelectCompartment: { viewModel.dispatch(.selectCompartment($0)) },
             onSelectLink:        { viewModel.dispatch(.selectLink($0)) },
             onToggleLeftPanel:   { viewModel.dispatch(.toggleLeftPanel) },
@@ -147,7 +152,10 @@ public struct EditorView: View {
             onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) },
             onAddVariant:            { viewModel.dispatch(.addVariant(name: $0)) },
             onDeleteVariant:         { viewModel.dispatch(.deleteVariant(name: $0)) },
-            onSelectEditingVariant:  { viewModel.dispatch(.selectEditingVariant($0)) }
+            onSelectEditingVariant:  { viewModel.dispatch(.selectEditingVariant($0)) },
+            onBeginVariantRename:    { viewModel.dispatch(.beginVariantRename($0)) },
+            onCommitVariantRename:   { viewModel.dispatch(.commitVariantRename) },
+            onCancelVariantRename:   { viewModel.dispatch(.cancelVariantRename) }
         )
         .inlineNavigationTitle()
     }
@@ -194,6 +202,8 @@ struct EditorContent: View {
     let isModelListSheetOpen: Bool
     let variants: [String]
     let editingVariant: String?
+    let renamingVariant: String?
+    var variantRenameDraft: Binding<String>
 
     // MARK: One-way action callbacks
     var onSelectCompartment: (String?) -> Void
@@ -222,6 +232,9 @@ struct EditorContent: View {
     var onAddVariant: (String) -> Void
     var onDeleteVariant: (String) -> Void
     var onSelectEditingVariant: (String?) -> Void
+    var onBeginVariantRename: (String) -> Void
+    var onCommitVariantRename: () -> Void
+    var onCancelVariantRename: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -305,8 +318,13 @@ struct EditorContent: View {
                     onAddVariant: onAddVariant,
                     onDeleteVariant: onDeleteVariant,
                     onSelectEditingVariant: onSelectEditingVariant,
+                    onBeginVariantRename: onBeginVariantRename,
+                    onCommitVariantRename: onCommitVariantRename,
+                    onCancelVariantRename: onCancelVariantRename,
                     variants: variants,
-                    editingVariant: editingVariant
+                    editingVariant: editingVariant,
+                    renamingVariant: renamingVariant,
+                    variantRenameDraft: variantRenameDraft
                 )
                 .frame(width: 326)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -463,8 +481,13 @@ struct EditorContent: View {
                     onAddVariant: onAddVariant,
                     onDeleteVariant: onDeleteVariant,
                     onSelectEditingVariant: onSelectEditingVariant,
+                    onBeginVariantRename: onBeginVariantRename,
+                    onCommitVariantRename: onCommitVariantRename,
+                    onCancelVariantRename: onCancelVariantRename,
                     variants: variants,
-                    editingVariant: editingVariant
+                    editingVariant: editingVariant,
+                    renamingVariant: renamingVariant,
+                    variantRenameDraft: variantRenameDraft
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)
