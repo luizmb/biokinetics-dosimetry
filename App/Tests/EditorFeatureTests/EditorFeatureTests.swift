@@ -144,11 +144,12 @@ struct EditorFeatureBehaviorTests {
 
     @Test func updateCompartmentIntakeSetsIntakeAndFraction() {
         let initial = loaded()
-        // Enabling intake also sets fraction=1.0 so the solver has non-zero initial conditions.
+        // Enabling intake redistributes fractions equally among all intake compartments.
+        // Validation doc has A already intake; enabling B gives both 0.5.
         store(initial: initial).dispatch(.updateCompartmentIntake(id: "B", value: true)) { state in
-            state.document.model = state.document.model.updatingCompartment(id: "B") {
-                $0.with(intake: true).with(fraction: 1.0)
-            }
+            state.document.model = state.document.model
+                .updatingCompartment(id: "A") { $0.with(fraction: 0.5) }
+                .updatingCompartment(id: "B") { $0.with(intake: true).with(fraction: 0.5) }
         }
     }
 
@@ -436,7 +437,8 @@ struct EditorFeatureNuclideTests {
         s.dispatch(.addNuclide, source: src)
         let nuclides = s.state.document.model.nuclides
         #expect(nuclides.count == 2)
-        #expect(nuclides[1].name == "New Nuclide")
+        // Name comes from field lingo; .validation fixture uses .generic → "New Substance"
+        #expect(nuclides[1].name == "New \(ModelField.generic.lingo.substanceName)")
         #expect(nuclides[1].halfLife == 0)
     }
 
@@ -568,10 +570,10 @@ struct EditorFeatureSnapshotTests {
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
-                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
-                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                               named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                               named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 

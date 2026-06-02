@@ -58,21 +58,25 @@ struct HomeFeatureBehaviorTests {
 
     // MARK: - Document management
 
-    @Test func newDocumentPrependsEmptyDocumentToLoadedList() {
+    @Test func newDocumentPrependsEmptyDocumentToLoadedList() async {
         var initial = HomeFeature.initialState()
         initial.documents = .loaded([.validation])
         let s = store(initial: initial)
         let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.newDocument, source: src)
+        s.dispatch(.newDocument(field: .generic, name: "Untitled"), source: src)
+        await s.runEffects()
+        s.receive(HomeFeature.Action.prism.edit) { _, _ in }
         #expect(s.state.documents.loaded?.count == 2)
         #expect(s.state.documents.loaded?.first?.name == "Untitled")
         #expect(s.state.documents.loaded?.last == .validation)
     }
 
-    @Test func newDocumentFromIdleInitializesWithEmpty() {
+    @Test func newDocumentFromIdleInitializesWithEmpty() async {
         let s = store()
         let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.newDocument, source: src)
+        s.dispatch(.newDocument(field: .generic, name: "Untitled"), source: src)
+        await s.runEffects()
+        s.receive(HomeFeature.Action.prism.edit) { _, _ in }
         #expect(s.state.documents.loaded?.count == 1)
         #expect(s.state.documents.loaded?.first?.name == "Untitled")
     }
@@ -221,7 +225,7 @@ struct HomeFeatureMapActionTests {
     }
 
     @Test func newDocumentMapsToNewDocument() {
-        let action = HomeFeature.mapAction(.newDocument)
+        let action = HomeFeature.mapAction(.newDocument(field: .generic, name: "Test"))
         #expect(HomeFeature.Action.prism.newDocument.preview(action) != nil)
     }
 
@@ -276,10 +280,10 @@ struct HomeFeatureSnapshotTests {
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
-                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
-                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                               named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                               named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 
