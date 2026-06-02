@@ -448,7 +448,7 @@ struct EditorInspectorPanel: View {
             .padding(.bottom, 8)
 
             Button { onAddNuclide() } label: {
-                Label("Add nuclide", systemImage: "plus.circle")
+                Label("Add \(lingo.substanceName)", systemImage: "plus.circle")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(g.accent)
             }

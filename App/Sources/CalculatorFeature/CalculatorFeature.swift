@@ -234,7 +234,10 @@ public enum CalculatorFeature {
             logYLabel: logYLabel,
             durationWarningMessage: durationWarningMessage,
             isParamSheetOpen: state.isParamSheetOpen,
-            validationIssues: doc.model.validationIssues
+            validationIssues: doc.model.validationIssues.filter { issue in
+                if case .missingHalfLife = issue { return doc.field == .nuclear }
+                return true
+            }
         )
     }
 
