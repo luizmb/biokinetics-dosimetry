@@ -153,24 +153,59 @@ struct CalculatorFeatureBehaviorTests {
         store().dispatch(.setFinalDay(-10)) { $0.finalDay = 1 }
     }
 
-    @Test func setStepSizeWithValidValueUpdatesDirectly() {
-        store().dispatch(.setStepSize(0.5)) { $0.stepSize = 0.5 }
+    @Test func setStepSizeWithValidValueUpdatesDirectly() async {
+        let s = store()
+        let src = ActionSource(file: #file, function: #function, line: #line)
+        s.dispatch(.setStepSize(0.5), source: src)
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { vt, state in
+            state.stepSize = vt.0; state.stepSizeText = vt.1
+        }
+        #expect(s.state.stepSize == 0.5)
     }
 
-    @Test func setStepSizeBelowMinimumClampsTo0_001() {
-        store().dispatch(.setStepSize(0.0)) { $0.stepSize = 0.001 }
+    @Test func setStepSizeBelowMinimumClampsTo0_001() async {
+        let s = store()
+        let src = ActionSource(file: #file, function: #function, line: #line)
+        s.dispatch(.setStepSize(0.0), source: src)
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { vt, state in
+            state.stepSize = vt.0; state.stepSizeText = vt.1
+        }
+        #expect(s.state.stepSize == 0.001)
     }
 
-    @Test func setToleranceWithValidValue() {
-        store().dispatch(.setTolerance(1e-8)) { $0.tolerance = 1e-8 }
+    @Test func setToleranceWithValidValue() async {
+        let s = store()
+        let src = ActionSource(file: #file, function: #function, line: #line)
+        s.dispatch(.setTolerance(1e-8), source: src)
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
+            state.tolerance = vt.0; state.toleranceText = vt.1
+        }
+        #expect(s.state.tolerance == 1e-8)
     }
 
-    @Test func setToleranceBelowMinimumClampsTo1e_14() {
-        store().dispatch(.setTolerance(1e-20)) { $0.tolerance = 1e-14 }
+    @Test func setToleranceBelowMinimumClampsTo1e_14() async {
+        let s = store()
+        let src = ActionSource(file: #file, function: #function, line: #line)
+        s.dispatch(.setTolerance(1e-20), source: src)
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
+            state.tolerance = vt.0; state.toleranceText = vt.1
+        }
+        #expect(s.state.tolerance == 1e-14)
     }
 
-    @Test func setToleranceAboveMaximumClampsTo1e_2() {
-        store().dispatch(.setTolerance(1.0)) { $0.tolerance = 1e-2 }
+    @Test func setToleranceAboveMaximumClampsTo1e_2() async {
+        let s = store()
+        let src = ActionSource(file: #file, function: #function, line: #line)
+        s.dispatch(.setTolerance(1.0), source: src)
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
+            state.tolerance = vt.0; state.toleranceText = vt.1
+        }
+        #expect(s.state.tolerance == 1e-2)
     }
 
     // MARK: - Log scale toggles
@@ -297,8 +332,8 @@ struct CalculatorFeatureMapStateTests {
         var state = CalculatorFeature.initialState()
         state.solver = .rungeKutta45(tolerance: 1e-8)
         state.finalDay = 365
-        state.stepSize = 0.5
-        state.tolerance = 1e-8
+        state.stepSize = 0.5;  state.stepSizeText  = "0.5"
+        state.tolerance = 1e-8; state.toleranceText = "1e-8"
         state.logX = false
         state.logY = false
         state.activeView = .report
@@ -306,8 +341,8 @@ struct CalculatorFeatureMapStateTests {
         let vs = CalculatorFeature.mapState(state)
         #expect(vs.solver == .rungeKutta45(tolerance: 1e-8))
         #expect(vs.finalDay == 365)
-        #expect(vs.stepSize == 0.5)
-        #expect(vs.tolerance == 1e-8)
+        #expect(vs.stepSizeText  == "0.5")
+        #expect(vs.toleranceText == "1e-8")
         #expect(vs.logX == false)
         #expect(vs.logY == false)
         #expect(vs.activeView == .report)

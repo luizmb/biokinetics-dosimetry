@@ -13,10 +13,10 @@ import Foundation
 public struct World: Sendable {
     public let xmlDecoder:  Sendable & DataDecoderFactory
     public let jsonDecoder: Sendable & DataDecoderFactory
-    public let newId:  @Sendable () -> UUID
+    public let newId:        @Sendable () -> UUID
+    public let formatDouble: @Sendable (Double, Int) -> String    // (value, decimalPlaces) — locale-aware
+    public let parseDouble:  @Sendable (String) -> Double?        // locale-aware input parsing
     public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
-    public let generateCSV: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
-    public let renderPDF:   @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
     public let saveDocument: @Sendable (ModelDocument) -> Result<Void, PersistenceError>
     public let loadAllDocuments: @Sendable () -> Result<[ModelDocument], PersistenceError>
     public let deleteDocument: @Sendable (UUID) -> Result<Void, PersistenceError>
@@ -24,20 +24,20 @@ public struct World: Sendable {
     public init(
         xmlDecoder:  Sendable & DataDecoderFactory,
         jsonDecoder: Sendable & DataDecoderFactory,
-        newId:  @escaping @Sendable () -> UUID,
+        newId:        @escaping @Sendable () -> UUID,
+        formatDouble: @escaping @Sendable (Double, Int) -> String,
+        parseDouble:  @escaping @Sendable (String) -> Double?,
         solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
-        generateCSV: @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
-        renderPDF:   @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
         saveDocument: @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>,
         loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError>,
         deleteDocument: @escaping @Sendable (UUID) -> Result<Void, PersistenceError>
     ) {
-        self.xmlDecoder  = xmlDecoder
-        self.jsonDecoder = jsonDecoder
-        self.newId       = newId
-        self.solver      = solver
-        self.generateCSV = generateCSV
-        self.renderPDF   = renderPDF
+        self.xmlDecoder   = xmlDecoder
+        self.jsonDecoder  = jsonDecoder
+        self.newId        = newId
+        self.formatDouble = formatDouble
+        self.parseDouble  = parseDouble
+        self.solver       = solver
         self.saveDocument = saveDocument
         self.loadAllDocuments = loadAllDocuments
         self.deleteDocument = deleteDocument

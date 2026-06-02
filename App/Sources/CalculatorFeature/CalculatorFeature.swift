@@ -20,8 +20,10 @@ public enum CalculatorFeature {
         public var selectedVariant: String? = nil
         public var solver: SolverMethod = .birchall(composition: .perTime)
         public var finalDay: Int = 200
-        public var stepSize: Double = 1.0
-        public var tolerance: Double = 1e-6
+        public var stepSize:     Double = 1.0
+        public var tolerance:    Double = 1e-6
+        public var stepSizeText: String = "1"
+        public var toleranceText: String = "0.000001"
         public var results: [[Double]]?
         public var isCalculating: Bool = false
         public var error: String?
@@ -32,8 +34,6 @@ public enum CalculatorFeature {
         public var isParamPanelVisible: Bool = true
         /// iPhone: whether the params bottom sheet is open.
         public var isParamSheetOpen: Bool = false
-        public var csvData: Data? = nil
-        public var pdfData: Data? = nil
 
         public init() {}
     }
@@ -54,36 +54,34 @@ public enum CalculatorFeature {
         case setSolver(SolverMethod)
         case setFinalDay(Int)
         case setStepSize(Double)
+        case setStepSizeText(String)
         case setTolerance(Double)
+        case setToleranceText(String)
+        case stepSizeResolved(Double, String)
+        case toleranceResolved(Double, String)
         case setLogX(Bool)
         case setLogY(Bool)
         case toggleSeries(String)
         case setActiveView(CalcView)
         case toggleParamPanel
         case setParamSheet(Bool)
-        // Export
-        case exportCSV
-        case exportPDF
-        case csvReady(Data)
-        case pdfReady(Data)
-        case exportFailed(String)
     }
 
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var solve:       @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
-        public var generateCSV: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
-        public var renderPDF:   @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
+        public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
+        public var formatDouble: @Sendable (Double, Int) -> String
+        public var parseDouble:  @Sendable (String) -> Double?
 
         public init(
-            solve:       @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
-            generateCSV: @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
-            renderPDF:   @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
+            solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
+            formatDouble: @escaping @Sendable (Double, Int) -> String = { v, dp in String(format: "%.\(dp)f", v) },
+            parseDouble:  @escaping @Sendable (String) -> Double?     = { Double($0) }
         ) {
-            self.solve       = solve
-            self.generateCSV = generateCSV
-            self.renderPDF   = renderPDF
+            self.solve        = solve
+            self.formatDouble = formatDouble
+            self.parseDouble  = parseDouble
         }
     }
 
@@ -118,8 +116,8 @@ public enum CalculatorFeature {
             public var selectedVariant: String? = nil
             public var solver: SolverMethod = .birchall(composition: .perTime)
             public var finalDay: Int = 200
-            public var stepSize: Double = 1.0
-            public var tolerance: Double = 1e-6
+            public var stepSizeText:  String = "1"
+            public var toleranceText: String = "0.000001"
             public var series: [Series] = []
             public var reportRows: [ReportRow] = []
             public var isCalculating: Bool = false
@@ -148,10 +146,10 @@ public enum CalculatorFeature {
             public var isParamSheetOpen: Bool = false
             /// All structural and completeness issues detected in the current model.
             public var validationIssues: [CompartmentalModel.ValidationIssue] = []
-            /// Non-nil when a CSV export is ready — binds to ShareLink.
-            public var csvShareable: CSVShareable? = nil
-            /// Non-nil when a PDF export is ready — binds to ShareLink.
-            public var pdfShareable: PDFShareable? = nil
+            /// Non-nil when results are available — carries data for lazy CSV generation.
+            public var csvExportInput: CSVExportInput? = nil
+            /// Non-nil when results are available — carries data for lazy PDF generation.
+            public var pdfExportInput: PDFExportInput? = nil
         }
 
         @dynamicMemberLookup
@@ -161,13 +159,13 @@ public enum CalculatorFeature {
             case setSolver(SolverMethod)
             case setFinalDay(Int)
             case setStepSize(Double)
+            case setStepSizeText(String)
             case setTolerance(Double)
+            case setToleranceText(String)
             case setLogX(Bool)
             case setLogY(Bool)
             case toggleSeries(String)
             case setActiveView(CalcView)
-            case exportCSV
-            case exportPDF
             case toggleParamPanel
             case setParamSheet(Bool)
         }
@@ -194,8 +192,16 @@ public enum CalculatorFeature {
             }
         }
 
+        // Only tracked compartments in report — same filter as chart
+        let trackedIndices = compartments.compactMap { comp in
+            doc.model.compartments.firstIndex { $0.id == comp.id }
+        }
         let reportRows: [ViewModel.ReportRow] = (state.results ?? []).enumerated().map { idx, row in
-            ViewModel.ReportRow(id: idx, day: Double(idx) * state.stepSize, values: row)
+            ViewModel.ReportRow(
+                id: idx,
+                day: Double(idx) * state.stepSize,
+                values: trackedIndices.map { $0 < row.count ? row[$0] : 0 }
+            )
         }
 
         let plan = BiokineticsSimulationPlan(
@@ -233,13 +239,13 @@ public enum CalculatorFeature {
             documentName: doc.name,
             lingo: doc.field.lingo,
             halfLife: doc.halfLife,
-            compartmentNames: doc.model.compartments.map(\.name),
+            compartmentNames: compartments.map(\.name),
             variants: doc.variants.keys.sorted(),
             selectedVariant: state.selectedVariant,
             solver: state.solver,
             finalDay: state.finalDay,
-            stepSize: state.stepSize,
-            tolerance: state.tolerance,
+            stepSizeText:  state.stepSizeText,
+            toleranceText: state.toleranceText,
             series: series,
             reportRows: reportRows,
             isCalculating: state.isCalculating,
@@ -260,8 +266,16 @@ public enum CalculatorFeature {
                 if case .missingHalfLife = issue { return doc.field == .nuclear }
                 return true
             },
-            csvShareable: state.csvData.map { CSVShareable(data: $0, filename: "\(doc.name).csv") },
-            pdfShareable: state.pdfData.map { PDFShareable(data: $0, filename: "\(doc.name).pdf") }
+            csvExportInput: reportRows.isEmpty ? nil : CSVExportInput(
+                documentName: doc.name, lingo: doc.field.lingo,
+                compartmentNames: compartments.map(\.name),
+                rows: reportRows.map { ($0.day, $0.values) }
+            ),
+            pdfExportInput: reportRows.isEmpty ? nil : PDFExportInput(
+                documentName: doc.name, lingo: doc.field.lingo,
+                compartmentNames: compartments.map(\.name),
+                rows: reportRows.map { ($0.day, $0.values) }
+            )
         )
     }
 
@@ -284,15 +298,15 @@ public enum CalculatorFeature {
         case .setSolver(let s):         .setSolver(s)
         case .setFinalDay(let d):       .setFinalDay(d)
         case .setStepSize(let s):       .setStepSize(s)
+        case .setStepSizeText(let t):   .setStepSizeText(t)
         case .setTolerance(let t):      .setTolerance(t)
+        case .setToleranceText(let t):  .setToleranceText(t)
         case .setLogX(let v):           .setLogX(v)
         case .setLogY(let v):           .setLogY(v)
         case .toggleSeries(let id):     .toggleSeries(id)
         case .setActiveView(let v):     .setActiveView(v)
         case .toggleParamPanel:         .toggleParamPanel
         case .setParamSheet(let v):     .setParamSheet(v)
-        case .exportCSV:                .exportCSV
-        case .exportPDF:                .exportPDF
         }
     }
 
@@ -326,9 +340,38 @@ public enum CalculatorFeature {
             case .setFinalDay(let d):
                 C.reduce { $0.finalDay = max(1, d) }
             case .setStepSize(let s):
-                C.reduce { $0.stepSize = max(0.001, s) }
+                C.produce { ctx in
+                    let v = max(0.001, s)
+                    return .just(.stepSizeResolved(v, ctx.environment.formatDouble(v, 6)))
+                }
+            case .setStepSizeText(let text):
+                C.produce { ctx in
+                    let t = text.trimmingCharacters(in: .whitespaces)
+                    if let v = ctx.environment.parseDouble(t) {
+                        let clamped = max(0.001, v)
+                        return .just(.stepSizeResolved(clamped, ctx.environment.formatDouble(clamped, 6)))
+                    }
+                    return .just(.stepSizeResolved(0, t))  // store raw text; stepSize unchanged until valid
+                }
+            case .stepSizeResolved(let v, let t):
+                C.reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
+
             case .setTolerance(let t):
-                C.reduce { $0.tolerance = max(1e-14, min(1e-2, t)) }
+                C.produce { ctx in
+                    let v = max(1e-14, min(1e-2, t))
+                    return .just(.toleranceResolved(v, ctx.environment.formatDouble(v, 10)))
+                }
+            case .setToleranceText(let text):
+                C.produce { ctx in
+                    let t = text.trimmingCharacters(in: .whitespaces)
+                    if let v = ctx.environment.parseDouble(t) {
+                        let clamped = max(1e-14, min(1e-2, v))
+                        return .just(.toleranceResolved(clamped, ctx.environment.formatDouble(clamped, 10)))
+                    }
+                    return .just(.toleranceResolved(0, t))
+                }
+            case .toleranceResolved(let v, let t):
+                C.reduce { $0.tolerance = v > 0 ? v : $0.tolerance; $0.toleranceText = t }
             case .setLogX(let v):
                 C.reduce { $0.logX = v }
             case .setLogY(let v):
@@ -349,67 +392,6 @@ public enum CalculatorFeature {
             case .setParamSheet(let v):
                 C.reduce { $0.isParamSheetOpen = v }
 
-            case .exportCSV:
-                exportConsequence(kind: .csv, context: context)
-
-            case .exportPDF:
-                exportConsequence(kind: .pdf, context: context)
-
-            case .csvReady(let data):
-                C.reduce { $0.csvData = data }
-
-            case .pdfReady(let data):
-                C.reduce { $0.pdfData = data }
-
-            case .exportFailed:
-                C.reduce { _ in }
-            }
-        }
-    }
-
-    private enum ExportKind { case csv, pdf }
-
-    @MainActor
-    private static func exportConsequence(
-        kind: ExportKind,
-        context: PreReducerContext<State>
-    ) -> Consequence<State, Environment, Action> {
-        typealias C = Consequence<State, Environment, Action>
-        let snapshot = context.stateBefore ?? State()
-        let doc      = snapshot.document
-        let results  = snapshot.results ?? []
-        let step     = snapshot.stepSize
-        let lingo    = doc.field.lingo
-
-        let trackedCompartments = doc.model.compartments.filter { $0.follow }
-        let trackedIndices = trackedCompartments.compactMap { comp in
-            doc.model.compartments.firstIndex { $0.id == comp.id }
-        }
-        let names = trackedCompartments.map(\.name)
-        let rows: [(day: Double, values: [Double])] = results.enumerated().map { idx, row in
-            (day: Double(idx) * step,
-             values: trackedIndices.map { $0 < row.count ? row[$0] : 0 })
-        }
-        let input = CalculatorExportData(
-            documentName: doc.name, lingo: lingo, compartmentNames: names, rows: rows
-        )
-
-        return C.produce { ctx in
-            switch kind {
-            case .csv:
-                return Effect.deferredTask(ctx.environment.generateCSV(input)) { result in
-                    switch result {
-                    case .success(let data): return .csvReady(data)
-                    case .failure(let e):    return .exportFailed(e.localizedDescription)
-                    }
-                }
-            case .pdf:
-                return Effect.deferredTask(ctx.environment.renderPDF(input)) { result in
-                    switch result {
-                    case .success(let data): return .pdfReady(data)
-                    case .failure(let e):    return .exportFailed(e.localizedDescription)
-                    }
-                }
             }
         }
     }

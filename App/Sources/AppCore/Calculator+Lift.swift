@@ -14,9 +14,9 @@ where Action == CalculatorFeature.Action,
             state:       AppState.lens.calculator,
             environment: { world in
                 CalculatorFeature.Environment(
-                    solve:       world.solver,
-                    generateCSV: world.generateCSV,
-                    renderPDF:   world.renderPDF
+                    solve:        world.solver,
+                    formatDouble: world.formatDouble,
+                    parseDouble:  world.parseDouble
                 )
             }
         )
