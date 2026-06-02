@@ -16,10 +16,10 @@ extension World {
         return .init(
             xmlDecoder:  XMLDecoder(),
             jsonDecoder: decoder,
-            newId:       { UUID() },
-            solver:      { plan, model in Solver.solve(plan: plan, model: model) },
-            generateCSV: generateCalculatorCSV,
-            renderPDF:   renderCalculatorPDF,
+            newId:        { UUID() },
+            formatDouble: liveFormatDouble,
+            parseDouble:  liveParseDouble,
+            solver:       { plan, model in Solver.solve(plan: plan, model: model) },
             saveDocument: { doc in
                 Result {
                     let dir = try biokineticsDocs()
@@ -56,6 +56,22 @@ extension World {
             }
         )
     }
+}
+
+// MARK: - Locale-aware number helpers
+
+private let liveFormatDouble: @Sendable (Double, Int) -> String = { value, dp in
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.minimumFractionDigits = dp
+    f.maximumFractionDigits = dp
+    return f.string(from: NSNumber(value: value)) ?? String(value)
+}
+
+private let liveParseDouble: @Sendable (String) -> Double? = { text in
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    return f.number(from: text.trimmingCharacters(in: .whitespaces))?.doubleValue
 }
 
 // MARK: - Helpers

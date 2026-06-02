@@ -42,13 +42,13 @@ public struct CalculatorView: View {
                 get: { viewModel.finalDay },
                 set: { viewModel.dispatch(.setFinalDay($0)) }
             ),
-            stepSize: Binding(
-                get: { viewModel.stepSize },
-                set: { viewModel.dispatch(.setStepSize($0)) }
+            stepSizeText: Binding(
+                get: { viewModel.stepSizeText },
+                set: { viewModel.dispatch(.setStepSizeText($0)) }
             ),
-            tolerance: Binding(
-                get: { viewModel.tolerance },
-                set: { viewModel.dispatch(.setTolerance($0)) }
+            toleranceText: Binding(
+                get: { viewModel.toleranceText },
+                set: { viewModel.dispatch(.setToleranceText($0)) }
             ),
             selectedVariant: Binding(
                 get: { viewModel.selectedVariant },
@@ -78,8 +78,8 @@ public struct CalculatorView: View {
             durationWarningMessage: viewModel.durationWarningMessage,
             isParamSheetOpen:     viewModel.isParamSheetOpen,
             validationIssues:     viewModel.validationIssues,
-            csvShareable:         viewModel.csvShareable,
-            pdfShareable:         viewModel.pdfShareable,
+            csvExportInput:       viewModel.csvExportInput,
+            pdfExportInput:       viewModel.pdfExportInput,
             activeView:           activeViewBinding,
             logX:                 logXBinding,
             logY:                 logYBinding,
@@ -89,8 +89,6 @@ public struct CalculatorView: View {
             onToggleSeries:       { viewModel.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewModel.dispatch(.toggleParamPanel) },
             onSetParamSheet:      { viewModel.dispatch(.setParamSheet($0)) },
-            onExportCSV:          { viewModel.dispatch(.exportCSV) },
-            onExportPDF:          { viewModel.dispatch(.exportPDF) }
         )
         .inlineNavigationTitle()
     }
@@ -120,8 +118,8 @@ struct CalculatorContent: View {
     let durationWarningMessage: String?
     let isParamSheetOpen: Bool
     let validationIssues: [CompartmentalModel.ValidationIssue]
-    let csvShareable: CSVShareable?
-    let pdfShareable: PDFShareable?
+    let csvExportInput: CSVExportInput?
+    let pdfExportInput: PDFExportInput?
 
     // MARK: Bidirectional bindings
     var activeView: Binding<CalculatorFeature.CalcView>
@@ -135,8 +133,6 @@ struct CalculatorContent: View {
     var onToggleSeries: (String) -> Void
     var onToggleParamPanel: () -> Void
     var onSetParamSheet: (Bool) -> Void
-    var onExportCSV: () -> Void
-    var onExportPDF: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -151,7 +147,7 @@ struct CalculatorContent: View {
         .toolbar { toolbarItems }
     }
 
-    // MARK: - Regular (iPad: left panel + chart/report)
+    // MARK: - Regular (iPad: left panel + TabView)
 
     private var regularLayout: some View {
         HStack(spacing: 0) {
@@ -174,52 +170,27 @@ struct CalculatorContent: View {
                 GlassPanelRevealStrip(edge: .leading, action: onToggleParamPanel)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
-
             GlassVDivider()
-
-            VStack(spacing: 0) {
-                tabBar.padding(.horizontal, 16).padding(.vertical, 10)
-                GlassDivider()
-                contentArea
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            contentTabView.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isParamPanelVisible)
     }
 
-    // MARK: - Compact (iPhone: chart/report + bottom-sheet params)
+    // MARK: - Compact (iPhone: TabView fills screen, params/calculate in toolbar)
 
     private var compactLayout: some View {
-        VStack(spacing: 0) {
-            tabBar.padding(.horizontal, 14).padding(.top, 4)
-            GlassDivider()
-            contentArea
-            bottomBar
-        }
-        .sheet(isPresented: Binding(
-            get: { isParamSheetOpen },
-            set: { onSetParamSheet($0) }
-        )) { paramsSheet }
+        contentTabView
+            .sheet(isPresented: Binding(
+                get: { isParamSheetOpen },
+                set: { onSetParamSheet($0) }
+            )) { paramsSheet }
     }
 
-    // MARK: - Tab bar (Chart / Report)
+    // MARK: - TabView (both layouts)
 
-    private var tabBar: some View {
-        GSegmented(
-            selection: activeView,
-            options: [
-                ("Chart",  CalculatorFeature.CalcView.chart),
-                ("Report", CalculatorFeature.CalcView.report),
-            ]
-        )
-    }
-
-    // MARK: - Main content area
-
-    @ViewBuilder
-    private var contentArea: some View {
-        switch activeView.wrappedValue {
-        case .chart:
+    private var contentTabView: some View {
+        TabView(selection: activeView) {
+            // Chart tab
             GCard(cornerRadius: 20, intensity: 0.55,
                   tint: colorScheme == .dark
                         ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
@@ -244,64 +215,18 @@ struct CalculatorContent: View {
                 }
             }
             .padding(.horizontal, isCompact ? 12 : 16)
-            .padding(.bottom, isCompact ? 0 : 16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, isCompact ? 0 : 4)
+            .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
+            .tag(CalculatorFeature.CalcView.chart)
 
-        case .report:
-            VStack(spacing: 0) {
-                ReportContent(
-                    reportRows: reportRows, compartmentNames: compartmentNames,
-                    lingo: lingo, isCompact: isCompact
-                )
-                if !reportRows.isEmpty {
-                    GlassDivider()
-                    HStack(spacing: 10) {
-                        exportButton("CSV", systemImage: "tablecells", action: onExportCSV)
-                        if let csv = csvShareable {
-                            ShareLink(item: csv,
-                                      preview: SharePreview(csv.filename, image: Image(systemName: "tablecells"))) {
-                                exportChip("Share CSV", systemImage: "square.and.arrow.up")
-                            }
-                        }
-                        Spacer()
-                        exportButton("PDF", systemImage: "doc.richtext", action: onExportPDF)
-                        if let pdf = pdfShareable {
-                            ShareLink(item: pdf,
-                                      preview: SharePreview(pdf.filename, image: Image(systemName: "doc.richtext"))) {
-                                exportChip("Share PDF", systemImage: "square.and.arrow.up")
-                            }
-                        }
-                    }
-                    .padding(.horizontal, isCompact ? 14 : 18)
-                    .padding(.vertical, 10)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    // MARK: - iPhone bottom bar
-
-    private var bottomBar: some View {
-        HStack(spacing: 10) {
-            GPill(intensity: 0.85, action: { onSetParamSheet(true) }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 17, weight: .medium))
-                    Text(solverShortName)
-                        .font(.system(size: 15, weight: .semibold))
-                }
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 18).frame(height: 52)
-            }
-            GButton(
-                calculateButtonTitle,
-                icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors,
-                action: onCalculate
+            // Report tab
+            ReportContent(
+                reportRows: reportRows, compartmentNames: compartmentNames,
+                lingo: lingo, isCompact: isCompact
             )
+            .tabItem { Label("Report", systemImage: "tablecells") }
+            .tag(CalculatorFeature.CalcView.report)
         }
-        .padding(.horizontal, 14).padding(.bottom, 30).padding(.top, 12)
     }
 
     // MARK: - iPhone params sheet
@@ -338,21 +263,58 @@ struct CalculatorContent: View {
 
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
-        ToolbarItem(placement: .platformNavigationLeading) {
-            if halfLife > 0 {
-                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
-                    .font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(.quaternary, in: Capsule())
+        // iPhone: params and calculate in the toolbar
+        if isCompact {
+            ToolbarItem(placement: .platformNavigationLeading) {
+                Button { onSetParamSheet(true) } label: {
+                    Label(solverShortName, systemImage: "slider.horizontal.3")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                GButton(
+                    isCalculating ? "" : "Calculate",
+                    icon: isCalculating ? nil : Image(systemName: "play.fill"),
+                    size: .sm, disabled: isCalculating || validationIssues.hasErrors,
+                    action: onCalculate
+                )
             }
         }
-        ToolbarItemGroup(placement: .platformNavigationTrailing) {
-            if !isCompact {
+        // iPad: sidebar toggle
+        if !isCompact {
+            ToolbarItem(placement: .platformNavigationTrailing) {
                 Button(action: onToggleParamPanel) {
                     Image(systemName: "sidebar.left")
                         .symbolVariant(isParamPanelVisible ? .fill : .none)
                 }
                 .tint(isParamPanelVisible ? .accentColor : .secondary)
+            }
+        }
+        // Export menu — right side, both layouts, only when results are ready
+        ToolbarItem(placement: .platformNavigationTrailing) {
+            if csvExportInput != nil || pdfExportInput != nil {
+                Menu {
+                    if let csv = csvExportInput {
+                        ShareLink(
+                            item: csv,
+                            preview: SharePreview(csv.documentName + ".csv",
+                                                  image: Image(systemName: "tablecells"))
+                        ) {
+                            Label("Export CSV", systemImage: "tablecells")
+                        }
+                    }
+                    if let pdf = pdfExportInput {
+                        ShareLink(
+                            item: pdf,
+                            preview: SharePreview(pdf.documentName + ".pdf",
+                                                  image: Image(systemName: "doc.richtext"))
+                        ) {
+                            Label("Export PDF", systemImage: "doc.richtext")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
             }
         }
     }
@@ -376,21 +338,4 @@ struct CalculatorContent: View {
         }
     }
 
-    private func exportButton(_ label: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(label, systemImage: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12).frame(height: 36)
-        }
-        .buttonStyle(.borderless)
-    }
-
-    private func exportChip(_ label: String, systemImage: String) -> some View {
-        Label(label, systemImage: systemImage)
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(Color.accentColor)
-            .padding(.horizontal, 12).frame(height: 36)
-            .background(.regularMaterial, in: Capsule())
-    }
 }

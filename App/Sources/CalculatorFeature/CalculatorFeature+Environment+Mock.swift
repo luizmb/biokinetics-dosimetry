@@ -2,10 +2,8 @@
 ///
 /// Use these in unit tests and SwiftUI previews instead of inline closures.
 #if DEBUG
-import AppDomain   // CalculatorExportData, FieldLingo
 import Darwin      // exp
 import Domain      // CompartmentalModel, BiokineticsSimulationPlan
-import Foundation  // Data
 import FP          // DeferredTask
 import Solver      // Solver.solve
 
@@ -25,46 +23,29 @@ private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalMode
 }
 private let mockSolve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]> = mockDecay
 
-// No-op export stubs — mocks don't need real CSV/PDF output.
-private let stubCSV: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>> = { _ in
-    DeferredTask { .success(Data()) }
-}
-private let stubPDF: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>> = { _ in
-    DeferredTask { .success(Data()) }
-}
 
 public extension CalculatorFeature.Environment {
 
     /// Returns plausible exponential-decay curves for every solve request.
     static var alwaysSucceed: CalculatorFeature.Environment {
-        .init(
-            solve: mockSolve,
-            generateCSV: stubCSV,
-            renderPDF:   stubPDF
-        )
+        .init(solve: mockSolve)
     }
 
     /// Returns the provided data for every solve request, ignoring the plan and model.
     static func succeeds(with data: [[Double]]) -> CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { data } },
-              generateCSV: stubCSV, renderPDF: stubPDF)
+        .init(solve: { _, _ in DeferredTask { data } })
     }
 
     static var alwaysFails: CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { [] } },
-              generateCSV: stubCSV, renderPDF: stubPDF)
+        .init(solve: { _, _ in DeferredTask { [] } })
     }
 
     static var realBirchall: CalculatorFeature.Environment {
-        .init(
-            solve: { plan, model in
-                let p = BiokineticsSimulationPlan(step: plan.step, final: plan.final,
-                                                  solver: .birchall(composition: .perTime))
-                return DeferredTask { await Solver.solve(plan: p, model: model).run() }
-            },
-            generateCSV: stubCSV,
-            renderPDF:   stubPDF
-        )
+        .init(solve: { plan, model in
+            let p = BiokineticsSimulationPlan(step: plan.step, final: plan.final,
+                                              solver: .birchall(composition: .perTime))
+            return DeferredTask { await Solver.solve(plan: p, model: model).run() }
+        })
     }
 }
 

@@ -29,7 +29,7 @@ public let generateCalculatorCSV: @Sendable (CalculatorExportData) -> DeferredTa
     }
 }
 
-// MARK: - PDF
+// MARK: - PDF renderer
 
 #if canImport(UIKit)
 import UIKit
