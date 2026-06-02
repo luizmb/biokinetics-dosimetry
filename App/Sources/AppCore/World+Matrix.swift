@@ -13,7 +13,9 @@ extension World {
         return World(
             xmlDecoder:  env.xmlDecoder,
             jsonDecoder: env.jsonDecoder,
-            solver: CalculatorFeature.Environment.alwaysSucceed.solve,
+            solver:      CalculatorFeature.Environment.alwaysSucceed.solve,
+            generateCSV: CalculatorFeature.Environment.alwaysSucceed.generateCSV,
+            renderPDF:   CalculatorFeature.Environment.alwaysSucceed.renderPDF,
             saveDocument: { _ in .success(()) },
             loadAllDocuments: { .success([]) },
             deleteDocument: { _ in .success(()) }
@@ -25,7 +27,9 @@ extension World {
         return World(
             xmlDecoder:  env.xmlDecoder,
             jsonDecoder: env.jsonDecoder,
-            solver: CalculatorFeature.Environment.alwaysSucceed.solve,
+            solver:      CalculatorFeature.Environment.alwaysSucceed.solve,
+            generateCSV: CalculatorFeature.Environment.alwaysSucceed.generateCSV,
+            renderPDF:   CalculatorFeature.Environment.alwaysSucceed.renderPDF,
             saveDocument: { _ in .success(()) },
             loadAllDocuments: { .success([]) },
             deleteDocument: { _ in .success(()) }

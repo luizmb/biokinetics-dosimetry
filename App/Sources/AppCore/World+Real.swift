@@ -16,7 +16,9 @@ extension World {
         return .init(
             xmlDecoder:  XMLDecoder(),
             jsonDecoder: decoder,
-            solver: { plan, model in Solver.solve(plan: plan, model: model) },
+            solver:      { plan, model in Solver.solve(plan: plan, model: model) },
+            generateCSV: generateCalculatorCSV,
+            renderPDF:   renderCalculatorPDF,
             saveDocument: { doc in
                 Result {
                     let dir = try biokineticsDocs()

@@ -78,6 +78,8 @@ public struct CalculatorView: View {
             durationWarningMessage: viewModel.durationWarningMessage,
             isParamSheetOpen:     viewModel.isParamSheetOpen,
             validationIssues:     viewModel.validationIssues,
+            csvShareable:         viewModel.csvShareable,
+            pdfShareable:         viewModel.pdfShareable,
             activeView:           activeViewBinding,
             logX:                 logXBinding,
             logY:                 logYBinding,
@@ -86,7 +88,9 @@ public struct CalculatorView: View {
             onSetSolver:          { viewModel.dispatch(.setSolver($0)) },
             onToggleSeries:       { viewModel.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewModel.dispatch(.toggleParamPanel) },
-            onSetParamSheet:      { viewModel.dispatch(.setParamSheet($0)) }
+            onSetParamSheet:      { viewModel.dispatch(.setParamSheet($0)) },
+            onExportCSV:          { viewModel.dispatch(.exportCSV) },
+            onExportPDF:          { viewModel.dispatch(.exportPDF) }
         )
         .inlineNavigationTitle()
     }
@@ -116,6 +120,8 @@ struct CalculatorContent: View {
     let durationWarningMessage: String?
     let isParamSheetOpen: Bool
     let validationIssues: [CompartmentalModel.ValidationIssue]
+    let csvShareable: CSVShareable?
+    let pdfShareable: PDFShareable?
 
     // MARK: Bidirectional bindings
     var activeView: Binding<CalculatorFeature.CalcView>
@@ -129,6 +135,8 @@ struct CalculatorContent: View {
     var onToggleSeries: (String) -> Void
     var onToggleParamPanel: () -> Void
     var onSetParamSheet: (Bool) -> Void
+    var onExportCSV: () -> Void
+    var onExportPDF: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -171,6 +179,7 @@ struct CalculatorContent: View {
 
             VStack(spacing: 0) {
                 tabBar.padding(.horizontal, 16).padding(.vertical, 10)
+                GlassDivider()
                 contentArea
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -183,6 +192,7 @@ struct CalculatorContent: View {
     private var compactLayout: some View {
         VStack(spacing: 0) {
             tabBar.padding(.horizontal, 14).padding(.top, 4)
+            GlassDivider()
             contentArea
             bottomBar
         }
@@ -238,10 +248,34 @@ struct CalculatorContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .report:
-            ReportContent(
-                reportRows: reportRows, compartmentNames: compartmentNames,
-                lingo: lingo, isCompact: isCompact
-            )
+            VStack(spacing: 0) {
+                ReportContent(
+                    reportRows: reportRows, compartmentNames: compartmentNames,
+                    lingo: lingo, isCompact: isCompact
+                )
+                if !reportRows.isEmpty {
+                    GlassDivider()
+                    HStack(spacing: 10) {
+                        exportButton("CSV", systemImage: "tablecells", action: onExportCSV)
+                        if let csv = csvShareable {
+                            ShareLink(item: csv,
+                                      preview: SharePreview(csv.filename, image: Image(systemName: "tablecells"))) {
+                                exportChip("Share CSV", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                        Spacer()
+                        exportButton("PDF", systemImage: "doc.richtext", action: onExportPDF)
+                        if let pdf = pdfShareable {
+                            ShareLink(item: pdf,
+                                      preview: SharePreview(pdf.filename, image: Image(systemName: "doc.richtext"))) {
+                                exportChip("Share PDF", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    }
+                    .padding(.horizontal, isCompact ? 14 : 18)
+                    .padding(.vertical, 10)
+                }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -340,5 +374,23 @@ struct CalculatorContent: View {
         case .slow:         .warn
         case .veryLong:     .danger
         }
+    }
+
+    private func exportButton(_ label: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(label, systemImage: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12).frame(height: 36)
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private func exportChip(_ label: String, systemImage: String) -> some View {
+        Label(label, systemImage: systemImage)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 12).frame(height: 36)
+            .background(.regularMaterial, in: Capsule())
     }
 }
