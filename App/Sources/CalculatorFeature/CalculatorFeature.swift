@@ -30,7 +30,7 @@ public enum CalculatorFeature {
         public var logX: Bool = true
         public var logY: Bool = true
         public var visibleSeriesIds: Set<String> = []
-        public var activeView: CalcView = .chart
+        public var activeView: CalcView = .parameters
         public var isParamPanelVisible: Bool = true
         /// iPhone: whether the params bottom sheet is open.
         public var isParamSheetOpen: Bool = false
@@ -39,7 +39,7 @@ public enum CalculatorFeature {
     }
 
     public enum CalcView: String, Sendable, Equatable {
-        case chart, report
+        case chart, report, parameters
     }
 
     // MARK: - Action
@@ -124,7 +124,7 @@ public enum CalculatorFeature {
             public var error: String?
             public var logX: Bool = true
             public var logY: Bool = true
-            public var activeView: CalcView = .chart
+            public var activeView: CalcView = .parameters
             public var isParamPanelVisible: Bool = true
             /// Estimated solve time for the current parameters and model.
             public var durationWarning: BiokineticsSimulationPlan.DurationWarning = .none
@@ -324,6 +324,7 @@ public enum CalculatorFeature {
                     state.results = nil
                     state.error = nil
                     state.isCalculating = false
+                    state.activeView = .parameters
                     state.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
                 }
             case .selectVariant(let key):
