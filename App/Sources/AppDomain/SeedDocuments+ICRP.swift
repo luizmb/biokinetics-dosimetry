@@ -1,4 +1,5 @@
 import Domain
+import Foundation
 
 // MARK: - ICRP Nuclear Seed Models
 //
@@ -155,6 +156,7 @@ private var uranium234: ModelDocument {
     let typeM = lungVariant(of: model, nuclide: nuclide, plasmaRate: 10,  seqRate: 0.001)
 
     return ModelDocument(
+        id: UUID(uuidString: "00000000-ICRP-0000-0000-000000000015")!,
         name: "U-234 Inhalation (ICRP 137)",
         description: "ICRP 137 systemic model with ICRP 66 respiratory tract model for U-234 inhalation intake. Base model is Type S (slow lung absorption). Type M and Type F variants alter the lung-to-blood transfer rates. Physical T½ = 89,060,000 d.",
         field: .nuclear,
@@ -207,6 +209,7 @@ private var hydrogen3: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-ICRP-0000-0000-000000000011")!,
         name: "H-3 Tritiated Water (ICRP 56)",
         description: "ICRP 56 Part 1 model for HTO inhalation or ingestion. 97% as body water (T½ bio ≈ 10 d), 3% as organically bound tritium (T½ bio ≈ 40 d). Physical T½ = 4499 d (12.32 y).",
         field: .nuclear,
@@ -239,6 +242,7 @@ private var caesium137: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-ICRP-0000-0000-000000000012")!,
         name: "Cs-137 Systemic (ICRP 67)",
         description: "ICRP 67 simplified systemic model for Cs-137. Fast soft-tissue pool (T½ bio ≈ 2 d) and slow skeletal pool (T½ bio ≈ 110 d). Physical T½ = 11,012 d (30.2 y).",
         field: .nuclear,
@@ -271,6 +275,7 @@ private var iodine131: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-ICRP-0000-0000-000000000013")!,
         name: "I-131 Thyroid (ICRP 67)",
         description: "ICRP 67 model for I-131. 30% thyroid uptake (T½ bio = 80 d), remainder in other tissue (T½ bio = 12 d). Physical T½ = 8.02 d.",
         field: .nuclear,
@@ -309,6 +314,7 @@ private var strontium90: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-ICRP-0000-0000-000000000014")!,
         name: "Sr-90 Bone Seeker (ICRP 67)",
         description: "ICRP 67 simplified model for Sr-90, a calcium-analogue bone seeker. Deposition on bone surface followed by volume incorporation and slow skeletal remodelling. Physical T½ = 10,512 d (28.8 y).",
         field: .nuclear,

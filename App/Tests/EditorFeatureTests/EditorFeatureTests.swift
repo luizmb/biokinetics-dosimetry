@@ -1,6 +1,7 @@
 import AppDomain
 import Domain
 import EditorFeature
+import Foundation
 import SnapshotTesting
 import SwiftRex
 import SwiftRexTesting
@@ -19,7 +20,7 @@ struct EditorFeatureBehaviorTests {
     private func store(
         initial: EditorFeature.State = EditorFeature.initialState()
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
-        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: ())
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
@@ -418,7 +419,7 @@ struct EditorFeatureNuclideTests {
     private func store(
         initial: EditorFeature.State = EditorFeature.initialState()
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
-        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: ())
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
@@ -497,7 +498,7 @@ struct EditorFeatureNuclideTests {
             Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
             Compartment(id: "b", nuclideId: "n2", name: "B", follow: true, intake: false, dispose: false, fraction: 0),
         ]
-        let twoNuclideDoc = ModelDocument(
+        let twoNuclideDoc = ModelDocument(id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000002")!, 
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
@@ -526,6 +527,7 @@ struct EditorFeatureNuclideTests {
             Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
         ]
         let doc = ModelDocument(
+            id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000003")!,
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
@@ -580,14 +582,14 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Baseline states
 
     @Test func snapshotDefaultDocument() async {
-        let feature = TestFeature<EditorFeature>(environment: ())
+        let feature = TestFeature<EditorFeature>(environment: EditorFeature.Environment())
         await snapBoth(feature, named: "default-document")
     }
 
     @Test func snapshotValidationDocument() async {
         var initial = EditorFeature.initialState()
         initial.document = .validation
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "validation-document")
     }
 
@@ -596,7 +598,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = false
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "panels-hidden")
     }
 
@@ -605,7 +607,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "left-panel-hidden")
     }
 
@@ -614,7 +616,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = true
         initial.isRightPanelVisible = false
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "right-panel-hidden")
     }
 
@@ -626,7 +628,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "compartment-selected")
     }
 
@@ -636,7 +638,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .relationships
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "compartment-relationships-tab")
     }
 
@@ -648,7 +650,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "link-selected")
     }
 
@@ -658,7 +660,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .relationships
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "link-relationships-tab")
     }
 
@@ -666,7 +668,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "inspector-empty")
     }
 
@@ -676,7 +678,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         initial.showKValues = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "k-values-visible")
     }
 
@@ -684,7 +686,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         initial.linkingState = .awaitingTo(fromId: "A")
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "linking-in-progress")
     }
 
@@ -692,7 +694,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState()
         initial.document = .validation
         initial.linkingState = .awaitingFrom
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "linking-awaiting-from")
     }
 
@@ -701,7 +703,7 @@ struct EditorFeatureSnapshotTests {
     @Test func snapshotMultiNuclideDocument() async {
         var initial = EditorFeature.initialState()
         initial.document = Self.multiNuclideDoc
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "multi-nuclide-document")
     }
 
@@ -711,7 +713,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "k2"
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: ())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "multi-nuclide-compartment-inspector")
     }
 
@@ -731,6 +733,7 @@ struct EditorFeatureSnapshotTests {
             CompartmentConnection(from: "b2", to: "k2", rate: 0.12),
         ]
         return ModelDocument(
+            id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000004")!,
             name: "Multi-Nuclide",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: connections),
             visuals: [
