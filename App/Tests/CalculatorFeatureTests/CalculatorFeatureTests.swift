@@ -2,6 +2,7 @@ import AppDomain
 import CalculatorFeature
 import Domain
 import SnapshotTesting
+import SwiftRex
 import SwiftRexTesting
 import Testing
 
@@ -158,9 +159,6 @@ struct CalculatorFeatureBehaviorTests {
         let src = ActionSource(file: #file, function: #function, line: #line)
         s.dispatch(.setStepSize(0.5), source: src)
         await s.runEffects()
-        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { vt, state in
-            state.stepSize = vt.0; state.stepSizeText = vt.1
-        }
         #expect(s.state.stepSize == 0.5)
     }
 
@@ -169,9 +167,6 @@ struct CalculatorFeatureBehaviorTests {
         let src = ActionSource(file: #file, function: #function, line: #line)
         s.dispatch(.setStepSize(0.0), source: src)
         await s.runEffects()
-        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { vt, state in
-            state.stepSize = vt.0; state.stepSizeText = vt.1
-        }
         #expect(s.state.stepSize == 0.001)
     }
 
@@ -180,9 +175,6 @@ struct CalculatorFeatureBehaviorTests {
         let src = ActionSource(file: #file, function: #function, line: #line)
         s.dispatch(.setTolerance(1e-8), source: src)
         await s.runEffects()
-        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
-            state.tolerance = vt.0; state.toleranceText = vt.1
-        }
         #expect(s.state.tolerance == 1e-8)
     }
 
@@ -191,9 +183,6 @@ struct CalculatorFeatureBehaviorTests {
         let src = ActionSource(file: #file, function: #function, line: #line)
         s.dispatch(.setTolerance(1e-20), source: src)
         await s.runEffects()
-        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
-            state.tolerance = vt.0; state.toleranceText = vt.1
-        }
         #expect(s.state.tolerance == 1e-14)
     }
 
@@ -202,9 +191,6 @@ struct CalculatorFeatureBehaviorTests {
         let src = ActionSource(file: #file, function: #function, line: #line)
         s.dispatch(.setTolerance(1.0), source: src)
         await s.runEffects()
-        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { vt, state in
-            state.tolerance = vt.0; state.toleranceText = vt.1
-        }
         #expect(s.state.tolerance == 1e-2)
     }
 

@@ -176,14 +176,50 @@ struct CalculatorContent: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isParamPanelVisible)
     }
 
-    // MARK: - Compact (iPhone: TabView fills screen, params/calculate in toolbar)
+    // MARK: - Compact (iPhone: TabView + floating action buttons)
 
     private var compactLayout: some View {
-        contentTabView
-            .sheet(isPresented: Binding(
-                get: { isParamSheetOpen },
-                set: { onSetParamSheet($0) }
-            )) { paramsSheet }
+        ZStack(alignment: .bottomTrailing) {
+            contentTabView
+            floatingActions
+                .padding(.trailing, 18)
+                .padding(.bottom, 24)
+        }
+        .sheet(isPresented: Binding(
+            get: { isParamSheetOpen },
+            set: { onSetParamSheet($0) }
+        )) { paramsSheet }
+    }
+
+    private var floatingActions: some View {
+        VStack(spacing: 12) {
+            // Params / solver config
+            GPill(intensity: 0.85, action: { onSetParamSheet(true) }) {
+                VStack(spacing: 2) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 17, weight: .medium))
+                    Text(solverShortName)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 54, height: 54)
+            }
+            // Calculate
+            GPill(intensity: isCalculating ? 0.6 : 1.0,
+                  action: isCalculating ? {} : onCalculate) {
+                Group {
+                    if isCalculating {
+                        ProgressView().tint(.secondary)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(validationIssues.hasErrors ? .secondary : Color.accentColor)
+                    }
+                }
+                .frame(width: 60, height: 60)
+            }
+            .disabled(isCalculating || validationIssues.hasErrors)
+        }
     }
 
     // MARK: - TabView (both layouts)
@@ -263,23 +299,6 @@ struct CalculatorContent: View {
 
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
-        // iPhone: params and calculate in the toolbar
-        if isCompact {
-            ToolbarItem(placement: .platformNavigationLeading) {
-                Button { onSetParamSheet(true) } label: {
-                    Label(solverShortName, systemImage: "slider.horizontal.3")
-                        .labelStyle(.titleAndIcon)
-                }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                GButton(
-                    isCalculating ? "" : "Calculate",
-                    icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                    size: .sm, disabled: isCalculating || validationIssues.hasErrors,
-                    action: onCalculate
-                )
-            }
-        }
         // iPad: sidebar toggle
         if !isCompact {
             ToolbarItem(placement: .platformNavigationTrailing) {
