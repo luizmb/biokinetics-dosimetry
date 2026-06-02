@@ -15,6 +15,7 @@ where Action == HomeFeature.Action,
             environment: { world in
                 HomeModule.Environment(
                     xmlDecoder:       world.xmlDecoder,
+                    jsonDecoder:      world.jsonDecoder,
                     saveDocument:     world.saveDocument,
                     loadAllDocuments: world.loadAllDocuments,
                     deleteDocument:   world.deleteDocument

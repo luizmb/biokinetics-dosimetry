@@ -13,6 +13,7 @@ struct DecayChartContent: View {
     let logX: Bool
     let logY: Bool
     let finalDay: Int
+    let lingo: FieldLingo
     let validationIssues: [CompartmentalModel.ValidationIssue]
     var onToggleSeries: (String) -> Void
 
@@ -140,7 +141,7 @@ struct DecayChartContent: View {
                 let pts = transformedPoints(s.points)
                 ForEach(pts.indices, id: \.self) { idx in
                     LineMark(
-                        x: .value("Day",      pts[idx].x),
+                        x: .value(lingo.timeUnit.displayName, pts[idx].x),
                         y: .value("Activity", pts[idx].y)
                     )
                     .foregroundStyle(by: .value("Compartment", s.name))
@@ -168,7 +169,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(pow(10, v))) d").font(.caption2)
+                        Text("\(Int(pow(10, v))) \(lingo.timeUnit.label)").font(.caption2)
                     }
                 }
             }
@@ -177,7 +178,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(v)) d").font(.caption2)
+                        Text("\(Int(v)) \(lingo.timeUnit.label)").font(.caption2)
                     }
                 }
             }

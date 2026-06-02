@@ -1,0 +1,118 @@
+<?xml version="1.0" standalone="yes"?>
+<NewDataSet>
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msdata:EnforceConstraints="False">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="Modelo">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="nmModelo" type="xs:string" minOccurs="0" />
+                <xs:element name="dtCriacao" type="xs:dateTime" minOccurs="0" />
+                <xs:element name="Descricao" type="xs:string" minOccurs="0" />
+                <xs:element name="TipoModelo" type="xs:string" minOccurs="0" />
+                <xs:element name="meiaVida" type="xs:double" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="TableCaixas">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="Numero" type="xs:int" minOccurs="0" />
+                <xs:element name="Nome" type="xs:string" minOccurs="0" />
+                <xs:element name="PosLeft" type="xs:int" minOccurs="0" />
+                <xs:element name="PosTop" type="xs:int" minOccurs="0" />
+                <xs:element name="PosWidth" type="xs:int" minOccurs="0" />
+                <xs:element name="PosHeight" type="xs:int" minOccurs="0" />
+                <xs:element name="CorR" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="CorG" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="CorB" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Acompanhar" type="xs:boolean" minOccurs="0" />
+                <xs:element name="Eliminacao" type="xs:boolean" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="TableLinhas">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="CaixaInicio" type="xs:int" minOccurs="0" />
+                <xs:element name="CaixaFim" type="xs:int" minOccurs="0" />
+                <xs:element name="CorR" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="CorG" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="CorB" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Direcao" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="ValorAB" type="xs:float" minOccurs="0" />
+                <xs:element name="ValorBA" type="xs:float" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <Modelo>
+    <nmModelo>Validacao</nmModelo>
+    <dtCriacao>2007-09-04T13:14:42.281-03:00</dtCriacao>
+    <Descricao>Modelo para validar o software</Descricao>
+    <meiaVida>5</meiaVida>
+  </Modelo>
+  <TableCaixas>
+    <Numero>1</Numero>
+    <Nome>A</Nome>
+    <PosLeft>147</PosLeft>
+    <PosTop>26</PosTop>
+    <PosWidth>100</PosWidth>
+    <PosHeight>50</PosHeight>
+    <CorR>70</CorR>
+    <CorG>130</CorG>
+    <CorB>180</CorB>
+    <Acompanhar>true</Acompanhar>
+    <Eliminacao>false</Eliminacao>
+  </TableCaixas>
+  <TableCaixas>
+    <Numero>2</Numero>
+    <Nome>B</Nome>
+    <PosLeft>348</PosLeft>
+    <PosTop>134</PosTop>
+    <PosWidth>60</PosWidth>
+    <PosHeight>50</PosHeight>
+    <CorR>0</CorR>
+    <CorG>128</CorG>
+    <CorB>0</CorB>
+    <Acompanhar>true</Acompanhar>
+    <Eliminacao>false</Eliminacao>
+  </TableCaixas>
+  <TableCaixas>
+    <Numero>3</Numero>
+    <Nome>C</Nome>
+    <PosLeft>174</PosLeft>
+    <PosTop>252</PosTop>
+    <PosWidth>60</PosWidth>
+    <PosHeight>50</PosHeight>
+    <CorR>255</CorR>
+    <CorG>0</CorG>
+    <CorB>0</CorB>
+    <Acompanhar>true</Acompanhar>
+    <Eliminacao>false</Eliminacao>
+  </TableCaixas>
+  <TableLinhas>
+    <CaixaInicio>1</CaixaInicio>
+    <CaixaFim>2</CaixaFim>
+    <CorR>139</CorR>
+    <CorG>0</CorG>
+    <CorB>0</CorB>
+    <Direcao>1</Direcao>
+    <ValorAB>0.1</ValorAB>
+    <ValorBA>0</ValorBA>
+  </TableLinhas>
+  <TableLinhas>
+    <CaixaInicio>2</CaixaInicio>
+    <CaixaFim>3</CaixaFim>
+    <CorR>139</CorR>
+    <CorG>0</CorG>
+    <CorB>0</CorB>
+    <Direcao>3</Direcao>
+    <ValorAB>0.2</ValorAB>
+    <ValorBA>1</ValorBA>
+  </TableLinhas>
+</NewDataSet>

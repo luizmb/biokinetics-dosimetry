@@ -85,6 +85,10 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
         .on(
             AppAction.prism.home >>> HomeModule.Action.prism.calculate,
             dispatch: { doc in .navigation(.setPath([.calculator])) },
-            reduce: { doc, state in state.calculator.document = doc }
+            reduce: { doc, state in
+                state.calculator.document = doc
+                state.calculator.results = nil   // clear stale results from a previous document
+                state.calculator.error = nil
+            }
         )
 }

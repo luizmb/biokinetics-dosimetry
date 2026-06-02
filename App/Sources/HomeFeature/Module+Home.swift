@@ -23,9 +23,13 @@ public enum HomeModule {
         /// The canonical list of saved biokinetic models.
         public var documents: Loading<[ModelDocument], DecodingError> = .idle
         /// Tracks the file-picker lifecycle.
-        /// `.loading` → picker sheet visible; `.loaded(())` → file chosen, importing;
-        /// `.idle` → closed.
         public var filePicker: Loading<Terminal, Never> = .idle
+        /// Whether the new-document creation sheet is presented.
+        public var isCreationSheetOpen: Bool = false
+        /// Draft field selection in the creation sheet.
+        public var draftField: ModelField = .generic
+        /// Draft name in the creation sheet.
+        public var draftName: String = ""
 
         public init() {}
     }
@@ -37,13 +41,21 @@ public enum HomeModule {
         // File picker state machine
         case openFilePicker
         case filePickerDismissed
+        // Creation sheet
+        case openCreationSheet
+        case dismissCreationSheet
+        case setDraftField(ModelField)
+        case setDraftName(String)
         // Document management
         case loadDocuments
         case loadResult(Result<[ModelDocument], PersistenceError>)
-        case newDocument
+        case newDocument(field: ModelField, name: String)
         case importXML(Data)
+        case importJSON(Data)
+        case importCSV(Data)
         case importResult(Result<ModelDocument, DecodingError>)
         case saveDocument(ModelDocument)
+        case duplicateDocument(ModelDocument.ID)
         case deleteDocument(ModelDocument.ID)
         case edit(document: ModelDocument)
         case calculate(document: ModelDocument)
@@ -53,17 +65,20 @@ public enum HomeModule {
 
     public struct Environment: Sendable {
         public var xmlDecoder:        DataDecoderFactory & Sendable
+        public var jsonDecoder:       DataDecoderFactory & Sendable
         public var saveDocument:      @Sendable (ModelDocument) -> Result<Void, PersistenceError>
         public var loadAllDocuments:  @Sendable () -> Result<[ModelDocument], PersistenceError>
         public var deleteDocument:    @Sendable (UUID) -> Result<Void, PersistenceError>
 
         public init(
             xmlDecoder:       DataDecoderFactory & Sendable,
+            jsonDecoder:      DataDecoderFactory & Sendable,
             saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>    = { _ in .success(()) },
             loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError> = { .success([]) },
             deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>        = { _ in .success(()) }
         ) {
             self.xmlDecoder       = xmlDecoder
+            self.jsonDecoder      = jsonDecoder
             self.saveDocument     = saveDocument
             self.loadAllDocuments = loadAllDocuments
             self.deleteDocument   = deleteDocument

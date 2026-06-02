@@ -46,19 +46,28 @@ public enum HomeFeature {
         public struct ViewState: Sendable, Equatable {
             public var filePicker: Loading<Terminal, Never> = .idle
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
-            /// Non-nil when the last import attempt failed; localised message to show in banner.
             public var importErrorMessage: String? = nil
+            public var isCreationSheetOpen: Bool = false
+            public var draftField: ModelField = .generic
+            public var draftName: String = ""
         }
 
         @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case openFilePicker
             case filePickerDismissed
-            case newDocument
+            case openCreationSheet
+            case dismissCreationSheet
+            case setDraftField(ModelField)
+            case setDraftName(String)
+            case newDocument(field: ModelField, name: String)
             case importXML(Data)
+            case importJSON(Data)
+            case importCSV(Data)
             case editDocument(ModelDocument)
             case calculateDocument(ModelDocument)
             case deleteDocument(ModelDocument.ID)
+            case duplicateDocument(ModelDocument.ID)
             case saveDocument(ModelDocument)
         }
     }
@@ -87,7 +96,10 @@ public enum HomeFeature {
                     )
                 }
             },
-            importErrorMessage: importError
+            importErrorMessage: importError,
+            isCreationSheetOpen: state.isCreationSheetOpen,
+            draftField: state.draftField,
+            draftName: state.draftName
         )
     }
 
@@ -95,11 +107,18 @@ public enum HomeFeature {
         switch va {
         case .openFilePicker:             .openFilePicker
         case .filePickerDismissed:        .filePickerDismissed
-        case .newDocument:                .newDocument
+        case .openCreationSheet:          .openCreationSheet
+        case .dismissCreationSheet:       .dismissCreationSheet
+        case .setDraftField(let f):       .setDraftField(f)
+        case .setDraftName(let n):        .setDraftName(n)
+        case .newDocument(let f, let n):  .newDocument(field: f, name: n)
         case .importXML(let d):           .importXML(d)
+        case .importJSON(let d):          .importJSON(d)
+        case .importCSV(let d):           .importCSV(d)
         case .editDocument(let doc):      .edit(document: doc)
         case .calculateDocument(let doc): .calculate(document: doc)
         case .deleteDocument(let id):     .deleteDocument(id)
+        case .duplicateDocument(let id):  .duplicateDocument(id)
         case .saveDocument(let doc):      .saveDocument(doc)
         }
     }
@@ -110,7 +129,7 @@ public enum HomeFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         typealias C = Consequence<State, Environment, Action>
-        return .handle { action, _ in
+        return .handle { action, context in
             switch action {
             case .openFilePicker:
                 return C.reduce { $0.filePicker = $0.filePicker.startLoading() }
@@ -118,12 +137,33 @@ public enum HomeFeature {
             case .filePickerDismissed:
                 return C.reduce { $0.filePicker = .idle }
 
+            case .openCreationSheet:
+                return C.reduce { $0.isCreationSheetOpen = true; $0.draftField = .generic; $0.draftName = "" }
+
+            case .dismissCreationSheet:
+                return C.reduce { $0.isCreationSheetOpen = false }
+
+            case .setDraftField(let f):
+                return C.reduce { $0.draftField = f }
+
+            case .setDraftName(let n):
+                return C.reduce { $0.draftName = n }
+
             case .loadDocuments:
                 return C.produce { ctx in
                     .just(.loadResult(ctx.environment.loadAllDocuments()))
                 }
 
             case .loadResult(let result):
+                if case .success(let docs) = result, docs.isEmpty {
+                    // First launch: seed example documents, save them, then show them.
+                    let seeds = SeedDocuments.all + SeedDocuments.icrpModels
+                    return C.reduce { $0.documents = .loaded(seeds) }
+                        .produce { ctx in
+                            seeds.forEach { _ = ctx.environment.saveDocument($0) }
+                            return .empty
+                        }
+                }
                 return C.reduce { state in
                     if case .success(let docs) = result {
                         state.documents = .loaded(docs)
@@ -131,13 +171,23 @@ public enum HomeFeature {
                     // On failure, leave existing state — user can still work.
                 }
 
-            case .newDocument:
-                let newDoc = ModelDocument.empty
-                return C.reduce { $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? [])) }
-                    .produce { ctx in
-                        _ = ctx.environment.saveDocument(newDoc)
-                        return .empty
-                    }
+            case .newDocument(let field, let name):
+                let lingo = field.lingo
+                let nuclide = Nuclide(id: "n0", name: lingo.substanceName, halfLife: 0)
+                let model = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
+                let newDoc = ModelDocument(
+                    name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name,
+                    field: field,
+                    model: model
+                )
+                return C.reduce {
+                    $0.isCreationSheetOpen = false
+                    $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? []))
+                }
+                .produce { ctx in
+                    _ = ctx.environment.saveDocument(newDoc)
+                    return .just(.edit(document: newDoc))
+                }
 
             case .importXML(let data):
                 return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
@@ -157,6 +207,29 @@ public enum HomeFeature {
                                     }
                             )
                         )
+                    }
+
+            case .importJSON(let data):
+                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                    .produce { ctx in
+                        .just(.importResult(ctx.environment.jsonDecoder.dataDecoder(for: ModelDocument.self)(data)))
+                    }
+
+            case .importCSV(let data):
+                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                    .produce { _ in
+                        let result = parseCSVRateMatrix(data: data)
+                            .map { model -> ModelDocument in
+                                var doc = model.asModelDocument
+                                doc.name = "Imported CSV Model"
+                                return doc
+                            }
+                            .mapError { err in
+                                DecodingError.dataCorrupted(
+                                    DecodingError.Context(codingPath: [], debugDescription: err.localizedDescription)
+                                )
+                            }
+                        return .just(.importResult(result))
                     }
 
             case let .importResult(result):
@@ -186,6 +259,9 @@ public enum HomeFeature {
                     return .empty
                 }
 
+            case .duplicateDocument(let id):
+                return duplicateConsequence(id: id, context: context)
+
             case .deleteDocument(let id):
                 return C.reduce { state in
                     guard let loaded = state.documents.loaded else { return }
@@ -203,6 +279,30 @@ public enum HomeFeature {
     }
 
     public typealias Content = HomeView
+
+    // MARK: - Private helpers
+
+    @MainActor
+    private static func duplicateConsequence(
+        id: ModelDocument.ID,
+        context: PreReducerContext<State>
+    ) -> Consequence<State, Environment, Action> {
+        typealias C = Consequence<State, Environment, Action>
+        guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
+            return C.reduce { _ in }
+        }
+        var mutable = original
+        mutable.id = UUID()
+        mutable.name = original.name + " (Copy)"
+        let copy = mutable
+        return C.reduce { state in
+            state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [copy])
+        }
+        .produce { ctx in
+            _ = ctx.environment.saveDocument(copy)
+            return .empty
+        }
+    }
 
     // MARK: - Visual layout helpers
 

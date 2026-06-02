@@ -173,7 +173,7 @@ public enum CalculatorFeature {
         }
 
         let reportRows: [ViewModel.ReportRow] = (state.results ?? []).enumerated().map { idx, row in
-            ViewModel.ReportRow(id: idx, day: Double(idx), values: row)
+            ViewModel.ReportRow(id: idx, day: Double(idx) * state.stepSize, values: row)
         }
 
         let plan = BiokineticsSimulationPlan(
@@ -234,7 +234,10 @@ public enum CalculatorFeature {
             logYLabel: logYLabel,
             durationWarningMessage: durationWarningMessage,
             isParamSheetOpen: state.isParamSheetOpen,
-            validationIssues: doc.model.validationIssues
+            validationIssues: doc.model.validationIssues.filter { issue in
+                if case .missingHalfLife = issue { return doc.field == .nuclear }
+                return true
+            }
         )
     }
 

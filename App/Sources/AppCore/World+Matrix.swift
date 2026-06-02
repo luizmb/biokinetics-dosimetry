@@ -9,22 +9,26 @@ import HomeFeature
 extension World {
 
     public static var matrixFakeAll: World {
-        World(
-            xmlDecoder: HomeModule.Environment.alwaysFails.xmlDecoder,
+        let env = HomeModule.Environment.alwaysFails
+        return World(
+            xmlDecoder:  env.xmlDecoder,
+            jsonDecoder: env.jsonDecoder,
             solver: CalculatorFeature.Environment.alwaysSucceed.solve,
-            saveDocument: { _ in Result<Void, PersistenceError>.success(()) },
-            loadAllDocuments: { Result<[ModelDocument], PersistenceError>.success([]) },
-            deleteDocument: { _ in Result<Void, PersistenceError>.success(()) }
+            saveDocument: { _ in .success(()) },
+            loadAllDocuments: { .success([]) },
+            deleteDocument: { _ in .success(()) }
         )
     }
 
     public static func matrixFailsImport(error: DecodingError) -> World {
-        World(
-            xmlDecoder: HomeModule.Environment.fails(error: error).xmlDecoder,
+        let env = HomeModule.Environment.fails(error: error)
+        return World(
+            xmlDecoder:  env.xmlDecoder,
+            jsonDecoder: env.jsonDecoder,
             solver: CalculatorFeature.Environment.alwaysSucceed.solve,
-            saveDocument: { _ in Result<Void, PersistenceError>.success(()) },
-            loadAllDocuments: { Result<[ModelDocument], PersistenceError>.success([]) },
-            deleteDocument: { _ in Result<Void, PersistenceError>.success(()) }
+            saveDocument: { _ in .success(()) },
+            loadAllDocuments: { .success([]) },
+            deleteDocument: { _ in .success(()) }
         )
     }
 }
