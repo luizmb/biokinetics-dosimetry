@@ -21,7 +21,7 @@ public struct EditorView: View {
         let compBindings: CompartmentFieldBindings? = viewModel.selectedCompartmentId.flatMap { id in
             guard viewModel.compartments.contains(where: { $0.id == id }) else { return nil }
             let isMultiNuclide = viewModel.nuclides.count > 1
-            return CompartmentFieldBindings(
+            return CompartmentFieldBindings(  // isMultiNuclide used to guard dispatch below
                 name: Binding(
                     get: { viewModel.compartments.first { $0.id == id }?.name ?? "" },
                     set: { viewModel.dispatch(.updateCompartmentName(id: id, name: $0)) }
@@ -38,10 +38,14 @@ public struct EditorView: View {
                     get: { viewModel.compartments.first { $0.id == id }?.intake ?? false },
                     set: { viewModel.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
-                nuclideId: isMultiNuclide ? Binding(
+                fraction: Binding(
+                    get: { viewModel.compartments.first { $0.id == id }?.fraction ?? 0 },
+                    set: { viewModel.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
+                ),
+                nuclideId: Binding(
                     get: { viewModel.compartments.first { $0.id == id }?.nuclideId ?? "" },
-                    set: { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) }
-                ) : nil
+                    set: { if isMultiNuclide { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
+                )
             )
         }
 
@@ -59,6 +63,11 @@ public struct EditorView: View {
         let documentNameBinding = Binding(
             get: { viewModel.documentName },
             set: { viewModel.dispatch(.renameDocument($0)) }
+        )
+
+        let documentDescriptionBinding = Binding(
+            get: { viewModel.documentDescription },
+            set: { viewModel.dispatch(.updateDescription($0)) }
         )
 
         let fieldBinding = Binding(
@@ -84,9 +93,10 @@ public struct EditorView: View {
         }
 
         return EditorContent(
-            documentName:       documentNameBinding,
-            field:              fieldBinding,
-            lingo:              viewModel.lingo,
+            documentName:        documentNameBinding,
+            documentDescription: documentDescriptionBinding,
+            field:               fieldBinding,
+            lingo:               viewModel.lingo,
             halfLife:           viewModel.halfLife,
             nuclides:           viewModel.nuclides,
             compartments:       viewModel.compartments,
@@ -114,6 +124,13 @@ public struct EditorView: View {
             canvasPinchOriginScale:  viewModel.canvasPinchOriginScale,
             isInspectorSheetOpen:    viewModel.isInspectorSheetOpen,
             isModelListSheetOpen:    viewModel.isModelListSheetOpen,
+            variants:                viewModel.variants,
+            editingVariant:          viewModel.editingVariant,
+            renamingVariant:         viewModel.renamingVariant,
+            variantRenameDraft:      Binding(
+                get: { viewModel.variantRenameDraft },
+                set: { viewModel.dispatch(.setVariantRenameDraft($0)) }
+            ),
             onSelectCompartment: { viewModel.dispatch(.selectCompartment($0)) },
             onSelectLink:        { viewModel.dispatch(.selectLink($0)) },
             onToggleLeftPanel:   { viewModel.dispatch(.toggleLeftPanel) },
@@ -136,7 +153,13 @@ public struct EditorView: View {
             onSetInspectorSheet:     { viewModel.dispatch(.setInspectorSheet($0)) },
             onSetModelListSheet:     { viewModel.dispatch(.setModelListSheet($0)) },
             onAddNuclide:            { viewModel.dispatch(.addNuclide) },
-            onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) }
+            onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) },
+            onAddVariant:            { viewModel.dispatch(.addVariant(name: $0)) },
+            onDeleteVariant:         { viewModel.dispatch(.deleteVariant(name: $0)) },
+            onSelectEditingVariant:  { viewModel.dispatch(.selectEditingVariant($0)) },
+            onBeginVariantRename:    { viewModel.dispatch(.beginVariantRename($0)) },
+            onCommitVariantRename:   { viewModel.dispatch(.commitVariantRename) },
+            onCancelVariantRename:   { viewModel.dispatch(.cancelVariantRename) }
         )
         .inlineNavigationTitle()
     }
@@ -146,8 +169,9 @@ public struct EditorView: View {
 
 struct EditorContent: View {
     // MARK: Read-only view state
-    var documentName: Binding<String>
-    var field: Binding<ModelField>
+    var documentName:        Binding<String>
+    var documentDescription: Binding<String>
+    var field:               Binding<ModelField>
     let lingo: FieldLingo
     let halfLife: Double
     let nuclides: [EditorFeature.ViewModel.NuclideRow]
@@ -180,6 +204,10 @@ struct EditorContent: View {
     let canvasPinchOriginScale: Double?
     let isInspectorSheetOpen: Bool
     let isModelListSheetOpen: Bool
+    let variants: [String]
+    let editingVariant: String?
+    let renamingVariant: String?
+    var variantRenameDraft: Binding<String>
 
     // MARK: One-way action callbacks
     var onSelectCompartment: (String?) -> Void
@@ -205,6 +233,12 @@ struct EditorContent: View {
     var onSetModelListSheet: (Bool) -> Void
     var onAddNuclide: () -> Void
     var onDeleteNuclide: (String) -> Void
+    var onAddVariant: (String) -> Void
+    var onDeleteVariant: (String) -> Void
+    var onSelectEditingVariant: (String?) -> Void
+    var onBeginVariantRename: (String) -> Void
+    var onCommitVariantRename: () -> Void
+    var onCancelVariantRename: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -263,6 +297,7 @@ struct EditorContent: View {
             if isRightPanelVisible {
                 EditorInspectorPanel(
                     documentName: documentName,
+                    documentDescription: documentDescription,
                     field: field,
                     lingo: lingo,
                     nuclides: nuclides,
@@ -283,7 +318,17 @@ struct EditorContent: View {
                         else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                     },
                     onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide
+                    onDeleteNuclide: onDeleteNuclide,
+                    onAddVariant: onAddVariant,
+                    onDeleteVariant: onDeleteVariant,
+                    onSelectEditingVariant: onSelectEditingVariant,
+                    onBeginVariantRename: onBeginVariantRename,
+                    onCommitVariantRename: onCommitVariantRename,
+                    onCancelVariantRename: onCancelVariantRename,
+                    variants: variants,
+                    editingVariant: editingVariant,
+                    renamingVariant: renamingVariant,
+                    variantRenameDraft: variantRenameDraft
                 )
                 .frame(width: 326)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -414,6 +459,7 @@ struct EditorContent: View {
             ScrollView {
                 EditorInspectorPanel(
                     documentName: documentName,
+                    documentDescription: documentDescription,
                     field: field,
                     lingo: lingo,
                     nuclides: nuclides,
@@ -435,7 +481,17 @@ struct EditorContent: View {
                         else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                     },
                     onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide
+                    onDeleteNuclide: onDeleteNuclide,
+                    onAddVariant: onAddVariant,
+                    onDeleteVariant: onDeleteVariant,
+                    onSelectEditingVariant: onSelectEditingVariant,
+                    onBeginVariantRename: onBeginVariantRename,
+                    onCommitVariantRename: onCommitVariantRename,
+                    onCancelVariantRename: onCancelVariantRename,
+                    variants: variants,
+                    editingVariant: editingVariant,
+                    renamingVariant: renamingVariant,
+                    variantRenameDraft: variantRenameDraft
                 )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)

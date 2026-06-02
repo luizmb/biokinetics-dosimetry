@@ -11,7 +11,8 @@ struct CompartmentFieldBindings {
     var follow:    Binding<Bool>
     var dispose:   Binding<Bool>
     var intake:    Binding<Bool>
-    var nuclideId: Binding<String>?  // nil for single-nuclide documents
+    var fraction:  Binding<Double>
+    var nuclideId: Binding<String>
 }
 
 struct LinkFieldBindings {
@@ -31,6 +32,7 @@ struct NuclideEditBinding {
 struct EditorInspectorPanel: View {
     // Data props (read-only)
     @Binding var documentName: String
+    @Binding var documentDescription: String
     @Binding var field: ModelField
     let lingo: FieldLingo
     let nuclides:             [EditorFeature.ViewModel.NuclideRow]
@@ -54,6 +56,16 @@ struct EditorInspectorPanel: View {
     var onDeleteSelected:    () -> Void
     var onAddNuclide:        () -> Void
     var onDeleteNuclide:     (String) -> Void
+    var onAddVariant:           (String) -> Void
+    var onDeleteVariant:        (String) -> Void
+    var onSelectEditingVariant: (String?) -> Void
+    var onBeginVariantRename:   (String) -> Void
+    var onCommitVariantRename:  () -> Void
+    var onCancelVariantRename:  () -> Void
+    let variants: [String]
+    let editingVariant: String?
+    let renamingVariant: String?
+    @Binding var variantRenameDraft: String
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -160,19 +172,47 @@ struct EditorInspectorPanel: View {
                 flagRow(lingo.eliminationLabel,   dot: Color(hex: 0xF59E0B), isOn: bindings.dispose)
                 GlassDivider()
                 flagRow(lingo.intakeLabel,        dot: Color(hex: 0x34C759), isOn: bindings.intake)
+                if bindings.intake.wrappedValue {
+                    GlassDivider()
+                    HStack(spacing: 10) {
+                        Circle().fill(Color(hex: 0x34C759).opacity(0.4)).frame(width: 9, height: 9)
+                        Text("Fraction (0–1)").font(.system(size: 16))
+                        Spacer()
+                        TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(4)))
+                            .font(.system(size: 15, design: .monospaced))
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                            .decimalKeyboard()
+                    }
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 10)
+                }
             }
         }
         .padding(.bottom, 14)
 
-        if let nuclideIdBinding = bindings.nuclideId {
-            GLabel(lingo.substanceName)
+        GLabel(lingo.substanceName)
+        if nuclides.count > 1 {
             GRadioList(
-                selection: nuclideIdBinding,
+                selection: bindings.nuclideId,
                 options: nuclides.map { n in
                     GRadioOption(value: n.id, label: n.name,
-                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) d" : nil)
+                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)" : nil)
                 }
             )
+        } else if let n = nuclides.first(where: { $0.id == bindings.nuclideId.wrappedValue }) {
+            GCard(cornerRadius: 12, intensity: 0.5) {
+                HStack {
+                    Text(n.name).font(.system(size: 15))
+                    Spacer()
+                    if n.halfLife > 0 {
+                        Text("\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 14).padding(.vertical, 12)
+            }
         }
     }
 
@@ -344,6 +384,15 @@ struct EditorInspectorPanel: View {
                     .padding(.horizontal, 14)
                     .frame(height: 44)
             }
+            .padding(.bottom, 14)
+
+            GLabel("Description")
+            GCard(cornerRadius: 12, intensity: 0.5) {
+                TextField("Optional description", text: $documentDescription, axis: .vertical)
+                    .lineLimit(3...5)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+            }
             .padding(.bottom, 18)
 
             if !validationIssues.isEmpty {
@@ -358,6 +407,29 @@ struct EditorInspectorPanel: View {
                 }
                 .padding(.bottom, 18)
             }
+
+            GLabel("Variants")
+            GCard(cornerRadius: 16, intensity: 0.5) {
+                VStack(spacing: 0) {
+                    variantRow(key: nil, label: "Base model")
+                    ForEach(variants, id: \.self) { key in
+                        GlassDivider()
+                        variantRow(key: key, label: key)
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+
+            Button {
+                let name = "Variant \(variants.count + 1)"
+                onAddVariant(name)
+            } label: {
+                Label("Add variant", systemImage: "plus.circle")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(g.accent)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.bottom, 18)
 
             GLabel("Field")
             GCard(cornerRadius: 16, intensity: 0.5) {
@@ -397,11 +469,60 @@ struct EditorInspectorPanel: View {
             .padding(.bottom, 8)
 
             Button { onAddNuclide() } label: {
-                Label("Add nuclide", systemImage: "plus.circle")
+                Label("Add \(lingo.substanceName)", systemImage: "plus.circle")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(g.accent)
             }
             .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    @ViewBuilder
+    private func variantRow(key: String?, label: String) -> some View {
+        let isEditing  = editingVariant == key
+        let isRenaming = key != nil && renamingVariant == key
+
+        if isRenaming {
+            HStack(spacing: 8) {
+                TextField("Variant name", text: $variantRenameDraft)
+                    .font(.system(size: 15))
+                    .submitLabel(.done)
+                    .onSubmit { onCommitVariantRename() }
+                Button("Done") { onCommitVariantRename() }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(g.accent)
+                    .buttonStyle(PlainButtonStyle())
+                Button { onCancelVariantRename() } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+        } else {
+            HStack {
+                Text(label).font(.system(size: 15))
+                Spacer()
+                if isEditing {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(g.accent)
+                }
+                if let key {
+                    Button { onBeginVariantRename(key) } label: {
+                        Image(systemName: "pencil").font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    Button(role: .destructive) { onDeleteVariant(key) } label: {
+                        Image(systemName: "minus.circle.fill").foregroundStyle(.red.opacity(0.8))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .background(isEditing ? g.accent.opacity(0.06) : Color.clear)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelectEditingVariant(key) }
         }
     }
 
@@ -420,10 +541,17 @@ struct EditorInspectorPanel: View {
             }
             HStack(spacing: 6) {
                 Text(lingo.halfLifeLabel).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
-                    .font(.system(size: 12, design: .monospaced))
-                    .decimalKeyboard()
-                Text("days").font(.system(size: 11)).foregroundStyle(.secondary)
+                if nb.halfLife.wrappedValue == 0 && !lingo.isHalfLifeRequired {
+                    Text("None")
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .onTapGesture { nb.halfLife.wrappedValue = 1 }
+                } else {
+                    TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
+                        .font(.system(size: 12, design: .monospaced))
+                        .decimalKeyboard()
+                    Text(lingo.timeUnit.label).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
             }
             if nb.compartmentCount > 0 {
                 Text("\(nb.compartmentCount) compartment\(nb.compartmentCount == 1 ? "" : "s")")

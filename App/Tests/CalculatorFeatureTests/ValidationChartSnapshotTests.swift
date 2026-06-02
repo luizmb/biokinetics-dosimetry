@@ -60,10 +60,10 @@ struct ValidationChartSnapshotTests {
         line: UInt = #line
     ) async where F.Content: View {
         await feature.ignoringActions {
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
-                           named: "\(baseName)-iphone", file: file, testName: testName, line: line)
-            assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
-                           named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
+                               named: "\(baseName)-iphone", file: file, testName: testName, line: line)
+                assertSnapshot(of: feature.view, as: .image(layout: Self.iPadLayout),
+                               named: "\(baseName)-ipad",   file: file, testName: testName, line: line)
         }
     }
 

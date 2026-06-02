@@ -11,6 +11,31 @@ public enum ModelField: String, Codable, CaseIterable, Hashable, Sendable {
     case generic
 }
 
+/// The time unit a model's rates and durations are expressed in.
+///
+/// The solver is dimensionless — `TimeUnit` is purely a display convention.
+/// A model whose rates are defined in h⁻¹ should use `.hours`; one with day⁻¹ rates should use `.days`.
+public enum TimeUnit: String, Codable, Hashable, Sendable {
+    case days
+    case hours
+
+    /// Short abbreviation used as a suffix in the UI (e.g. "3 d", "8 h").
+    public var label: String {
+        switch self {
+        case .days:  "d"
+        case .hours: "h"
+        }
+    }
+
+    /// Full word, capitalised, for labels (e.g. "Days", "Hours").
+    public var displayName: String {
+        switch self {
+        case .days:  "Days"
+        case .hours: "Hours"
+        }
+    }
+}
+
 /// UI label strings for a given `ModelField`.
 public struct FieldLingo: Sendable, Equatable {
     /// The concept of a tracked substance (e.g. "Nuclide", "Substance", "Compound").
@@ -23,10 +48,16 @@ public struct FieldLingo: Sendable, Equatable {
     public let intakeLabel: String
     /// Label for the elimination/sink flag on a compartment.
     public let eliminationLabel: String
-    /// Transfer rate unit shown next to rate fields.
+    /// Transfer rate unit shown next to rate fields (e.g. "day⁻¹", "h⁻¹").
     public let rateUnit: String
     /// Human-readable field name shown in pickers.
     public let fieldName: String
+    /// Default time unit for this field.
+    public let timeUnit: TimeUnit
+    /// Whether a non-zero half-life is required for the model to be meaningful.
+    /// `true` for nuclear (halfLife=0 means "not yet set").
+    /// `false` for all other fields (halfLife=0 means "stable / no spontaneous elimination").
+    public let isHalfLifeRequired: Bool
 }
 
 public extension ModelField {
@@ -40,7 +71,9 @@ public extension ModelField {
                 intakeLabel:      "Intake",
                 eliminationLabel: "Elimination",
                 rateUnit:         "day⁻¹",
-                fieldName:        "Nuclear / Dosimetry"
+                fieldName:        "Nuclear / Dosimetry",
+                timeUnit:         .days,
+                isHalfLifeRequired: true
             )
         case .pharmacology:
             FieldLingo(
@@ -49,8 +82,10 @@ public extension ModelField {
                 halfLifeLabel:    "Elim. T½",
                 intakeLabel:      "Dose",
                 eliminationLabel: "Clearance",
-                rateUnit:         "day⁻¹",
-                fieldName:        "Pharmacology / PK"
+                rateUnit:         "h⁻¹",
+                fieldName:        "Pharmacology / PK",
+                timeUnit:         .hours,
+                isHalfLifeRequired: false
             )
         case .toxicology:
             FieldLingo(
@@ -60,7 +95,9 @@ public extension ModelField {
                 intakeLabel:      "Exposure",
                 eliminationLabel: "Excretion",
                 rateUnit:         "day⁻¹",
-                fieldName:        "Toxicology"
+                fieldName:        "Toxicology",
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         case .ecology:
             FieldLingo(
@@ -70,7 +107,9 @@ public extension ModelField {
                 intakeLabel:      "Source",
                 eliminationLabel: "Sink",
                 rateUnit:         "day⁻¹",
-                fieldName:        "Ecology"
+                fieldName:        "Ecology",
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         case .generic:
             FieldLingo(
@@ -80,7 +119,9 @@ public extension ModelField {
                 intakeLabel:      "Intake",
                 eliminationLabel: "Elimination",
                 rateUnit:         "day⁻¹",
-                fieldName:        "Generic"
+                fieldName:        "Generic",
+                timeUnit:         .days,
+                isHalfLifeRequired: false
             )
         }
     }

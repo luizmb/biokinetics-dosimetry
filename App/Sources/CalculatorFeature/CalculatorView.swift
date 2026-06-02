@@ -150,6 +150,7 @@ struct CalculatorContent: View {
             if isParamPanelVisible {
                 ParameterContent(
                     paramBindings: paramBindings,
+                    lingo: lingo,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
@@ -226,6 +227,7 @@ struct CalculatorContent: View {
                         series: series, isCalculating: isCalculating,
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
                         finalDay: paramBindings.finalDay.wrappedValue,
+                        lingo: lingo,
                         validationIssues: validationIssues,
                         onToggleSeries: onToggleSeries
                     )
@@ -238,7 +240,7 @@ struct CalculatorContent: View {
         case .report:
             ReportContent(
                 reportRows: reportRows, compartmentNames: compartmentNames,
-                isCompact: isCompact
+                lingo: lingo, isCompact: isCompact
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -275,6 +277,7 @@ struct CalculatorContent: View {
             ScrollView {
                 ParameterContent(
                     paramBindings: paramBindings,
+                    lingo: lingo,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
@@ -303,7 +306,7 @@ struct CalculatorContent: View {
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .platformNavigationLeading) {
             if halfLife > 0 {
-                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                Text("\(lingo.halfLifeLabel) \(halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
                     .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(.quaternary, in: Capsule())

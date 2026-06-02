@@ -100,7 +100,7 @@ struct EditorModelListPanel: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             if nuclide.halfLife > 0 {
-                Text("· \(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                Text("· \(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }

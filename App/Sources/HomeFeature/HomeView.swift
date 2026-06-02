@@ -21,12 +21,33 @@ public struct HomeView: View {
                     }
                 }
             ),
-            onOpenFilePicker: { viewModel.dispatch(.openFilePicker) },
-            onNewDocument:    { viewModel.dispatch(.newDocument) },
-            onEdit:           { viewModel.dispatch(.editDocument($0)) },
-            onCalculate:      { viewModel.dispatch(.calculateDocument($0)) },
-            onDelete:         { viewModel.dispatch(.deleteDocument($0)) },
-            onImportXML:      { viewModel.dispatch(.importXML($0)) }
+            isCreationSheetPresented: Binding(
+                get: { viewModel.isCreationSheetOpen },
+                set: { if !$0 { viewModel.dispatch(.dismissCreationSheet) } }
+            ),
+            draftField: Binding(
+                get: { viewModel.draftField },
+                set: { viewModel.dispatch(.setDraftField($0)) }
+            ),
+            draftName: Binding(
+                get: { viewModel.draftName },
+                set: { viewModel.dispatch(.setDraftName($0)) }
+            ),
+            onOpenFilePicker:   { viewModel.dispatch(.openFilePicker) },
+            onOpenCreationSheet: { viewModel.dispatch(.openCreationSheet) },
+            onConfirmNewDocument: { viewModel.dispatch(.newDocument(field: viewModel.draftField, name: viewModel.draftName)) },
+            onCancelNewDocument: { viewModel.dispatch(.dismissCreationSheet) },
+            onEdit:              { viewModel.dispatch(.editDocument($0)) },
+            onCalculate:         { viewModel.dispatch(.calculateDocument($0)) },
+            onDuplicate:         { viewModel.dispatch(.duplicateDocument($0)) },
+            onDelete:            { viewModel.dispatch(.deleteDocument($0)) },
+            onImportFile: { ext, data in
+                switch ext.lowercased() {
+                case "json": viewModel.dispatch(.importJSON(data))
+                case "csv":  viewModel.dispatch(.importCSV(data))
+                default:     viewModel.dispatch(.importXML(data))
+                }
+            }
         )
     }
 }
@@ -39,12 +60,18 @@ struct HomeContent: View {
     let isLoading: Bool
     let importErrorMessage: String?
     @Binding var isFilePickerPresented: Bool
-    var onOpenFilePicker: () -> Void
-    var onNewDocument:    () -> Void
-    var onEdit:           (ModelDocument) -> Void
-    var onCalculate:      (ModelDocument) -> Void
-    var onDelete:         (ModelDocument.ID) -> Void
-    var onImportXML:      (Data) -> Void
+    @Binding var isCreationSheetPresented: Bool
+    @Binding var draftField: ModelField
+    @Binding var draftName: String
+    var onOpenFilePicker:     () -> Void
+    var onOpenCreationSheet:  () -> Void
+    var onConfirmNewDocument: () -> Void
+    var onCancelNewDocument: () -> Void
+    var onEdit:              (ModelDocument) -> Void
+    var onCalculate:         (ModelDocument) -> Void
+    var onDuplicate:         (ModelDocument.ID) -> Void
+    var onDelete:            (ModelDocument.ID) -> Void
+    var onImportFile:        (String, Data) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -67,16 +94,28 @@ struct HomeContent: View {
                 }
             }
         }
+        .sheet(isPresented: $isCreationSheetPresented) {
+            NewDocumentSheet(
+                field: $draftField,
+                name: $draftName,
+                onConfirm: onConfirmNewDocument,
+                onCancel: onCancelNewDocument
+            )
+        }
         .fileImporter(
             isPresented: $isFilePickerPresented,
-            allowedContentTypes: [UTType(filenameExtension: "xml") ?? .data]
+            allowedContentTypes: [
+                UTType(filenameExtension: "xml")  ?? .data,
+                UTType(filenameExtension: "json") ?? .json,
+                UTType(filenameExtension: "csv")  ?? .commaSeparatedText,
+            ]
         ) { result in
-            if case .success(let url) = result,
-               url.startAccessingSecurityScopedResource(),
-               let data = try? Data(contentsOf: url) {
-                url.stopAccessingSecurityScopedResource()
-                onImportXML(data)
-            }
+            guard case .success(let url) = result,
+                  url.startAccessingSecurityScopedResource(),
+                  let data = try? Data(contentsOf: url) else { return }
+            let ext = url.pathExtension
+            url.stopAccessingSecurityScopedResource()
+            onImportFile(ext, data)
         }
         .inlineNavigationTitle()
     }
@@ -93,14 +132,14 @@ struct HomeContent: View {
             HStack(spacing: 8) {
                 Spacer()
                 GPill(intensity: 0.85, action: onOpenFilePicker) {
-                    Label("Open XML", systemImage: "doc.badge.arrow.up")
+                    Label("Import", systemImage: "doc.badge.arrow.up")
                         .font(.system(size: isCompact ? 14 : 15, weight: .semibold))
                         .foregroundStyle(Color.accentColor)
                         .padding(.horizontal, isCompact ? 13 : 16)
                         .frame(height: isCompact ? 38 : 42)
                 }
                 GButton("New", icon: Image(systemName: "plus"),
-                        size: isCompact ? .sm : .md, action: onNewDocument)
+                        size: isCompact ? .sm : .md, action: onOpenCreationSheet)
             }
             .padding(.horizontal, hPad)
             .padding(.top, isCompact ? 4 : 8)
@@ -151,9 +190,10 @@ struct HomeContent: View {
                             if idx > 0 { GlassDivider() }
                             HomeListRow(
                                 card: card,
-                                onEdit:    { onEdit(card.document) },
+                                onEdit:      { onEdit(card.document) },
                                 onCalculate: { onCalculate(card.document) },
-                                onDelete:  { onDelete(card.id) }
+                                onDuplicate: { onDuplicate(card.id) },
+                                onDelete:    { onDelete(card.id) }
                             )
                         }
                     }
@@ -178,6 +218,7 @@ struct HomeContent: View {
                         card: card,
                         onEdit:      { onEdit(card.document) },
                         onCalculate: { onCalculate(card.document) },
+                        onDuplicate: { onDuplicate(card.id) },
                         onDelete:    { onDelete(card.id) }
                     )
                 }
@@ -188,7 +229,7 @@ struct HomeContent: View {
     // MARK: - New model box
 
     private func newModelBox(big: Bool) -> some View {
-        Button(action: onNewDocument) {
+        Button(action: onOpenCreationSheet) {
             VStack(spacing: 10) {
                 ZStack {
                     Circle()
@@ -257,9 +298,10 @@ struct HomeContent: View {
 
 private struct HomeListRow: View {
     let card: HomeFeature.ViewModel.DocumentCard
-    var onEdit: () -> Void
+    var onEdit:      () -> Void
     var onCalculate: () -> Void
-    var onDelete: () -> Void
+    var onDuplicate: () -> Void
+    var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -271,7 +313,7 @@ private struct HomeListRow: View {
                 Spacer()
                 if card.halfLife > 0 {
                     GPill(intensity: 0.7) {
-                        Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                        Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
                             .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(g.muted)
                             .padding(.horizontal, 11)
@@ -307,6 +349,9 @@ private struct HomeListRow: View {
                 actionBtn("Edit",      systemImage: "pencil",           accent: true,  action: onEdit)
                 GlassVDivider().frame(height: 26)
                 actionBtn("Calculate", systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
+                GlassVDivider().frame(height: 26)
+                actionBtn("",          systemImage: "doc.on.doc",        accent: false, action: onDuplicate)
+                    .frame(width: 52)
                 GlassVDivider().frame(height: 26)
                 actionBtn("",          systemImage: "trash",             accent: false, danger: true, action: onDelete)
                     .frame(width: 52)
@@ -348,9 +393,10 @@ private struct HomeListRow: View {
 
 private struct HomeModelCard: View {
     let card: HomeFeature.ViewModel.DocumentCard
-    var onEdit: () -> Void
+    var onEdit:      () -> Void
     var onCalculate: () -> Void
-    var onDelete: () -> Void
+    var onDuplicate: () -> Void
+    var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -367,7 +413,7 @@ private struct HomeModelCard: View {
                     Spacer()
                     if card.halfLife > 0 {
                         GPill(intensity: 0.7) {
-                            Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) d")
+                            Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
                                 .font(.system(size: 12.5, weight: .semibold))
                                 .foregroundStyle(g.muted)
                                 .padding(.horizontal, 11)
@@ -406,6 +452,9 @@ private struct HomeModelCard: View {
                     gridActionBtn("Edit",      systemImage: "pencil",            action: onEdit)
                     GlassVDivider().frame(height: 26)
                     gridActionBtn("Calculate", systemImage: "waveform.path.ecg", action: onCalculate)
+                    GlassVDivider().frame(height: 26)
+                    gridActionBtn("",          systemImage: "doc.on.doc",         action: onDuplicate)
+                        .frame(width: 48)
                     GlassVDivider().frame(height: 26)
                     gridActionBtn("",          systemImage: "trash", danger: true, action: onDelete)
                         .frame(width: 48)

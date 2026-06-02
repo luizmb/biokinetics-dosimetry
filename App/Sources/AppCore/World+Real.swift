@@ -14,7 +14,8 @@ extension World {
         decoder.dateDecodingStrategy = .iso8601
 
         return .init(
-            xmlDecoder: XMLDecoder(),
+            xmlDecoder:  XMLDecoder(),
+            jsonDecoder: decoder,
             solver: { plan, model in Solver.solve(plan: plan, model: model) },
             saveDocument: { doc in
                 Result {
