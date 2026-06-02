@@ -120,6 +120,7 @@ public enum EditorFeature {
         case updateCompartmentFollow(id: String, value: Bool)
         case updateCompartmentDispose(id: String, value: Bool)
         case updateCompartmentIntake(id: String, value: Bool)
+        case updateCompartmentFraction(id: String, fraction: Double)
         case moveCompartment(id: String, x: Double, y: Double)
         case beginCompartmentDrag(id: String, x: Double, y: Double)
         case endCompartmentDrag
@@ -267,6 +268,7 @@ public enum EditorFeature {
             case updateCompartmentFollow(id: String, value: Bool)
             case updateCompartmentDispose(id: String, value: Bool)
             case updateCompartmentIntake(id: String, value: Bool)
+            case updateCompartmentFraction(id: String, fraction: Double)
             case moveCompartment(id: String, x: Double, y: Double)
             case beginCompartmentDrag(id: String, x: Double, y: Double)
             case endCompartmentDrag
@@ -420,6 +422,7 @@ public enum EditorFeature {
         case .updateCompartmentFollow(let id, let v):              .updateCompartmentFollow(id: id, value: v)
         case .updateCompartmentDispose(let id, let v):             .updateCompartmentDispose(id: id, value: v)
         case .updateCompartmentIntake(let id, let v):              .updateCompartmentIntake(id: id, value: v)
+        case .updateCompartmentFraction(let id, let f):            .updateCompartmentFraction(id: id, fraction: f)
         case .moveCompartment(let id, let x, let y):               .moveCompartment(id: id, x: x, y: y)
         case .beginCompartmentDrag(let id, let x, let y):         .beginCompartmentDrag(id: id, x: x, y: y)
         case .endCompartmentDrag:                                  .endCompartmentDrag
@@ -603,6 +606,13 @@ public enum EditorFeature {
                             $0.with(fraction: equalFraction)
                         })
                     }
+                }
+
+            case .updateCompartmentFraction(let id, let fraction):
+                .reduce { state in
+                    state.setCurrentModel(state.currentModel.updatingCompartment(id: id) {
+                        $0.with(fraction: max(0, min(1, fraction)))
+                    })
                 }
 
             case .beginCompartmentDrag(let id, let x, let y):

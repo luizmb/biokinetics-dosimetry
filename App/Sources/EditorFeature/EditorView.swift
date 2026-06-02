@@ -38,6 +38,10 @@ public struct EditorView: View {
                     get: { viewModel.compartments.first { $0.id == id }?.intake ?? false },
                     set: { viewModel.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
+                fraction: Binding(
+                    get: { viewModel.compartments.first { $0.id == id }?.fraction ?? 0 },
+                    set: { viewModel.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
+                ),
                 nuclideId: Binding(
                     get: { viewModel.compartments.first { $0.id == id }?.nuclideId ?? "" },
                     set: { if isMultiNuclide { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
