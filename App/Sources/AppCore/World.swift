@@ -13,6 +13,7 @@ import Foundation
 public struct World: Sendable {
     public let xmlDecoder:  Sendable & DataDecoderFactory
     public let jsonDecoder: Sendable & DataDecoderFactory
+    public let newId:  @Sendable () -> UUID
     public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>
     public let generateCSV: @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
     public let renderPDF:   @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>
@@ -23,6 +24,7 @@ public struct World: Sendable {
     public init(
         xmlDecoder:  Sendable & DataDecoderFactory,
         jsonDecoder: Sendable & DataDecoderFactory,
+        newId:  @escaping @Sendable () -> UUID,
         solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<[[Double]]>,
         generateCSV: @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
         renderPDF:   @escaping @Sendable (CalculatorExportData) -> DeferredTask<Result<Data, Error>>,
@@ -32,6 +34,7 @@ public struct World: Sendable {
     ) {
         self.xmlDecoder  = xmlDecoder
         self.jsonDecoder = jsonDecoder
+        self.newId       = newId
         self.solver      = solver
         self.generateCSV = generateCSV
         self.renderPDF   = renderPDF

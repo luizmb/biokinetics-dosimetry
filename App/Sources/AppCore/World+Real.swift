@@ -16,6 +16,7 @@ extension World {
         return .init(
             xmlDecoder:  XMLDecoder(),
             jsonDecoder: decoder,
+            newId:       { UUID() },
             solver:      { plan, model in Solver.solve(plan: plan, model: model) },
             generateCSV: generateCalculatorCSV,
             renderPDF:   renderCalculatorPDF,

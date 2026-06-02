@@ -50,6 +50,8 @@ public enum HomeModule {
         case loadDocuments
         case loadResult(Result<[ModelDocument], PersistenceError>)
         case newDocument(field: ModelField, name: String)
+        case newDocumentReady(ModelDocument)
+        case insertDocument(ModelDocument)
         case importXML(Data)
         case importJSON(Data)
         case importCSV(Data)
@@ -66,6 +68,7 @@ public enum HomeModule {
     public struct Environment: Sendable {
         public var xmlDecoder:        DataDecoderFactory & Sendable
         public var jsonDecoder:       DataDecoderFactory & Sendable
+        public var newId:             @Sendable () -> UUID
         public var saveDocument:      @Sendable (ModelDocument) -> Result<Void, PersistenceError>
         public var loadAllDocuments:  @Sendable () -> Result<[ModelDocument], PersistenceError>
         public var deleteDocument:    @Sendable (UUID) -> Result<Void, PersistenceError>
@@ -73,12 +76,14 @@ public enum HomeModule {
         public init(
             xmlDecoder:       DataDecoderFactory & Sendable,
             jsonDecoder:      DataDecoderFactory & Sendable,
-            saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>    = { _ in .success(()) },
-            loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError> = { .success([]) },
-            deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>        = { _ in .success(()) }
+            newId:            @escaping @Sendable () -> UUID                                         = { UUID() },
+            saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>  = { _ in .success(()) },
+            loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError>    = { .success([]) },
+            deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>           = { _ in .success(()) }
         ) {
             self.xmlDecoder       = xmlDecoder
             self.jsonDecoder      = jsonDecoder
+            self.newId            = newId
             self.saveDocument     = saveDocument
             self.loadAllDocuments = loadAllDocuments
             self.deleteDocument   = deleteDocument

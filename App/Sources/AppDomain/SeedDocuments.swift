@@ -1,4 +1,5 @@
 import Domain
+import Foundation
 
 /// Pre-shipped example models, one per scientific field.
 ///
@@ -31,6 +32,7 @@ private var twoCompartmentPK: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [drug], compartments: compartments, connections: connections)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-SEED-0000-0000-000000000001")!,
         name: "2-Compartment PK (IV Bolus)",
         description: "Classic two-compartment pharmacokinetic model for an intravenous bolus dose. Central ⇄ Peripheral with first-order elimination from central.",
         field: .pharmacology,
@@ -67,6 +69,7 @@ private var codeineToMorphine: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [codeine, morphine], compartments: compartments, connections: connections)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-SEED-0000-0000-000000000002")!,
         name: "Codeine → Morphine",
         description: "Two-substance pharmacokinetic model. Codeine is absorbed into plasma and partially converted to morphine via CYP2D6 metabolism (~15 %). Both substances distribute into tissue. Morphine is eliminated via urine.",
         field: .pharmacology,
@@ -97,6 +100,7 @@ private var foodChainBioaccumulation: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [pollutant], compartments: compartments, connections: connections)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-SEED-0000-0000-000000000003")!,
         name: "Food-Chain Bioaccumulation",
         description: "Aquatic food-chain bioaccumulation of a persistent pollutant. Substance enters the water column and biomagnifies through algae → invertebrates → fish, with slow elimination at the apex.",
         field: .ecology,
@@ -121,6 +125,7 @@ private var twoCompartmentGeneric: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [substance], compartments: compartments, connections: connections)
     return ModelDocument(
+        id: UUID(uuidString: "00000000-SEED-0000-0000-000000000004")!,
         name: "Simple Two-Compartment",
         description: "Minimal two-compartment model. Substance enters A, distributes bidirectionally into B, and is slowly eliminated via Sink. A starting point for any field.",
         field: .generic,

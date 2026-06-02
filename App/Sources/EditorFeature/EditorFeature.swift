@@ -110,12 +110,14 @@ public enum EditorFeature {
         case updateHalfLife(Double)
         // Nuclide management
         case addNuclide
+        case addNuclideWithId(String)
         case updateNuclideName(id: String, name: String)
         case updateNuclideHalfLife(id: String, halfLife: Double)
         case deleteNuclide(id: String)
         // Compartment mutations
         case setCompartmentNuclide(compartmentId: String, nuclideId: String)
         case addCompartment(CompartmentTint)
+        case addCompartmentWithId(String, CompartmentTint)
         case updateCompartmentName(id: String, name: String)
         case updateCompartmentFollow(id: String, value: Bool)
         case updateCompartmentDispose(id: String, value: Bool)
@@ -159,7 +161,13 @@ public enum EditorFeature {
 
     // MARK: - Environment
 
-    public typealias Environment = Void
+    public struct Environment: Sendable {
+        public var newId: @Sendable () -> UUID
+
+        public init(newId: @escaping @Sendable () -> UUID = { UUID() }) {
+            self.newId = newId
+        }
+    }
 
     // MARK: - ViewModel
 
@@ -504,8 +512,10 @@ public enum EditorFeature {
                 }
 
             case .addNuclide:
+                .produce { ctx in .just(.addNuclideWithId(ctx.environment.newId().uuidString.prefix(8).lowercased().description)) }
+
+            case .addNuclideWithId(let id):
                 .reduce { state in
-                    let id = String(UUID().uuidString.prefix(8).lowercased())
                     let nuclide = Nuclide(id: id, name: "New \(state.document.field.lingo.substanceName)", halfLife: 0)
                     state.document.model = state.document.model.with(
                         nuclides: state.document.model.nuclides + [nuclide]
@@ -556,8 +566,10 @@ public enum EditorFeature {
                 }
 
             case .addCompartment(let tint):
+                .produce { ctx in .just(.addCompartmentWithId(ctx.environment.newId().uuidString.prefix(8).lowercased().description, tint)) }
+
+            case .addCompartmentWithId(let idStr, let tint):
                 .reduce { state in
-                    let idStr = String(UUID().uuidString.prefix(8).lowercased())
                     let nuclideId = state.currentModel.nuclides.first?.id ?? "n0"
                     let compartment = Compartment(
                         id: idStr, nuclideId: nuclideId, name: "New Compartment",

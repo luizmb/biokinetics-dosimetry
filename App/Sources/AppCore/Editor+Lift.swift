@@ -12,7 +12,7 @@ where Action == EditorFeature.Action,
         lift(
             action:      AppAction.prism.editor,
             state:       AppState.lens.editor,
-            environment: ignore
+            environment: { world in EditorFeature.Environment(newId: world.newId) }
         )
     }
 }

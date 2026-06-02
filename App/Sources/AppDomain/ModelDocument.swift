@@ -43,7 +43,7 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     public var visuals: [String: CompartmentVisuals]
 
     public init(
-        id:          UUID                          = UUID(),
+        id:          UUID,
         name:        String,
         description: String                        = "",
         field:       ModelField                    = .generic,
@@ -62,8 +62,11 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
 
     /// A blank document with no nuclides, compartments, or connections.
     /// Used by the app as the "new document" placeholder — available in all build configurations.
+    /// Sentinel blank document used as a placeholder before the editor loads a real one.
+    /// Fixed UUID so it is stable across app runs and easy to identify in tests.
     public static var empty: ModelDocument {
         ModelDocument(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
             name: "Untitled",
             model: CompartmentalModel(nuclides: [], compartments: [], connections: [])
         )

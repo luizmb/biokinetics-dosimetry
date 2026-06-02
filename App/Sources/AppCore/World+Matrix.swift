@@ -13,6 +13,7 @@ extension World {
         return World(
             xmlDecoder:  env.xmlDecoder,
             jsonDecoder: env.jsonDecoder,
+            newId:       { UUID() },
             solver:      CalculatorFeature.Environment.alwaysSucceed.solve,
             generateCSV: CalculatorFeature.Environment.alwaysSucceed.generateCSV,
             renderPDF:   CalculatorFeature.Environment.alwaysSucceed.renderPDF,
@@ -27,6 +28,7 @@ extension World {
         return World(
             xmlDecoder:  env.xmlDecoder,
             jsonDecoder: env.jsonDecoder,
+            newId:       { UUID() },
             solver:      CalculatorFeature.Environment.alwaysSucceed.solve,
             generateCSV: CalculatorFeature.Environment.alwaysSucceed.generateCSV,
             renderPDF:   CalculatorFeature.Environment.alwaysSucceed.renderPDF,

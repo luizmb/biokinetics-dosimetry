@@ -172,22 +172,25 @@ public enum HomeFeature {
                 }
 
             case .newDocument(let field, let name):
-                let lingo = field.lingo
-                let nuclide = Nuclide(id: "n0", name: lingo.substanceName, halfLife: 0)
-                let model = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
-                let newDoc = ModelDocument(
-                    name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name,
-                    field: field,
-                    model: model
-                )
+                return C.produce { ctx in
+                    let nuclide = Nuclide(id: "n0", name: field.lingo.substanceName, halfLife: 0)
+                    let model   = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
+                    let newDoc  = ModelDocument(
+                        id:    ctx.environment.newId(),
+                        name:  name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name,
+                        field: field,
+                        model: model
+                    )
+                    _ = ctx.environment.saveDocument(newDoc)
+                    return .just(.newDocumentReady(newDoc))
+                }
+
+            case .newDocumentReady(let newDoc):
                 return C.reduce {
                     $0.isCreationSheetOpen = false
                     $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? []))
                 }
-                .produce { ctx in
-                    _ = ctx.environment.saveDocument(newDoc)
-                    return .just(.edit(document: newDoc))
-                }
+                .produce { _ in .just(.edit(document: newDoc)) }
 
             case .importXML(let data):
                 return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
@@ -199,10 +202,11 @@ public enum HomeFeature {
                                     .map { xmlModel -> ModelDocument in
                                         let model = xmlModel.toCompartmentalModel()
                                         return ModelDocument(
-                                            name: xmlModel.modelo?.name ?? "Imported Model",
+                                            id:          ctx.environment.newId(),
+                                            name:        xmlModel.modelo?.name ?? "Imported Model",
                                             description: xmlModel.modelo?.description ?? "",
-                                            model: model,
-                                            visuals: Self.visuals(from: xmlModel, model: model)
+                                            model:       model,
+                                            visuals:     Self.visuals(from: xmlModel, model: model)
                                         )
                                     }
                             )
@@ -217,13 +221,9 @@ public enum HomeFeature {
 
             case .importCSV(let data):
                 return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
-                    .produce { _ in
+                    .produce { ctx in
                         let result = parseCSVRateMatrix(data: data)
-                            .map { model -> ModelDocument in
-                                var doc = model.asModelDocument
-                                doc.name = "Imported CSV Model"
-                                return doc
-                            }
+                            .map { model in model.asModelDocument(id: ctx.environment.newId()) }
                             .mapError { err in
                                 DecodingError.dataCorrupted(
                                     DecodingError.Context(codingPath: [], debugDescription: err.localizedDescription)
@@ -272,6 +272,11 @@ public enum HomeFeature {
                     return .empty
                 }
 
+            case .insertDocument(let doc):
+                return C.reduce { state in
+                    state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [doc])
+                }
+
             case .edit, .calculate:
                 return .doNothing
             }
@@ -291,16 +296,19 @@ public enum HomeFeature {
         guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
             return C.reduce { _ in }
         }
-        var mutable = original
-        mutable.id = UUID()
-        mutable.name = original.name + " (Copy)"
-        let copy = mutable
-        return C.reduce { state in
-            state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [copy])
-        }
-        .produce { ctx in
+        let nameOnly = original.name + " (Copy)"
+        return C.produce { ctx in
+            let copy = ModelDocument(
+                id:          ctx.environment.newId(),
+                name:        nameOnly,
+                description: original.description,
+                field:       original.field,
+                model:       original.model,
+                variants:    original.variants,
+                visuals:     original.visuals
+            )
             _ = ctx.environment.saveDocument(copy)
-            return .empty
+            return .just(.insertDocument(copy))
         }
     }
 
