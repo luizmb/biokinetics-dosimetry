@@ -14,8 +14,8 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 struct ParameterBindings {
     var finalDay:             Binding<Int>
-    var stepSize:             Binding<Double>
-    var tolerance:            Binding<Double>
+    var stepSizeText:         Binding<String>
+    var toleranceText:        Binding<String>
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
 }
@@ -35,6 +35,7 @@ struct ParameterContent: View {
     let calculateButtonTitle: String
     let durationWarningMessage: String?
     let durationWarningTone: GBannerTone
+    var showCalculateButton: Bool = true
 
     // One-way callbacks for actions that involve more than a simple value swap.
     var onSetSolver:  (SolverMethod) -> Void   // sets method + resets associated params
@@ -121,7 +122,7 @@ struct ParameterContent: View {
                     switch solver {
                     case .rungeKutta4, .rungeKutta45:
                         GLabel("Step size (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        doubleField(binding: paramBindings.stepSize, dp: 4)
+                        GField(paramBindings.stepSizeText)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     default:
@@ -130,7 +131,7 @@ struct ParameterContent: View {
 
                     if case .rungeKutta45 = solver {
                         GLabel("Tolerance").padding(.horizontal, 18)
-                        doubleField(binding: paramBindings.tolerance, dp: 10)
+                        GField(paramBindings.toleranceText)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     }
@@ -138,23 +139,25 @@ struct ParameterContent: View {
                 .padding(.bottom, 8)
             }
 
-            VStack(spacing: 10) {
-                if let msg = durationWarningMessage {
-                    GBanner(
-                        tone: durationWarningTone,
-                        systemImage: durationWarningTone == .neutral ? "clock" : "exclamationmark.triangle",
-                        message: msg
+            if showCalculateButton {
+                VStack(spacing: 10) {
+                    if let msg = durationWarningMessage {
+                        GBanner(
+                            tone: durationWarningTone,
+                            systemImage: durationWarningTone == .neutral ? "clock" : "exclamationmark.triangle",
+                            message: msg
+                        )
+                    }
+                    GButton(
+                        calculateButtonTitle,
+                        icon: isCalculating ? nil : Image(systemName: "play.fill"),
+                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors,
+                        action: onCalculate
                     )
                 }
-                GButton(
-                    calculateButtonTitle,
-                    icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                    size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors,
-                    action: onCalculate
-                )
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
             }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 18)
         }
         .background(Color.platformGroupedBackground)
     }
@@ -169,14 +172,6 @@ struct ParameterContent: View {
         }
     }
 
-    private func doubleField(binding: Binding<Double>, dp: Int) -> some View {
-        GField(
-            Binding(
-                get: { String(format: "%.\(dp)f", binding.wrappedValue) },
-                set: { if let v = Double($0.replacingOccurrences(of: ",", with: ".")) { binding.wrappedValue = v } }
-            )
-        )
-    }
 }
 
 // MARK: - ReportContent (pure — unchanged)
