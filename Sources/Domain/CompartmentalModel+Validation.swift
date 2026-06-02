@@ -60,7 +60,7 @@ extension CompartmentalModel {
             case .noTrackedCompartment:
                 "No tracked compartments — enable Track on at least one compartment to see results in the chart."
             case .missingHalfLife(_, let name):
-                "Nuclide \"\(name)\" has no half-life — set it in the Document inspector."
+                "\"\(name)\" has no half-life set — enter it in the Document inspector."
             case .orphanedCompartment(_, let name):
                 "Compartment \"\(name)\" has no connections and will not interact with the rest of the model."
             case .danglingConnectionEndpoint(let id):

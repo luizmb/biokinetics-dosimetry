@@ -375,7 +375,12 @@ public enum EditorFeature {
             editingVariant:          state.editingVariant,
             linkingBannerText: linkingBannerText,
             selectionFooterLabel: selectionFooterLabel,
-            validationIssues: editingModel.validationIssues
+            validationIssues: editingModel.validationIssues.filter { issue in
+                // missingHalfLife only matters for nuclear models — halfLife=0 is
+                // the normal stable/no-decay state for all other fields.
+                if case .missingHalfLife = issue { return doc.field == .nuclear }
+                return true
+            }
         )
     }
 
