@@ -17,6 +17,7 @@ where Action == HomeFeature.Action,
                     xmlDecoder:       world.xmlDecoder,
                     jsonDecoder:      world.jsonDecoder,
                     newId:            world.newId,
+                    seedId:           world.seedId,
                     saveDocument:     world.saveDocument,
                     loadAllDocuments: world.loadAllDocuments,
                     deleteDocument:   world.deleteDocument

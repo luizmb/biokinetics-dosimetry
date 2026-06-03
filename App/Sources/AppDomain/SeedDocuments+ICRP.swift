@@ -15,14 +15,14 @@ import Foundation
 //   H-3   = 4,499 d        Sr-90  = 10,512 d
 
 public extension SeedDocuments {
-    static var icrpModels: [ModelDocument] {
-        [uranium234, hydrogen3, caesium137, iodine131, strontium90]
+    static func icrpModels(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
+        [uranium234(idFor: idFor), hydrogen3(idFor: idFor), caesium137(idFor: idFor), iodine131(idFor: idFor), strontium90(idFor: idFor)]
     }
 }
 
 // MARK: - U-234 (Type S / M / F)
 
-private var uranium234: ModelDocument {
+private func uranium234(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let nuclide = Nuclide(id: "u234", name: "U-234", halfLife: 89_060_000)
 
     // ── Compartments ────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ private var uranium234: ModelDocument {
     let typeM = lungVariant(of: model, nuclide: nuclide, plasmaRate: 10,  seqRate: 0.001)
 
     return ModelDocument(
-        id: UUID(uuidString: "00000002-0000-0000-0000-000000000015")!,
+        id: idFor("icrp.u234.type.s"),
         name: "U-234 Inhalation (ICRP 137)",
         description: "ICRP 137 systemic model with ICRP 66 respiratory tract model for U-234 inhalation intake. Base model is Type S (slow lung absorption). Type M and Type F variants alter the lung-to-blood transfer rates. Physical T½ = 89,060,000 d.",
         field: .nuclear,
@@ -194,7 +194,7 @@ private func lungVariant(
 
 // MARK: - H-3 (Tritium) — ICRP 56
 
-private var hydrogen3: ModelDocument {
+private func hydrogen3(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let nuclide = Nuclide(id: "h3", name: "H-3 (Tritium)", halfLife: 4499)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -209,7 +209,7 @@ private var hydrogen3: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000002-0000-0000-0000-000000000011")!,
+        id: idFor("icrp.h3"),
         name: "H-3 Tritiated Water (ICRP 56)",
         description: "ICRP 56 Part 1 model for HTO inhalation or ingestion. 97% as body water (T½ bio ≈ 10 d), 3% as organically bound tritium (T½ bio ≈ 40 d). Physical T½ = 4499 d (12.32 y).",
         field: .nuclear,
@@ -220,7 +220,7 @@ private var hydrogen3: ModelDocument {
 
 // MARK: - Cs-137 — ICRP 67
 
-private var caesium137: ModelDocument {
+private func caesium137(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let nuclide = Nuclide(id: "cs137", name: "Cs-137", halfLife: 11012)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -242,7 +242,7 @@ private var caesium137: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000002-0000-0000-0000-000000000012")!,
+        id: idFor("icrp.cs137"),
         name: "Cs-137 Systemic (ICRP 67)",
         description: "ICRP 67 simplified systemic model for Cs-137. Fast soft-tissue pool (T½ bio ≈ 2 d) and slow skeletal pool (T½ bio ≈ 110 d). Physical T½ = 11,012 d (30.2 y).",
         field: .nuclear,
@@ -253,7 +253,7 @@ private var caesium137: ModelDocument {
 
 // MARK: - I-131 — ICRP 67
 
-private var iodine131: ModelDocument {
+private func iodine131(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let nuclide = Nuclide(id: "i131", name: "I-131", halfLife: 8.02)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -275,7 +275,7 @@ private var iodine131: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000002-0000-0000-0000-000000000013")!,
+        id: idFor("icrp.i131"),
         name: "I-131 Thyroid (ICRP 67)",
         description: "ICRP 67 model for I-131. 30% thyroid uptake (T½ bio = 80 d), remainder in other tissue (T½ bio = 12 d). Physical T½ = 8.02 d.",
         field: .nuclear,
@@ -286,7 +286,7 @@ private var iodine131: ModelDocument {
 
 // MARK: - Sr-90 — ICRP 67
 
-private var strontium90: ModelDocument {
+private func strontium90(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let nuclide = Nuclide(id: "sr90", name: "Sr-90", halfLife: 10512)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -314,7 +314,7 @@ private var strontium90: ModelDocument {
     ]
     let model = buildModel(nuclide: nuclide, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000002-0000-0000-0000-000000000014")!,
+        id: idFor("icrp.sr90"),
         name: "Sr-90 Bone Seeker (ICRP 67)",
         description: "ICRP 67 simplified model for Sr-90, a calcium-analogue bone seeker. Deposition on bone surface followed by volume incorporation and slow skeletal remodelling. Physical T½ = 10,512 d (28.8 y).",
         field: .nuclear,

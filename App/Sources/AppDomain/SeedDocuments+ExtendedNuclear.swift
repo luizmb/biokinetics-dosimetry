@@ -8,14 +8,14 @@ import Foundation
 // and follow the general structure of the ICRP systemic models.
 
 public extension SeedDocuments {
-    static var extendedNuclearModels: [ModelDocument] {
-        [plutonium239, americium241, cobalt60, technetium99m, thorium232, lead210polonium210]
+    static func extendedNuclearModels(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
+        [plutonium239(idFor: idFor), americium241(idFor: idFor), cobalt60(idFor: idFor), technetium99m(idFor: idFor), thorium232(idFor: idFor), lead210polonium210(idFor: idFor)]
     }
 }
 
 // MARK: - Pu-239 (ICRP 67 simplified)
 
-private var plutonium239: ModelDocument {
+private func plutonium239(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let n = Nuclide(id: "pu239", name: "Pu-239", halfLife: 2.4110e4 * 365.25)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -36,7 +36,7 @@ private var plutonium239: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000001")!,
+        id: idFor("icrp.pu239"),
         name: "Pu-239 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Pu-239. Plutonium is a bone and liver seeker with extremely slow bone resorption. Rates are approximate; consult ICRP 67 Annex B for exact values. Physical T½ = 24,110 y.",
         field: .nuclear,
@@ -47,7 +47,7 @@ private var plutonium239: ModelDocument {
 
 // MARK: - Am-241 (ICRP 67 simplified, similar to Pu)
 
-private var americium241: ModelDocument {
+private func americium241(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let n = Nuclide(id: "am241", name: "Am-241", halfLife: 432.7 * 365.25)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -67,7 +67,7 @@ private var americium241: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000002")!,
+        id: idFor("icrp.am241"),
         name: "Am-241 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Am-241. Americium behaves similarly to Pu — bone and liver seeker — but with slightly higher liver uptake. Physical T½ = 432.7 y.",
         field: .nuclear,
@@ -78,7 +78,7 @@ private var americium241: ModelDocument {
 
 // MARK: - Co-60 (ICRP 56 simplified)
 
-private var cobalt60: ModelDocument {
+private func cobalt60(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let n = Nuclide(id: "co60", name: "Co-60", halfLife: 5.272 * 365.25)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -96,7 +96,7 @@ private var cobalt60: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000003")!,
+        id: idFor("icrp.co60"),
         name: "Co-60 Systemic (ICRP 56)",
         description: "Simplified ICRP 56 Part 3 model for Co-60. Cobalt follows a vitamin B12-like distribution: rapid liver uptake followed by gradual redistribution. Physical T½ = 5.27 y.",
         field: .nuclear,
@@ -107,7 +107,7 @@ private var cobalt60: ModelDocument {
 
 // MARK: - Tc-99m (nuclear medicine, simplified)
 
-private var technetium99m: ModelDocument {
+private func technetium99m(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let n = Nuclide(id: "tc99m", name: "Tc-99m", halfLife: 6.01 / 24.0)  // 6.01 h in days
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     // Whole-body pertechnetate model (unbound Tc-99m)
@@ -126,7 +126,7 @@ private var technetium99m: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000004")!,
+        id: idFor("icrp.tc99m"),
         name: "Tc-99m Whole Body (Pertechnetate)",
         description: "Simplified whole-body model for unbound Tc-99m pertechnetate, the most common nuclear medicine tracer. Rapid distribution followed by predominant renal excretion. Physical T½ = 6.01 h. Agent-specific biodistribution (e.g. labelled with HMPAO or MDP) is not modelled here.",
         field: .nuclear,
@@ -137,7 +137,7 @@ private var technetium99m: ModelDocument {
 
 // MARK: - Th-232 (simplified, same structure as Th-234)
 
-private var thorium232: ModelDocument {
+private func thorium232(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let n = Nuclide(id: "th232", name: "Th-232", halfLife: 1.405e10 * 365.25)
     typealias C = (id: String, name: String, follow: Bool, intake: Bool, dispose: Bool, fraction: Double)
     let comps: [C] = [
@@ -156,7 +156,7 @@ private var thorium232: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000005")!,
+        id: idFor("icrp.th232"),
         name: "Th-232 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Th-232 (naturally occurring thorium). Same compartmental structure as Th-234 with effectively infinite physical half-life (T½ = 14.05 Gy). Thorium is a bone seeker with slow urinary excretion.",
         field: .nuclear,
@@ -167,7 +167,7 @@ private var thorium232: ModelDocument {
 
 // MARK: - Pb-210 / Po-210 standalone chain
 
-private var lead210polonium210: ModelDocument {
+private func lead210polonium210(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let pb210 = Nuclide(id: "pb210s", name: "Pb-210", halfLife: 22.3 * 365.25)
     let po210 = Nuclide(id: "po210s", name: "Po-210", halfLife: 138.4)
 
@@ -210,7 +210,7 @@ private var lead210polonium210: ModelDocument {
         connections: conns.map { CompartmentConnection(from: $0.0, to: $0.1, rate: $0.2) }
     )
     return ModelDocument(
-        id: UUID(uuidString: "00000004-0000-0000-0000-000000000006")!,
+        id: idFor("icrp.pb210.po210"),
         name: "Pb-210 → Po-210 Chain (ICRP 67)",
         description: "Two-nuclide chain for Pb-210 (T½ = 22.3 y) and its daughter Po-210 (T½ = 138.4 d). Relevant for naturally occurring radioactivity (smoking, fish consumption, polonium poisoning). Pb-210 systemic model based on Rabinowitz et al. (1976). Po-210 distributes to blood, liver, and kidney with relatively rapid clearance.",
         field: .nuclear,

@@ -156,18 +156,17 @@ public enum HomeFeature {
 
             case .loadResult(let result):
                 if case .success(let docs) = result, docs.isEmpty {
-                    // First launch: seed example documents, save them, then show them.
-                    let seeds = SeedDocuments.all
-                              + SeedDocuments.icrpModels
-                              + SeedDocuments.nuclearChainModels
-                              + SeedDocuments.extendedNuclearModels
-                              + SeedDocuments.pharmacologyModels
-                              + SeedDocuments.toxicologyModels
-                    return C.reduce { $0.documents = .loaded(seeds) }
-                        .produce { ctx in
-                            seeds.forEach { _ = ctx.environment.saveDocument($0) }
-                            return .empty
-                        }
+                    // First launch: build seeds using injected seedId, then dispatch seedsReady.
+                    return C.produce { ctx in
+                        let sid = ctx.environment.seedId
+                        let seeds = SeedDocuments.all(idFor: sid)
+                                  + SeedDocuments.icrpModels(idFor: sid)
+                                  + SeedDocuments.nuclearChainModels(idFor: sid)
+                                  + SeedDocuments.extendedNuclearModels(idFor: sid)
+                                  + SeedDocuments.pharmacologyModels(idFor: sid)
+                                  + SeedDocuments.toxicologyModels(idFor: sid)
+                        return .just(.seedsReady(seeds))
+                    }
                 }
                 return C.reduce { state in
                     if case .success(let docs) = result {
@@ -281,6 +280,13 @@ public enum HomeFeature {
                 return C.reduce { state in
                     state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [doc])
                 }
+
+            case .seedsReady(let seeds):
+                return C.reduce { $0.documents = .loaded(seeds) }
+                    .produce { ctx in
+                        seeds.forEach { _ = ctx.environment.saveDocument($0) }
+                        return .empty
+                    }
 
             case .edit, .calculate:
                 return .doNothing

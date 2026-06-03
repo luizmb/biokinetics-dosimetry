@@ -14,7 +14,7 @@ import Foundation
 //       to the Pb-210 systemic burden (reflected in connection rate).
 
 public extension SeedDocuments {
-    static var nuclearChainModels: [ModelDocument] { [uranium238Chain] }
+    static func nuclearChainModels(idFor: @Sendable (String) -> UUID) -> [ModelDocument] { [uranium238Chain(idFor: idFor)] }
 }
 
 // MARK: - Decay constants (day⁻¹)
@@ -29,7 +29,7 @@ private let λPo210 = log(2) / 138.4                   // 5.01e-3
 
 // MARK: - Full chain model
 
-private var uranium238Chain: ModelDocument {
+private func uranium238Chain(idFor: @Sendable (String) -> UUID) -> ModelDocument {
 
     // ── Nuclides ────────────────────────────────────────────────────────
     let u238  = Nuclide(id: "u238",  name: "U-238",  halfLife: 4.468e9   * 365.25)
@@ -240,7 +240,7 @@ private var uranium238Chain: ModelDocument {
     )
 
     return ModelDocument(
-        id: UUID(uuidString: "00000003-0000-0000-0000-000000000001")!,
+        id: idFor("icrp.u238.chain"),
         name: "U-238 Decay Chain (ICRP 137)",
         description: "Multi-nuclide model for U-238 inhalation (Type S) with full progeny tracking: U-238 → Th-234 → U-234 → Th-230 → Ra-226 → Pb-210 → Po-210. Pa-234m and short-lived Rn daughters are omitted (effectively instantaneous). 85% of Ra-226 decays to exhaled Rn-222; only 15% contributes to the Pb-210 burden. Daughter systemic models are simplified (5–7 compartments); U-238 uses the full ICRP 137 / Leggett lung+systemic model (Type S).",
         field: .nuclear,
