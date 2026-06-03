@@ -34,6 +34,11 @@ public struct HomeView: View {
                 set: { viewModel.dispatch(.setDraftName($0)) }
             ),
             onOpenFilePicker:   { viewModel.dispatch(.openFilePicker) },
+            isCreditsSheetPresented: Binding(
+                get: { viewModel.isCreditsSheetOpen },
+                set: { if !$0 { viewModel.dispatch(.closeCredits) } }
+            ),
+            onOpenCredits: { viewModel.dispatch(.openCredits) },
             onOpenCreationSheet: { viewModel.dispatch(.openCreationSheet) },
             onConfirmNewDocument: { viewModel.dispatch(.newDocument(field: viewModel.draftField, name: viewModel.draftName)) },
             onCancelNewDocument: { viewModel.dispatch(.dismissCreationSheet) },
@@ -64,6 +69,8 @@ struct HomeContent: View {
     @Binding var draftField: ModelField
     @Binding var draftName: String
     var onOpenFilePicker:     () -> Void
+    @Binding var isCreditsSheetPresented: Bool
+    var onOpenCredits:        () -> Void
     var onOpenCreationSheet:  () -> Void
     var onConfirmNewDocument: () -> Void
     var onCancelNewDocument: () -> Void
@@ -117,6 +124,9 @@ struct HomeContent: View {
             url.stopAccessingSecurityScopedResource()
             onImportFile(ext, data)
         }
+        .sheet(isPresented: $isCreditsSheetPresented) {
+            CreditsSheet(onDismiss: { isCreditsSheetPresented = false })
+        }
         .inlineNavigationTitle()
     }
 
@@ -130,6 +140,12 @@ struct HomeContent: View {
         VStack(alignment: .leading, spacing: 0) {
             // Action pills row
             HStack(spacing: 8) {
+                Button(action: onOpenCredits) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: isCompact ? 20 : 22))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
                 Spacer()
                 GPill(intensity: 0.85, action: onOpenFilePicker) {
                     Label("Import", systemImage: "doc.badge.arrow.up")

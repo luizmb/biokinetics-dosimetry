@@ -24,6 +24,7 @@ public enum HomeModule {
         public var documents: Loading<[ModelDocument], DecodingError> = .idle
         /// Tracks the file-picker lifecycle.
         public var filePicker: Loading<Terminal, Never> = .idle
+        public var isCreditsSheetOpen: Bool = false
         /// Whether the new-document creation sheet is presented.
         public var isCreationSheetOpen: Bool = false
         /// Draft field selection in the creation sheet.
@@ -41,6 +42,8 @@ public enum HomeModule {
         // File picker state machine
         case openFilePicker
         case filePickerDismissed
+        case openCredits
+        case closeCredits
         // Creation sheet
         case openCreationSheet
         case dismissCreationSheet
