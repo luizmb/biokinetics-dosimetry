@@ -25,7 +25,7 @@ struct CreditsSheet: View {
                             creditRow(item)
                         }
 
-                        Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP. The three foundational theses by Thiago Claro, Orlando Rodriguez Júnior, and Guilherme Galina Loch (USP / IPEN‑CNEN/SP) form the scientific basis for this work.")
+                        Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP, São Paulo, Brazil.")
                             .font(.caption)
                             .foregroundStyle(g.faint)
                             .padding(.horizontal, 16)
@@ -180,11 +180,6 @@ private let scientificCredits: [CreditItem] = [
                detail: "Computational work in biokinetic modelling and dosimetry that informed this project.",
                urlString: "https://repositorio.ipen.br/server/api/core/bitstreams/bc0b5a16-e4b3-4311-a862-145e39280026/content"),
 
-    CreditItem("loch2016",
-               "Guilherme Galina Loch — USP",
-               subtitle: "Dissertação, Instituto de Física, Universidade de São Paulo, 2016",
-               detail: "Further computational work in biokinetic modelling that informed this project.",
-               urlString: "https://teses.usp.br/teses/disponiveis/45/45132/tde-25082016-221140/publico/Guilherme_Galina_Loch_Versao_Corrigida.pdf"),
 ]
 
 private let libraryCredits: [CreditItem] = [
