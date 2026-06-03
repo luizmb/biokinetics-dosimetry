@@ -47,6 +47,7 @@ public enum HomeFeature {
             public var filePicker: Loading<Terminal, Never> = .idle
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
             public var importErrorMessage: String? = nil
+            public var isCreditsSheetOpen: Bool = false
             public var isCreationSheetOpen: Bool = false
             public var draftField: ModelField = .generic
             public var draftName: String = ""
@@ -55,6 +56,8 @@ public enum HomeFeature {
         @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case openFilePicker
+            case openCredits
+            case closeCredits
             case filePickerDismissed
             case openCreationSheet
             case dismissCreationSheet
@@ -97,6 +100,7 @@ public enum HomeFeature {
                 }
             },
             importErrorMessage: importError,
+            isCreditsSheetOpen: state.isCreditsSheetOpen,
             isCreationSheetOpen: state.isCreationSheetOpen,
             draftField: state.draftField,
             draftName: state.draftName
@@ -107,6 +111,8 @@ public enum HomeFeature {
         switch va {
         case .openFilePicker:             .openFilePicker
         case .filePickerDismissed:        .filePickerDismissed
+        case .openCredits:                .openCredits
+        case .closeCredits:               .closeCredits
         case .openCreationSheet:          .openCreationSheet
         case .dismissCreationSheet:       .dismissCreationSheet
         case .setDraftField(let f):       .setDraftField(f)
@@ -136,6 +142,12 @@ public enum HomeFeature {
 
             case .filePickerDismissed:
                 return C.reduce { $0.filePicker = .idle }
+
+            case .openCredits:
+                return C.reduce { $0.isCreditsSheetOpen = true }
+
+            case .closeCredits:
+                return C.reduce { $0.isCreditsSheetOpen = false }
 
             case .openCreationSheet:
                 return C.reduce { $0.isCreationSheetOpen = true; $0.draftField = .generic; $0.draftName = "" }
