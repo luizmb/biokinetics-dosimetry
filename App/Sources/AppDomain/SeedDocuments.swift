@@ -6,19 +6,19 @@ import Foundation
 /// Written to the documents directory on first launch when no user documents exist.
 /// After seeding they behave as regular user documents — editable and deletable.
 public enum SeedDocuments {
-    public static var all: [ModelDocument] {
+    public static func all(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
         [
-            twoCompartmentPK,
-            codeineToMorphine,
-            foodChainBioaccumulation,
-            twoCompartmentGeneric,
+            twoCompartmentPK(idFor: idFor),
+            codeineToMorphine(idFor: idFor),
+            foodChainBioaccumulation(idFor: idFor),
+            twoCompartmentGeneric(idFor: idFor),
         ]
     }
 }
 
 // MARK: - Pharmacology: 2-Compartment IV Bolus
 
-private var twoCompartmentPK: ModelDocument {
+private func twoCompartmentPK(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let drug = Nuclide(id: "drug", name: "Drug", halfLife: 0)
     let compartments: [Compartment] = [
         Compartment(id: "central",      nuclideId: "drug", name: "Central (Plasma)",    follow: true,  intake: true,  dispose: false, fraction: 1.0),
@@ -32,7 +32,7 @@ private var twoCompartmentPK: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [drug], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000001-0000-0000-0000-000000000001")!,
+        id: idFor("generic.2comp.pk"),
         name: "2-Compartment PK (IV Bolus)",
         description: "Classic two-compartment pharmacokinetic model for an intravenous bolus dose. Central ⇄ Peripheral with first-order elimination from central.",
         field: .pharmacology,
@@ -43,7 +43,7 @@ private var twoCompartmentPK: ModelDocument {
 
 // MARK: - Pharmacology: Codeine → Morphine
 
-private var codeineToMorphine: ModelDocument {
+private func codeineToMorphine(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let codeine  = Nuclide(id: "codeine",  name: "Codeine",  halfLife: 0)
     let morphine = Nuclide(id: "morphine", name: "Morphine", halfLife: 0)
 
@@ -69,7 +69,7 @@ private var codeineToMorphine: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [codeine, morphine], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000001-0000-0000-0000-000000000002")!,
+        id: idFor("generic.codeine.morphine"),
         name: "Codeine → Morphine",
         description: "Two-substance pharmacokinetic model. Codeine is absorbed into plasma and partially converted to morphine via CYP2D6 metabolism (~15 %). Both substances distribute into tissue. Morphine is eliminated via urine.",
         field: .pharmacology,
@@ -80,7 +80,7 @@ private var codeineToMorphine: ModelDocument {
 
 // MARK: - Ecology: Food-Chain Bioaccumulation
 
-private var foodChainBioaccumulation: ModelDocument {
+private func foodChainBioaccumulation(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let pollutant = Nuclide(id: "pollutant", name: "Pollutant", halfLife: 0)
     let compartments: [Compartment] = [
         Compartment(id: "water",         nuclideId: "pollutant", name: "Water",         follow: true,  intake: true,  dispose: false, fraction: 1.0),
@@ -100,7 +100,7 @@ private var foodChainBioaccumulation: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [pollutant], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000001-0000-0000-0000-000000000003")!,
+        id: idFor("generic.food.chain"),
         name: "Food-Chain Bioaccumulation",
         description: "Aquatic food-chain bioaccumulation of a persistent pollutant. Substance enters the water column and biomagnifies through algae → invertebrates → fish, with slow elimination at the apex.",
         field: .ecology,
@@ -111,7 +111,7 @@ private var foodChainBioaccumulation: ModelDocument {
 
 // MARK: - Generic: Simple Two-Compartment
 
-private var twoCompartmentGeneric: ModelDocument {
+private func twoCompartmentGeneric(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let substance = Nuclide(id: "substance", name: "Substance", halfLife: 0)
     let compartments: [Compartment] = [
         Compartment(id: "a",    nuclideId: "substance", name: "Compartment A", follow: true,  intake: true,  dispose: false, fraction: 1.0),
@@ -125,7 +125,7 @@ private var twoCompartmentGeneric: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [substance], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000001-0000-0000-0000-000000000004")!,
+        id: idFor("generic.2comp"),
         name: "Simple Two-Compartment",
         description: "Minimal two-compartment model. Substance enters A, distributes bidirectionally into B, and is slowly eliminated via Sink. A starting point for any field.",
         field: .generic,

@@ -64,9 +64,10 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     /// Used by the app as the "new document" placeholder — available in all build configurations.
     /// Sentinel blank document used as a placeholder before the editor loads a real one.
     /// Fixed UUID so it is stable across app runs and easy to identify in tests.
+    /// Sentinel blank document — stable zero UUID, no string parsing.
     public static var empty: ModelDocument {
         ModelDocument(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
+            id: UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)),
             name: "Untitled",
             model: CompartmentalModel(nuclides: [], compartments: [], connections: [])
         )

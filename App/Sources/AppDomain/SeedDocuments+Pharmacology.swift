@@ -11,14 +11,14 @@ import Foundation
 // Digoxin:     classic 2-compartment IV, textbook values (Sheiner et al. 1979)
 
 public extension SeedDocuments {
-    static var pharmacologyModels: [ModelDocument] {
-        [oneCompartmentOral, twoCompartmentOral, digoxinIV]
+    static func pharmacologyModels(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
+        [oneCompartmentOral(idFor: idFor), twoCompartmentOral(idFor: idFor), digoxinIV(idFor: idFor)]
     }
 }
 
 // MARK: - 1-Compartment Oral
 
-private var oneCompartmentOral: ModelDocument {
+private func oneCompartmentOral(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let drug = Nuclide(id: "drug1", name: "Drug", halfLife: 0)
     let compartments: [Compartment] = [
         Compartment(id: "gi",   nuclideId: "drug1", name: "GI Tract",   follow: false, intake: true,  dispose: false, fraction: 1.0),
@@ -31,7 +31,7 @@ private var oneCompartmentOral: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [drug], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000005-0000-0000-0000-000000000001")!,
+        id: idFor("pk.1comp.oral"),
         name: "1-Compartment Oral PK",
         description: "Generic one-compartment oral pharmacokinetic model. Drug absorbs from GI to central compartment (k_a = 2 h⁻¹, t½_abs ≈ 8 h) and is eliminated from central (k_el = 1 h⁻¹, t½_elim ≈ 17 h). Bioavailability assumed 100%. Adjust rates in the editor for your specific drug.",
         field: .pharmacology,
@@ -42,7 +42,7 @@ private var oneCompartmentOral: ModelDocument {
 
 // MARK: - 2-Compartment Oral
 
-private var twoCompartmentOral: ModelDocument {
+private func twoCompartmentOral(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     let drug = Nuclide(id: "drug2", name: "Drug", halfLife: 0)
     let compartments: [Compartment] = [
         Compartment(id: "gi",   nuclideId: "drug2", name: "GI Tract",    follow: false, intake: true,  dispose: false, fraction: 1.0),
@@ -58,7 +58,7 @@ private var twoCompartmentOral: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [drug], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000005-0000-0000-0000-000000000002")!,
+        id: idFor("pk.2comp.oral"),
         name: "2-Compartment Oral PK",
         description: "Generic two-compartment oral pharmacokinetic model with absorption. Central ⇄ peripheral distribution with first-order elimination from central. Generic rates (k_a = k_12 = 2 h⁻¹, k_21 = 1 h⁻¹, k_10 = 0.5 h⁻¹). Adjust for your drug.",
         field: .pharmacology,
@@ -69,7 +69,7 @@ private var twoCompartmentOral: ModelDocument {
 
 // MARK: - Digoxin 2-Compartment IV (Sheiner et al. 1979)
 
-private var digoxinIV: ModelDocument {
+private func digoxinIV(idFor: @Sendable (String) -> UUID) -> ModelDocument {
     // Rates from Sheiner et al. Clin Pharmacol Ther 1979; confirmed in Rowland & Tozer
     // k_12 = 0.44 day⁻¹,  k_21 = 0.09 day⁻¹,  k_10 = 0.14 day⁻¹ (renal+non-renal)
     // t½ terminal ≈ 40 h = 1.67 d
@@ -86,7 +86,7 @@ private var digoxinIV: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [drug], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000005-0000-0000-0000-000000000003")!,
+        id: idFor("pk.digoxin"),
         name: "Digoxin 2-Compartment IV (Sheiner 1979)",
         description: "Classic two-compartment IV model for digoxin. Rates: k_12 = 0.44 day⁻¹, k_21 = 0.09 day⁻¹, k_10 = 0.14 day⁻¹ (Sheiner et al. Clin Pharmacol Ther 1979). Terminal t½ ≈ 40 h. Digoxin has a large volume of distribution and slow equilibration — the two-compartment behaviour is critical for dosing decisions.",
         field: .pharmacology,

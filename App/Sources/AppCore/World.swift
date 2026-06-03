@@ -14,6 +14,7 @@ public struct World: Sendable {
     public let xmlDecoder:  Sendable & DataDecoderFactory
     public let jsonDecoder: Sendable & DataDecoderFactory
     public let newId:        @Sendable () -> UUID
+    public let seedId:       @Sendable (String) -> UUID  // stable UUID for a named seed slot
     public let formatDouble: @Sendable (Double, Int) -> String    // (value, decimalPlaces) — locale-aware
     public let parseDouble:  @Sendable (String) -> Double?        // locale-aware input parsing
     public let solver: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>
@@ -25,6 +26,7 @@ public struct World: Sendable {
         xmlDecoder:  Sendable & DataDecoderFactory,
         jsonDecoder: Sendable & DataDecoderFactory,
         newId:        @escaping @Sendable () -> UUID,
+        seedId:       @escaping @Sendable (String) -> UUID,
         formatDouble: @escaping @Sendable (Double, Int) -> String,
         parseDouble:  @escaping @Sendable (String) -> Double?,
         solver: @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>,
@@ -35,6 +37,7 @@ public struct World: Sendable {
         self.xmlDecoder   = xmlDecoder
         self.jsonDecoder  = jsonDecoder
         self.newId        = newId
+        self.seedId       = seedId
         self.formatDouble = formatDouble
         self.parseDouble  = parseDouble
         self.solver       = solver
