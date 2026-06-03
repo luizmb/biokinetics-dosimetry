@@ -82,7 +82,7 @@ public extension ModelDocument {
             dict[id] = CompartmentVisuals(x: x, y: y, tint: tints[id] ?? .steel)
         }
         return ModelDocument(
-            id: UUID(uuidString: "F1X00000-0000-0000-0000-000000000001")!,
+            id: UUID(uuidString: "000000f1-0000-0000-0000-000000000001")!,
             name: "Iodo 131 F",
             description: "Iodine fast model",
             model: model,
@@ -110,7 +110,7 @@ public extension ModelDocument {
             ]
         )
         return ModelDocument(
-            id: UUID(uuidString: "F1X00000-0000-0000-0000-000000000002")!,
+            id: UUID(uuidString: "000000f1-0000-0000-0000-000000000002")!,
             name: "Validation",
             description: "Model to validate the software",
             model: model,

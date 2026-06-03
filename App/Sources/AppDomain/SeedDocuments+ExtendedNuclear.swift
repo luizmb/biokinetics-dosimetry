@@ -36,7 +36,7 @@ private var plutonium239: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000021")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000001")!,
         name: "Pu-239 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Pu-239. Plutonium is a bone and liver seeker with extremely slow bone resorption. Rates are approximate; consult ICRP 67 Annex B for exact values. Physical T½ = 24,110 y.",
         field: .nuclear,
@@ -67,7 +67,7 @@ private var americium241: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000022")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000002")!,
         name: "Am-241 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Am-241. Americium behaves similarly to Pu — bone and liver seeker — but with slightly higher liver uptake. Physical T½ = 432.7 y.",
         field: .nuclear,
@@ -96,7 +96,7 @@ private var cobalt60: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000023")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000003")!,
         name: "Co-60 Systemic (ICRP 56)",
         description: "Simplified ICRP 56 Part 3 model for Co-60. Cobalt follows a vitamin B12-like distribution: rapid liver uptake followed by gradual redistribution. Physical T½ = 5.27 y.",
         field: .nuclear,
@@ -126,7 +126,7 @@ private var technetium99m: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000024")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000004")!,
         name: "Tc-99m Whole Body (Pertechnetate)",
         description: "Simplified whole-body model for unbound Tc-99m pertechnetate, the most common nuclear medicine tracer. Rapid distribution followed by predominant renal excretion. Physical T½ = 6.01 h. Agent-specific biodistribution (e.g. labelled with HMPAO or MDP) is not modelled here.",
         field: .nuclear,
@@ -156,7 +156,7 @@ private var thorium232: ModelDocument {
     ]
     let model = buildSimpleModel(nuclide: n, comps: comps, conns: conns)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000025")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000005")!,
         name: "Th-232 Systemic (ICRP 67)",
         description: "Simplified ICRP 67 systemic model for Th-232 (naturally occurring thorium). Same compartmental structure as Th-234 with effectively infinite physical half-life (T½ = 14.05 Gy). Thorium is a bone seeker with slow urinary excretion.",
         field: .nuclear,
@@ -210,7 +210,7 @@ private var lead210polonium210: ModelDocument {
         connections: conns.map { CompartmentConnection(from: $0.0, to: $0.1, rate: $0.2) }
     )
     return ModelDocument(
-        id: UUID(uuidString: "00000000-NUCL-0000-0000-000000000026")!,
+        id: UUID(uuidString: "00000004-0000-0000-0000-000000000006")!,
         name: "Pb-210 → Po-210 Chain (ICRP 67)",
         description: "Two-nuclide chain for Pb-210 (T½ = 22.3 y) and its daughter Po-210 (T½ = 138.4 d). Relevant for naturally occurring radioactivity (smoking, fish consumption, polonium poisoning). Pb-210 systemic model based on Rabinowitz et al. (1976). Po-210 distributes to blood, liver, and kidney with relatively rapid clearance.",
         field: .nuclear,

@@ -45,7 +45,7 @@ private var leadRabinowitz: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [pb], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-TOXC-0000-0000-000000000001")!,
+        id: UUID(uuidString: "00000006-0000-0000-0000-000000000001")!,
         name: "Lead — Rabinowitz 3-Pool (1976)",
         description: "Classical 3-pool lead toxicokinetic model: blood, soft tissue, and bone (trabecular fast + cortical slow). Rates from Rabinowitz et al. Science 1976 — validated against stable Pb tracer data. Cortical bone has extremely slow resorption (t½ ≈ 27 y), making it a long-term repository. Use this model to assess chronic low-level lead exposure. halfLife = 0 (stable Pb).",
         field: .toxicology,
@@ -79,7 +79,7 @@ private var methylmercury: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [hg], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-TOXC-0000-0000-000000000002")!,
+        id: UUID(uuidString: "00000006-0000-0000-0000-000000000002")!,
         name: "Methylmercury Toxicokinetics (WHO 1990)",
         description: "Methylmercury (organic mercury) toxicokinetic model based on WHO/IPCS EHC 101 (1990). ~90% GI absorption; distributes to blood, brain (BBB penetration), and soft tissue. Brain accumulation drives neurotoxicity. Hair acts as a biomarker: [hair] ∝ blood concentration over exposure history. Whole-body biological t½ ≈ 70 d. Rates are approximate.",
         field: .toxicology,
@@ -115,7 +115,7 @@ private var cadmium: ModelDocument {
     ]
     let model = CompartmentalModel(nuclides: [cd], compartments: compartments, connections: connections)
     return ModelDocument(
-        id: UUID(uuidString: "00000000-TOXC-0000-0000-000000000003")!,
+        id: UUID(uuidString: "00000006-0000-0000-0000-000000000003")!,
         name: "Cadmium Toxicokinetics (ATSDR)",
         description: "Cadmium toxicokinetic model: initial liver accumulation, followed by slow redistribution to kidney cortex where Cd binds metallothionein. Kidney cortex t½ ≈ 10–30 years — cadmium is effectively irreversibly accumulated over a lifetime. Rates approximate; GI intake assumes ~5% absorption from a chronic dietary exposure scenario.",
         field: .toxicology,
