@@ -129,7 +129,8 @@ private let scientificCredits: [CreditItem] = [
     CreditItem("icrp",
                "ICRP Publications 56, 67, 69, 130–137",
                subtitle: "International Commission on Radiological Protection",
-               detail: "Biokinetic models, transfer rates, and dosimetric methodology used in nuclear models."),
+               detail: "Biokinetic models, transfer rates, and dosimetric methodology used in nuclear models.",
+               urlString: "https://www.icrp.org"),
 
     CreditItem("leggett1994",
                "Leggett (1994) — Uranium Systemic Model",
@@ -147,7 +148,7 @@ private let scientificCredits: [CreditItem] = [
                "Dormand & Prince (1980) — RK45",
                subtitle: "J. Comput. Appl. Math. 6(1):19–26",
                detail: "Dormand-Prince embedded Runge-Kutta pair underlying the adaptive RK45 solver path.",
-               urlString: "https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method"),
+               urlString: "https://doi.org/10.1016/0771-050X(80)90013-3"),
 
     CreditItem("rabinowitz1976",
                "Rabinowitz et al. (1976) — Lead Model",
@@ -164,7 +165,8 @@ private let scientificCredits: [CreditItem] = [
     CreditItem("sheiner1979",
                "Digoxin 2-Compartment PK",
                subtitle: "Standard clinical pharmacokinetics literature",
-               detail: "Two-compartment intravenous model for digoxin with large volume of distribution and slow peripheral equilibration."),
+               detail: "Two-compartment intravenous model for digoxin with large volume of distribution and slow peripheral equilibration.",
+               urlString: "https://en.wikipedia.org/wiki/Digoxin#Pharmacokinetics"),
 
     CreditItem("tclaro2011",
                "Thiago Claro — SSID",
