@@ -87,21 +87,22 @@ struct HomeContent: View {
     var body: some View {
         ZStack {
             GlassAppBackground()
-            ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                    if let msg = importErrorMessage {
-                        GBanner(tone: .danger,
-                                systemImage: "exclamationmark.triangle",
-                                message: msg)
-                            .padding(.horizontal, isCompact ? 16 : 36)
-                            .padding(.bottom, 8)
+            GeometryReader { geo in
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        header
+                        if let msg = importErrorMessage {
+                            GBanner(tone: .danger,
+                                    systemImage: "exclamationmark.triangle",
+                                    message: msg)
+                                .padding(.horizontal, isCompact ? 16 : 36)
+                                .padding(.bottom, 8)
+                        }
+                        contentArea
                     }
-                    contentArea
+                    .frame(width: geo.size.width)   // hard-pin width — no horizontal overflow possible
                 }
-                .frame(maxWidth: .infinity)
             }
-            .clipped()
         }
         .sheet(isPresented: $isCreationSheetPresented) {
             NewDocumentSheet(
