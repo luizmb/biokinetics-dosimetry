@@ -129,8 +129,7 @@ private let scientificCredits: [CreditItem] = [
     CreditItem("icrp",
                "ICRP Publications 56, 67, 69, 130–137",
                subtitle: "International Commission on Radiological Protection",
-               detail: "Biokinetic models, transfer rates, and dosimetric methodology used in nuclear models.",
-               urlString: "https://www.icrp.org/publications.asp"),
+               detail: "Biokinetic models, transfer rates, and dosimetric methodology used in nuclear models."),
 
     CreditItem("leggett1994",
                "Leggett (1994) — Uranium Systemic Model",
@@ -148,7 +147,7 @@ private let scientificCredits: [CreditItem] = [
                "Dormand & Prince (1980) — RK45",
                subtitle: "J. Comput. Appl. Math. 6(1):19–26",
                detail: "Dormand-Prince embedded Runge-Kutta pair underlying the adaptive RK45 solver path.",
-               urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=dormand+prince+runge-kutta+1980"),
+               urlString: "https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method"),
 
     CreditItem("rabinowitz1976",
                "Rabinowitz et al. (1976) — Lead Model",
@@ -158,15 +157,14 @@ private let scientificCredits: [CreditItem] = [
 
     CreditItem("whomercury1990",
                "WHO/IPCS EHC 101 (1990) — Methylmercury",
-               subtitle: "World Health Organization",
+               subtitle: "World Health Organization / IPCS",
                detail: "Environmental Health Criteria for methylmercury; basis for the mercury toxicokinetic model.",
-               urlString: "https://www.who.int/publications/i/item/environmental-health-criteria-101-methylmercury"),
+               urlString: "https://inchem.org/documents/ehc/ehc/ehc101.htm"),
 
     CreditItem("sheiner1979",
                "Digoxin 2-Compartment PK",
                subtitle: "Standard clinical pharmacokinetics literature",
-               detail: "Two-compartment intravenous model for digoxin with large volume of distribution and slow peripheral equilibration.",
-               urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=digoxin+two-compartment+pharmacokinetics"),
+               detail: "Two-compartment intravenous model for digoxin with large volume of distribution and slow peripheral equilibration."),
 
     CreditItem("tclaro2011",
                "Thiago Claro — SSID",
@@ -184,7 +182,7 @@ private let scientificCredits: [CreditItem] = [
 
 private let libraryCredits: [CreditItem] = [
     CreditItem("ssid",
-               "SSID — tclaro/ipen",
+               "SSID/CBT — tclaro/ipen",
                subtitle: "© Thiago Claro / IPEN‑CNEN/SP",
                detail: "Original C# codebase rewritten in Swift for this app. Compartment structure, XML schema, and Birchall algorithm port derived from this repository.",
                urlString: "https://github.com/tclaro/ipen"),
