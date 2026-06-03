@@ -83,11 +83,15 @@ struct CreditsSheet: View {
                 Text(subtitle)
                     .font(.system(size: 13))
                     .foregroundStyle(g.muted)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let detail = item.detail {
                 Text(detail)
                     .font(.system(size: 12))
                     .foregroundStyle(g.faint)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 16)
