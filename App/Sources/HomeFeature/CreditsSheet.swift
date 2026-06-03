@@ -25,7 +25,7 @@ struct CreditsSheet: View {
                             creditRow(item)
                         }
 
-                        Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP, São Paulo, Brazil.")
+                        Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP. The three foundational theses by Thiago Claro, Orlando Rodriguez Júnior, and Guilherme Galina Loch (USP / IPEN‑CNEN/SP) form the scientific basis for this work.")
                             .font(.caption)
                             .foregroundStyle(g.faint)
                             .padding(.horizontal, 16)
@@ -169,13 +169,31 @@ private let scientificCredits: [CreditItem] = [
                urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=digoxin+two-compartment+pharmacokinetics"),
 
     CreditItem("tclaro2011",
-               "Thiago Claro / IPEN‑CNEN/SP",
-               subtitle: "MSc Thesis, Universidade de São Paulo, 2011",
-               detail: "Original SSID (Smart Software for Internal Dosimetry) C# codebase from which this app is derived.",
-               urlString: "https://github.com/tclaro/ipen"),
+               "Thiago Claro — SSID",
+               subtitle: "MSc Thesis, IPEN‑CNEN/SP / Universidade de São Paulo, 2011",
+               detail: "\"Desenvolvimento de programa computacional para cálculo de dosimetria interna baseado em modelos multicompartimentais.\" Original Smart Software for Internal Dosimetry — this app is a Swift rewrite of that work.",
+               urlString: "https://teses.usp.br/teses/disponiveis/85/85131/tde-20122011-090939/pt-br.html"),
+
+    CreditItem("orlando2011",
+               "Orlando Rodriguez Júnior — IPEN‑CNEN/SP",
+               subtitle: "Dissertação, Instituto de Pesquisas Energéticas e Nucleares",
+               detail: "Computational work in biokinetic modelling and dosimetry that informed this project.",
+               urlString: "https://repositorio.ipen.br/server/api/core/bitstreams/bc0b5a16-e4b3-4311-a862-145e39280026/content"),
+
+    CreditItem("loch2016",
+               "Guilherme Galina Loch — USP",
+               subtitle: "Dissertação, Instituto de Física, Universidade de São Paulo, 2016",
+               detail: "Further computational work in biokinetic modelling that informed this project.",
+               urlString: "https://teses.usp.br/teses/disponiveis/45/45132/tde-25082016-221140/publico/Guilherme_Galina_Loch_Versao_Corrigida.pdf"),
 ]
 
 private let libraryCredits: [CreditItem] = [
+    CreditItem("ssid",
+               "SSID — tclaro/ipen",
+               subtitle: "© Thiago Claro / IPEN‑CNEN/SP",
+               detail: "Original C# codebase rewritten in Swift for this app. Compartment structure, XML schema, and Birchall algorithm port derived from this repository.",
+               urlString: "https://github.com/tclaro/ipen"),
+
     CreditItem("swiftrex",
                "SwiftRex",
                subtitle: "© Luiz Rodrigo Martins Barbosa",
