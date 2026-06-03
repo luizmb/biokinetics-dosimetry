@@ -87,7 +87,7 @@ struct HomeContent: View {
     var body: some View {
         ZStack {
             GlassAppBackground()
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     if let msg = importErrorMessage {
