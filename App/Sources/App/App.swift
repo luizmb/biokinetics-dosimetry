@@ -9,7 +9,8 @@ struct BiokineticsDosimetryApp: SwiftUI.App {
     private let store = Store.app(world: .real)
 
     init() {
-        UIScrollView.appearance().alwaysBounceHorizontal = false
+        UIScrollView.appearance().alwaysBounceHorizontal  = false
+        UIScrollView.appearance().isDirectionalLockEnabled = true
     }
 
     var body: some Scene {
