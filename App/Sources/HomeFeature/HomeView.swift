@@ -99,7 +99,9 @@ struct HomeContent: View {
                     }
                     contentArea
                 }
+                .frame(maxWidth: .infinity)
             }
+            .clipped()
         }
         .sheet(isPresented: $isCreationSheetPresented) {
             NewDocumentSheet(
