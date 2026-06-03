@@ -157,7 +157,12 @@ public enum HomeFeature {
             case .loadResult(let result):
                 if case .success(let docs) = result, docs.isEmpty {
                     // First launch: seed example documents, save them, then show them.
-                    let seeds = SeedDocuments.all + SeedDocuments.icrpModels
+                    let seeds = SeedDocuments.all
+                              + SeedDocuments.icrpModels
+                              + SeedDocuments.nuclearChainModels
+                              + SeedDocuments.extendedNuclearModels
+                              + SeedDocuments.pharmacologyModels
+                              + SeedDocuments.toxicologyModels
                     return C.reduce { $0.documents = .loaded(seeds) }
                         .produce { ctx in
                             seeds.forEach { _ = ctx.environment.saveDocument($0) }
