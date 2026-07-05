@@ -1,5 +1,6 @@
 import AppDomain
 import SwiftUI
+import UIComponents
 
 /// A `NavigationStack` whose path is a store-backed binding.
 /// Knows nothing about routes or feature construction — content is provided by the caller.
@@ -20,5 +21,6 @@ public struct AppRootView<Content: View>: View {
         NavigationStack(path: path) {
             content()
         }
+        .glassEnvironment()
     }
 }
