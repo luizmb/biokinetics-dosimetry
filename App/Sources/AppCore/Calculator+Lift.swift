@@ -3,22 +3,15 @@ import FP
 import SwiftRex
 import SwiftRexArchitecture
 
-public extension Module
-where Action == CalculatorFeature.Action,
-      State  == CalculatorFeature.State,
-      Environment == CalculatorFeature.Environment {
-
-    func lift() -> Module<AppAction, AppState, World, Content> {
-        lift(
-            action:      AppAction.prism.calculator,
-            state:       AppState.lens.calculator,
-            environment: { world in
+public let calculatorScope = Scope<AppAction, AppState, World, CalculatorFeature>(
+    CalculatorFeature.self,
+    action: \.calculator,
+    state: \.calculator,
+    environment: { world in
                 CalculatorFeature.Environment(
                     solve:        world.solver,
                     formatDouble: world.formatDouble,
                     parseDouble:  world.parseDouble
                 )
             }
-        )
-    }
-}
+)

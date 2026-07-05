@@ -14,8 +14,8 @@ import UIComponents
 ///
 /// The inverse gives the visible canvas rect used for culling.
 struct CompartmentCanvasView: View {
-    let compartments: [EditorFeature.ViewModel.CompartmentRow]
-    let links:        [EditorFeature.ViewModel.LinkRow]
+    let compartments: [EditorFeature.CompartmentRow]
+    let links:        [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
     let showKValues: Bool
@@ -252,7 +252,7 @@ struct CompartmentCanvasView: View {
         )
     }
 
-    private func isLinkVisible(_ link: EditorFeature.ViewModel.LinkRow, in vp: CGRect) -> Bool {
+    private func isLinkVisible(_ link: EditorFeature.LinkRow, in vp: CGRect) -> Bool {
         let f = nodePos(link.fromId), t = nodePos(link.toId)
         let bb = CGRect(x: min(f.x,t.x)-20, y: min(f.y,t.y)-20,
                         width: abs(t.x-f.x)+40, height: abs(t.y-f.y)+40)
@@ -320,7 +320,7 @@ struct CompartmentCanvasView: View {
 // MARK: - CompartmentNode
 
 private struct CompartmentNode: View {
-    let comp: EditorFeature.ViewModel.CompartmentRow
+    let comp: EditorFeature.CompartmentRow
     let isLinkingTarget: Bool
     let size: CGSize
     @Environment(\.colorScheme) private var colorScheme

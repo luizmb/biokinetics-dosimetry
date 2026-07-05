@@ -3,16 +3,11 @@ import HomeFeature
 import SwiftRex
 import SwiftRexArchitecture
 
-public extension Module
-where Action == HomeFeature.Action,
-      State  == HomeFeature.State,
-      Environment == HomeFeature.Environment {
-
-    func lift() -> Module<AppAction, AppState, World, Content> {
-        lift(
-            action:      AppAction.prism.home,
-            state:       AppState.lens.home,
-            environment: { world in
+public let homeScope = Scope<AppAction, AppState, World, HomeFeature>(
+    HomeFeature.self,
+    action: \.home,
+    state: \.home,
+    environment: { world in
                 HomeModule.Environment(
                     xmlDecoder:       world.xmlDecoder,
                     jsonDecoder:      world.jsonDecoder,
@@ -23,6 +18,4 @@ where Action == HomeFeature.Action,
                     deleteDocument:   world.deleteDocument
                 )
             }
-        )
-    }
-}
+)

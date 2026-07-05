@@ -7,7 +7,7 @@ import UIComponents
 // MARK: - DecayChartContent (pure)
 
 struct DecayChartContent: View {
-    let series: [CalculatorFeature.ViewModel.Series]
+    let series: [CalculatorFeature.Series]
     let isCalculating: Bool
     let error: String?
     let logX: Bool
@@ -227,7 +227,7 @@ struct DecayChartContent: View {
 
     private struct ChartPoint { let x, y: Double }
 
-    private func transformedPoints(_ raw: [CalculatorFeature.ViewModel.SeriesPoint]) -> [ChartPoint] {
+    private func transformedPoints(_ raw: [CalculatorFeature.SeriesPoint]) -> [ChartPoint] {
         raw.compactMap { pt in
             let x: Double = logX ? (pt.day > 0 ? log10(pt.day) : log10(0.1)) : pt.day
             let y: Double = logY ? (pt.value > 0 ? log10(pt.value) : -8) : pt.value

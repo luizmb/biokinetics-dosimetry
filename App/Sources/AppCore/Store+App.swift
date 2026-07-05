@@ -13,16 +13,16 @@ import SwiftRexArchitecture
 @Lenses
 public struct AppState: Sendable {
     public var navigation: NavigationFeature.State = .init()
-    public var home:       HomeFeature.State       = HomeFeature.initialState()
-    public var editor:     EditorFeature.State     = EditorFeature.initialState()
-    public var calculator: CalculatorFeature.State = CalculatorFeature.initialState()
+    public var home:       HomeFeature.State       = HomeFeature.initialState(with: ())
+    public var editor:     EditorFeature.State     = EditorFeature.initialState(with: ())
+    public var calculator: CalculatorFeature.State = CalculatorFeature.initialState(with: ())
     public init() {}
 }
 
 // MARK: - AppAction
 
 /// Flat action space. Navigation actions are their own case, not a parent wrapper.
-@Prisms @dynamicMemberLookup
+@Prisms
 public enum AppAction: Sendable {
     case navigation(NavigationFeature.Action)
     case home(HomeFeature.Action)
@@ -42,10 +42,10 @@ public extension MainStore {
     @MainActor static func app(world: World) -> MainStoreType {
         let store = Store(
             initial: AppState(),
-            behavior: NavigationFeature.behavior().lift()
-                <> Module.home.lift().behavior
-                <> Module.editor.lift().behavior
-                <> Module.calculator.lift().behavior
+            behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
+                <> homeScope.behavior
+                <> editorScope.behavior
+                <> calculatorScope.behavior
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world

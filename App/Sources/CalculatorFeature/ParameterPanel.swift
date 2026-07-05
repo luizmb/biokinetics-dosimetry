@@ -177,7 +177,7 @@ struct ParameterContent: View {
 // MARK: - ReportContent (pure — unchanged)
 
 struct ReportContent: View {
-    let reportRows: [CalculatorFeature.ViewModel.ReportRow]
+    let reportRows: [CalculatorFeature.ReportRow]
     let compartmentNames: [String]
     let lingo: FieldLingo
     let isCompact: Bool

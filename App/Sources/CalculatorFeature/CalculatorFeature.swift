@@ -1,15 +1,17 @@
 import AppDomain
 import CoreFP
+import ReactiveConcurrency
 import Domain
 import Foundation
 import Solver
 import SwiftRex
+import SwiftUI
 import SwiftRexArchitecture
-import SwiftRexConcurrency
+import SwiftRexReactiveConcurrency
 
 // MARK: - CalculatorFeature
 
-@Feature
+@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
 public enum CalculatorFeature {
 
     // MARK: - State
@@ -44,7 +46,6 @@ public enum CalculatorFeature {
 
     // MARK: - Action
 
-    @dynamicMemberLookup
     public enum Action: Sendable {
         case load(ModelDocument)
         case calculate
@@ -70,12 +71,12 @@ public enum CalculatorFeature {
     // MARK: - Environment
 
     public struct Environment: Sendable {
-        public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>
+        public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> Publisher<[[Double]], Error>
         public var formatDouble: @Sendable (Double, Int) -> String
         public var parseDouble:  @Sendable (String) -> Double?
 
         public init(
-            solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>>,
+            solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> Publisher<[[Double]], Error>,
             formatDouble: @escaping @Sendable (Double, Int) -> String = { v, dp in String(format: "%.\(dp)f", v) },
             parseDouble:  @escaping @Sendable (String) -> Double?     = { Double($0) }
         ) {
@@ -87,7 +88,6 @@ public enum CalculatorFeature {
 
     // MARK: - ViewModel
 
-    public final class ViewModel {
         public struct SeriesPoint: Sendable, Equatable {
             public var day: Double
             public var value: Double
@@ -152,7 +152,6 @@ public enum CalculatorFeature {
             public var pdfExportInput: PDFExportInput? = nil
         }
 
-        @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case calculate
             case selectVariant(String?)
@@ -169,25 +168,24 @@ public enum CalculatorFeature {
             case toggleParamPanel
             case setParamSheet(Bool)
         }
-    }
 
     // MARK: - Mappings
 
-    public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
+    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { _ in { state in
         let doc = state.document
         let compartments = doc.model.compartments.filter { $0.follow }
 
-        var series: [ViewModel.Series] = []
+        var series: [Series] = []
         if let results = state.results {
             let displayTrajectory = doc.model.displayTrajectory(from: results, step: state.stepSize)
-            series = compartments.enumerated().compactMap { globalIdx, comp -> ViewModel.Series? in
+            series = compartments.enumerated().compactMap { globalIdx, comp -> Series? in
                 let compIdx = doc.model.compartments.firstIndex { $0.id == comp.id } ?? globalIdx
-                let points = displayTrajectory.enumerated().map { stepIdx, row -> ViewModel.SeriesPoint in
-                    ViewModel.SeriesPoint(day: Double(stepIdx) * state.stepSize, value: compIdx < row.count ? row[compIdx] : 0)
+                let points = displayTrajectory.enumerated().map { stepIdx, row -> SeriesPoint in
+                    SeriesPoint(day: Double(stepIdx) * state.stepSize, value: compIdx < row.count ? row[compIdx] : 0)
                 }
                 let tint = doc.visuals[comp.id]?.tint ?? .steel
                 let visible = state.visibleSeriesIds.isEmpty || state.visibleSeriesIds.contains(comp.id)
-                return ViewModel.Series(id: comp.id, name: comp.name, tint: tint,
+                return Series(id: comp.id, name: comp.name, tint: tint,
                                         points: points, isVisible: visible)
             }
         }
@@ -196,8 +194,8 @@ public enum CalculatorFeature {
         let trackedIndices = compartments.compactMap { comp in
             doc.model.compartments.firstIndex { $0.id == comp.id }
         }
-        let reportRows: [ViewModel.ReportRow] = (state.results ?? []).enumerated().map { idx, row in
-            ViewModel.ReportRow(
+        let reportRows: [ReportRow] = (state.results ?? []).enumerated().map { idx, row in
+            ReportRow(
                 id: idx,
                 day: Double(idx) * state.stepSize,
                 values: trackedIndices.map { $0 < row.count ? row[$0] : 0 }
@@ -235,7 +233,7 @@ public enum CalculatorFeature {
             }
         }()
 
-        return ViewModel.ViewState(
+        return ViewState(
             documentName: doc.name,
             lingo: doc.field.lingo,
             halfLife: doc.halfLife,
@@ -277,7 +275,7 @@ public enum CalculatorFeature {
                 rows: reportRows.map { ($0.day, $0.values) }
             )
         )
-    }
+    } }
 
     // MARK: - Duration formatting
 
@@ -291,7 +289,7 @@ public enum CalculatorFeature {
         }
     }
 
-    public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
+    public static let mapAction = Reader<Environment, @Sendable (ViewAction) -> Action> { _ in { va in
         switch va {
         case .calculate:                .calculate
         case .selectVariant(let k):     .selectVariant(k)
@@ -308,18 +306,18 @@ public enum CalculatorFeature {
         case .toggleParamPanel:         .toggleParamPanel
         case .setParamSheet(let v):     .setParamSheet(v)
         }
-    }
+    } }
 
     // MARK: - Lifecycle
 
-    public static func initialState() -> State { .init() }
+    public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        typealias C = Consequence<State, Environment, Action>
+        typealias C = Reaction<State, Environment, Action>
         return .handle { action, context in
             switch action {
             case .load(let doc):
-                C.reduce { state in
+                .reduce { state in
                     state.document = doc
                     state.results = nil
                     state.error = nil
@@ -328,25 +326,25 @@ public enum CalculatorFeature {
                     state.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
                 }
             case .selectVariant(let key):
-                C.reduce { $0.selectedVariant = key }
+                .reduce { $0.selectedVariant = key }
             case .calculate:
                 // Capture pre-mutation state in phase 1 (@MainActor — context.stateBefore is safe here)
                 calculateConsequence(context: context)
             case .resultsReady(let data):
-                C.reduce { $0.results = data; $0.isCalculating = false }
+                .reduce { $0.results = data; $0.isCalculating = false }
             case .resultsFailed(let msg):
-                C.reduce { $0.error = msg; $0.isCalculating = false }
+                .reduce { $0.error = msg; $0.isCalculating = false }
             case .setSolver(let s):
-                C.reduce { $0.solver = s }
+                .reduce { $0.solver = s }
             case .setFinalDay(let d):
-                C.reduce { $0.finalDay = max(1, d) }
+                .reduce { $0.finalDay = max(1, d) }
             case .setStepSize(let s):
-                C.produce { ctx in
+                .produce { ctx in
                     let v = max(0.001, s)
                     return .just(.stepSizeResolved(v, ctx.environment.formatDouble(v, 6)))
                 }
             case .setStepSizeText(let text):
-                C.produce { ctx in
+                .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
                     if let v = ctx.environment.parseDouble(t) {
                         let clamped = max(0.001, v)
@@ -355,15 +353,15 @@ public enum CalculatorFeature {
                     return .just(.stepSizeResolved(0, t))  // store raw text; stepSize unchanged until valid
                 }
             case .stepSizeResolved(let v, let t):
-                C.reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
+                .reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
 
             case .setTolerance(let t):
-                C.produce { ctx in
+                .produce { ctx in
                     let v = max(1e-14, min(1e-2, t))
                     return .just(.toleranceResolved(v, ctx.environment.formatDouble(v, 10)))
                 }
             case .setToleranceText(let text):
-                C.produce { ctx in
+                .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
                     if let v = ctx.environment.parseDouble(t) {
                         let clamped = max(1e-14, min(1e-2, v))
@@ -372,13 +370,13 @@ public enum CalculatorFeature {
                     return .just(.toleranceResolved(0, t))
                 }
             case .toleranceResolved(let v, let t):
-                C.reduce { $0.tolerance = v > 0 ? v : $0.tolerance; $0.toleranceText = t }
+                .reduce { $0.tolerance = v > 0 ? v : $0.tolerance; $0.toleranceText = t }
             case .setLogX(let v):
-                C.reduce { $0.logX = v }
+                .reduce { $0.logX = v }
             case .setLogY(let v):
-                C.reduce { $0.logY = v }
+                .reduce { $0.logY = v }
             case .toggleSeries(let id):
-                C.reduce { state in
+                .reduce { state in
                     if state.visibleSeriesIds.contains(id) {
                         state.visibleSeriesIds.remove(id)
                     } else {
@@ -386,12 +384,12 @@ public enum CalculatorFeature {
                     }
                 }
             case .setActiveView(let v):
-                C.reduce { $0.activeView = v }
+                .reduce { $0.activeView = v }
             case .toggleParamPanel:
-                C.reduce { $0.isParamPanelVisible.toggle() }
+                .reduce { $0.isParamPanelVisible.toggle() }
 
             case .setParamSheet(let v):
-                C.reduce { $0.isParamSheetOpen = v }
+                .reduce { $0.isParamSheetOpen = v }
 
             }
         }
@@ -402,8 +400,8 @@ public enum CalculatorFeature {
     @MainActor
     private static func calculateConsequence(
         context: PreReducerContext<State>
-    ) -> Consequence<State, Environment, Action> {
-        typealias C = Consequence<State, Environment, Action>
+    ) -> Reaction<State, Environment, Action> {
+        typealias C = Reaction<State, Environment, Action>
         let snapshot = context.stateBefore
         let state = snapshot ?? State()
         let doc = state.document
@@ -414,9 +412,9 @@ public enum CalculatorFeature {
             final: Double(state.finalDay),
             solver: state.solver
         )
-        return C.reduce { $0.isCalculating = true; $0.error = nil }
+        return .reduce { $0.isCalculating = true; $0.error = nil }
             .produce { ctx in
-                Effect.deferredTask(ctx.environment.solve(plan, model)) { result in
+                (ctx.environment.solve(plan, model)).asEffect { result in
                     switch result {
                     case .success(let data): return .resultsReady(data)
                     case .failure(let e):    return .resultsFailed(e.localizedDescription)
@@ -427,3 +425,6 @@ public enum CalculatorFeature {
 
     public typealias Content = CalculatorView
 }
+
+@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
+extension CalculatorFeature: SwiftRexArchitecture.Feature {}

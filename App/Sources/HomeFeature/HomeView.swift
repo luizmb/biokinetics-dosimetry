@@ -6,51 +6,51 @@ import UniformTypeIdentifiers
 
 // MARK: - HomeView (container — thin SwiftRex wrapper)
 
-@BoundTo(HomeFeature.self)
+@BoundTo(HomeFeature.self, strategy: .observationSimple)
 public struct HomeView: View {
     public var body: some View {
         HomeContent(
-            cards: viewModel.cards.loadedOrPrevious ?? [],
-            isLoading: viewModel.cards.is(.loading),
-            importErrorMessage: viewModel.importErrorMessage,
+            cards: viewStore.state.cards.loadedOrPrevious ?? [],
+            isLoading: viewStore.state.cards.is(.loading),
+            importErrorMessage: viewStore.state.importErrorMessage,
             isFilePickerPresented: Binding(
-                get: { viewModel.filePicker.is(.loading) },
+                get: { viewStore.state.filePicker.is(.loading) },
                 set: { presenting in
-                    if !presenting && viewModel.filePicker.is(.loading) {
-                        viewModel.dispatch(.filePickerDismissed)
+                    if !presenting && viewStore.state.filePicker.is(.loading) {
+                        viewStore.dispatch(.filePickerDismissed)
                     }
                 }
             ),
             isCreationSheetPresented: Binding(
-                get: { viewModel.isCreationSheetOpen },
-                set: { if !$0 { viewModel.dispatch(.dismissCreationSheet) } }
+                get: { viewStore.state.isCreationSheetOpen },
+                set: { if !$0 { viewStore.dispatch(.dismissCreationSheet) } }
             ),
             draftField: Binding(
-                get: { viewModel.draftField },
-                set: { viewModel.dispatch(.setDraftField($0)) }
+                get: { viewStore.state.draftField },
+                set: { viewStore.dispatch(.setDraftField($0)) }
             ),
             draftName: Binding(
-                get: { viewModel.draftName },
-                set: { viewModel.dispatch(.setDraftName($0)) }
+                get: { viewStore.state.draftName },
+                set: { viewStore.dispatch(.setDraftName($0)) }
             ),
-            onOpenFilePicker:   { viewModel.dispatch(.openFilePicker) },
+            onOpenFilePicker:   { viewStore.dispatch(.openFilePicker) },
             isCreditsSheetPresented: Binding(
-                get: { viewModel.isCreditsSheetOpen },
-                set: { if !$0 { viewModel.dispatch(.closeCredits) } }
+                get: { viewStore.state.isCreditsSheetOpen },
+                set: { if !$0 { viewStore.dispatch(.closeCredits) } }
             ),
-            onOpenCredits: { viewModel.dispatch(.openCredits) },
-            onOpenCreationSheet: { viewModel.dispatch(.openCreationSheet) },
-            onConfirmNewDocument: { viewModel.dispatch(.newDocument(field: viewModel.draftField, name: viewModel.draftName)) },
-            onCancelNewDocument: { viewModel.dispatch(.dismissCreationSheet) },
-            onEdit:              { viewModel.dispatch(.editDocument($0)) },
-            onCalculate:         { viewModel.dispatch(.calculateDocument($0)) },
-            onDuplicate:         { viewModel.dispatch(.duplicateDocument($0)) },
-            onDelete:            { viewModel.dispatch(.deleteDocument($0)) },
+            onOpenCredits: { viewStore.dispatch(.openCredits) },
+            onOpenCreationSheet: { viewStore.dispatch(.openCreationSheet) },
+            onConfirmNewDocument: { viewStore.dispatch(.newDocument(field: viewStore.state.draftField, name: viewStore.state.draftName)) },
+            onCancelNewDocument: { viewStore.dispatch(.dismissCreationSheet) },
+            onEdit:              { viewStore.dispatch(.editDocument($0)) },
+            onCalculate:         { viewStore.dispatch(.calculateDocument($0)) },
+            onDuplicate:         { viewStore.dispatch(.duplicateDocument($0)) },
+            onDelete:            { viewStore.dispatch(.deleteDocument($0)) },
             onImportFile: { ext, data in
                 switch ext.lowercased() {
-                case "json": viewModel.dispatch(.importJSON(data))
-                case "csv":  viewModel.dispatch(.importCSV(data))
-                default:     viewModel.dispatch(.importXML(data))
+                case "json": viewStore.dispatch(.importJSON(data))
+                case "csv":  viewStore.dispatch(.importCSV(data))
+                default:     viewStore.dispatch(.importXML(data))
                 }
             }
         )
@@ -61,7 +61,7 @@ public struct HomeView: View {
 
 struct HomeContent: View {
     // MARK: Props
-    let cards: [HomeFeature.ViewModel.DocumentCard]
+    let cards: [HomeFeature.DocumentCard]
     let isLoading: Bool
     let importErrorMessage: String?
     @Binding var isFilePickerPresented: Bool
@@ -316,7 +316,7 @@ struct HomeContent: View {
 // MARK: - HomeListRow (compact flat-list card)
 
 private struct HomeListRow: View {
-    let card: HomeFeature.ViewModel.DocumentCard
+    let card: HomeFeature.DocumentCard
     var onEdit:      () -> Void
     var onCalculate: () -> Void
     var onDuplicate: () -> Void
@@ -411,7 +411,7 @@ private struct HomeListRow: View {
 // MARK: - HomeModelCard (iPad grid card)
 
 private struct HomeModelCard: View {
-    let card: HomeFeature.ViewModel.DocumentCard
+    let card: HomeFeature.DocumentCard
     var onEdit:      () -> Void
     var onCalculate: () -> Void
     var onDuplicate: () -> Void

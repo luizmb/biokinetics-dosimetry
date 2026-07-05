@@ -1,39 +1,46 @@
 import AppDomain
 import CalculatorFeature
 import EditorFeature
-import FP
 import HomeFeature
 import NavigationFeature
 import SwiftRex
 import SwiftRexArchitecture
 import SwiftUI
 
-// MARK: - AppRoute → View
+// MARK: - AppRoute → View (the router)
+//
+// The router resolves a route to a feature view via that feature's `Scope`, supplying the child's
+// environment from `world`. `@ViewBuilder` unifies the per-route view types without `AnyView`.
 
 public extension AppRoute {
+
+    @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
     @MainActor
-    static func scene(store: MainStoreType) -> some Scene {
+    static func scene(store: MainStoreType, world: World) -> some Scene {
         WindowGroup {
-            root(store: store, entry: .home)
+            root(store: store, world: world, entry: .home)
         }
     }
 
+    @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
     @MainActor
-    private static func root(store: MainStoreType, entry: AppRoute) -> some View {
-        AppRootView(viewModel: NavigationFeature.ViewModel.from(store: store)) {
-            entry.view(in: store)
-                .navigationDestination(for: AppRoute.self, destination: flip(AppRoute.view)(store))
+    private static func root(store: MainStoreType, world: World, entry: AppRoute) -> some View {
+        AppRootView(path: store.path(\.navigation.path, set: { AppAction.navigation(.setPath($0)) })) {
+            entry.view(in: store, world: world)
+                .navigationDestination(for: AppRoute.self) { route in
+                    route.view(in: store, world: world)
+                }
         }
     }
 
-    /// Produces the view for this route, already lifted to `AppAction / AppState / World`.
-    /// `@ViewBuilder` unifies the concrete per-route view types without `AnyView` erasure.
+    /// The view for this route, built with its environment supplied from `world`.
+    @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
     @MainActor @ViewBuilder
-    func view(in store: MainStoreType) -> some View {
+    func view(in store: MainStoreType, world: World) -> some View {
         switch self {
-        case .home:       Module.home.lift().view(for: store)
-        case .editor:     Module.editor.lift().view(for: store)
-        case .calculator: Module.calculator.lift().view(for: store)
+        case .home:       homeScope.view(from: store, world: world)
+        case .editor:     editorScope.view(from: store, world: world)
+        case .calculator: calculatorScope.view(from: store, world: world)
         }
     }
 }
