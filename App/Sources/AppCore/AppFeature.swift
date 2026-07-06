@@ -43,9 +43,9 @@ public extension MainStore {
         let store = Store(
             initial: AppState(),
             behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
-                <> homeScope.behavior
-                <> editorScope.behavior
-                <> calculatorScope.behavior
+                <> Scope<AppAction, AppState, World, HomeFeature>.home.behavior
+                <> Scope<AppAction, AppState, World, EditorFeature>.editor.behavior
+                <> Scope<AppAction, AppState, World, CalculatorFeature>.calculator.behavior
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world
@@ -91,4 +91,55 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
                 state.calculator.error = nil
             }
         )
+}
+
+// MARK: - Feature scopes
+
+public extension Scope<AppAction, AppState, World, CalculatorFeature> {
+    static var calculator: Self {
+        Scope(
+            CalculatorFeature.self,
+            action: \.calculator,
+            state: \.calculator,
+            environment: { world in
+                CalculatorFeature.Environment(
+                    solve:        world.solver,
+                    formatDouble: world.formatDouble,
+                    parseDouble:  world.parseDouble
+                )
+            }
+        )
+    }
+}
+
+public extension Scope<AppAction, AppState, World, EditorFeature> {
+    static var editor: Self {
+        Scope(
+            EditorFeature.self,
+            action: \.editor,
+            state: \.editor,
+            environment: { world in EditorFeature.Environment(newId: world.newId) }
+        )
+    }
+}
+
+public extension Scope<AppAction, AppState, World, HomeFeature> {
+    static var home: Self {
+        Scope(
+            HomeFeature.self,
+            action: \.home,
+            state: \.home,
+            environment: { world in
+                HomeModule.Environment(
+                    xmlDecoder:       world.xmlDecoder,
+                    jsonDecoder:      world.jsonDecoder,
+                    newId:            world.newId,
+                    seedId:           world.seedId,
+                    saveDocument:     world.saveDocument,
+                    loadAllDocuments: world.loadAllDocuments,
+                    deleteDocument:   world.deleteDocument
+                )
+            }
+        )
+    }
 }
