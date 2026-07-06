@@ -4,14 +4,15 @@
 #if DEBUG
 import Darwin      // exp
 import Domain      // CompartmentalModel, BiokineticsSimulationPlan
+import ReactiveConcurrency
 import FP          // DeferredTask
 import Solver      // Solver.solve
 
 // Mock solver — exponential decay per compartment
-private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>> {
+private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalModel) -> Publisher<[[Double]], Error> {
     let n = model.compartments.count
     let steps = plan.stepCount + 1
-    return DeferredTask {
+    return Publisher.future {
         .success((0..<steps).map { step -> [Double] in
             let t = Double(step) * plan.step
             return (0..<n).map { idx -> Double in
@@ -21,7 +22,7 @@ private func mockDecay(plan: BiokineticsSimulationPlan, model: CompartmentalMode
         })
     }
 }
-private let mockSolve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> DeferredTask<Result<[[Double]], Error>> = mockDecay
+private let mockSolve: @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> Publisher<[[Double]], Error> = mockDecay
 
 
 public extension CalculatorFeature.Environment {
@@ -33,11 +34,11 @@ public extension CalculatorFeature.Environment {
 
     /// Returns the provided data for every solve request, ignoring the plan and model.
     static func succeeds(with data: [[Double]]) -> CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { .success(data) } })
+        .init(solve: { _, _ in Publisher.future { .success(data) } })
     }
 
     static var alwaysFails: CalculatorFeature.Environment {
-        .init(solve: { _, _ in DeferredTask { .success([]) } })
+        .init(solve: { _, _ in Publisher.future { .success([]) } })
     }
 
     static var realBirchall: CalculatorFeature.Environment {
@@ -46,7 +47,7 @@ public extension CalculatorFeature.Environment {
                 plan: BiokineticsSimulationPlan(step: plan.step, final: plan.final,
                                                solver: .birchall(composition: .perTime)),
                 model: model
-            ).map(Result.success)
+            ).map(Result.success).eraseToThrowingPublisher()
         })
     }
 }

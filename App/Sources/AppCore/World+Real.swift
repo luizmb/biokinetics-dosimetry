@@ -1,4 +1,5 @@
 import AppDomain
+import ReactiveConcurrency
 import Foundation
 import Solver
 @preconcurrency import XMLCoder
@@ -20,7 +21,7 @@ extension World {
             seedId:       liveSeedId,
             formatDouble: liveFormatDouble,
             parseDouble:  liveParseDouble,
-            solver:       { plan, model in Solver.solve(plan: plan, model: model).map(Result.success) },
+            solver:       { plan, model in Solver.solve(plan: plan, model: model).map(Result.success).eraseToThrowingPublisher() },
             saveDocument: { doc in
                 Result {
                     let dir = try biokineticsDocs()

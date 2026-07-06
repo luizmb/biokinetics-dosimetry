@@ -1,4 +1,4 @@
-// swift-tools-version:6.2
+// swift-tools-version: 6.3
 import PackageDescription
 
 let package = Package(
@@ -10,10 +10,11 @@ let package = Package(
         .library(name: "Parser", targets: ["Parser"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
-        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.5.0"),
+        .package(url: "https://github.com/luizmb/FP.git", from: "1.13.0"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.6.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
-        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.3.0")
+        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.4.0"),
+        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "0.3.0"),
     ],
     targets: [
         // Pure value types — lingua franca for all other targets.
@@ -31,6 +32,7 @@ let package = Package(
             dependencies: [
                 "Domain",
                 .product(name: "CoreFP", package: "FP"),
+                .product(name: "ReactiveConcurrency", package: "ReactiveConcurrency"),
                 .product(name: "Math", package: "SwiftCalx"),
                 .product(name: "Calculus", package: "SwiftCalx"),
                 .product(name: "RungeKutta", package: "SwiftCalx"),

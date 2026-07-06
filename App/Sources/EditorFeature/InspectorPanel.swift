@@ -35,9 +35,9 @@ struct EditorInspectorPanel: View {
     @Binding var documentDescription: String
     @Binding var field: ModelField
     let lingo: FieldLingo
-    let nuclides:             [EditorFeature.ViewModel.NuclideRow]
-    let compartments:         [EditorFeature.ViewModel.CompartmentRow]
-    let links:                [EditorFeature.ViewModel.LinkRow]
+    let nuclides:             [EditorFeature.NuclideRow]
+    let compartments:         [EditorFeature.CompartmentRow]
+    let links:                [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex:    Int?
 
@@ -71,10 +71,10 @@ struct EditorInspectorPanel: View {
     @Environment(\.glassTokens) private var g
     private var dark: Bool { colorScheme == .dark }
 
-    private var selectedComp: EditorFeature.ViewModel.CompartmentRow? {
+    private var selectedComp: EditorFeature.CompartmentRow? {
         compartments.first { $0.id == selectedCompartmentId }
     }
-    private var selectedLink: EditorFeature.ViewModel.LinkRow? {
+    private var selectedLink: EditorFeature.LinkRow? {
         selectedLinkIndex.flatMap { idx in links.first { $0.id == idx } }
     }
 
@@ -126,7 +126,7 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func compartmentInspector(
-        _ comp: EditorFeature.ViewModel.CompartmentRow,
+        _ comp: EditorFeature.CompartmentRow,
         bindings: CompartmentFieldBindings
     ) -> some View {
         inspectorHead(swatch: comp.tint, title: comp.name, sub: "Compartment")
@@ -139,7 +139,7 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func compartmentDetails(
-        _ comp: EditorFeature.ViewModel.CompartmentRow,
+        _ comp: EditorFeature.CompartmentRow,
         bindings: CompartmentFieldBindings
     ) -> some View {
         GLabel("Name")
@@ -217,7 +217,7 @@ struct EditorInspectorPanel: View {
     }
 
     @ViewBuilder
-    private func compartmentRelationships(_ comp: EditorFeature.ViewModel.CompartmentRow) -> some View {
+    private func compartmentRelationships(_ comp: EditorFeature.CompartmentRow) -> some View {
         let outbound = links.filter { $0.fromId == comp.id }
         let inbound  = links.filter { $0.toId   == comp.id }
 
@@ -238,7 +238,7 @@ struct EditorInspectorPanel: View {
     @ViewBuilder
     private func transferGroup(
         _ title: String,
-        links groupLinks: [EditorFeature.ViewModel.LinkRow],
+        links groupLinks: [EditorFeature.LinkRow],
         direction: ArrowDirection
     ) -> some View {
         if !groupLinks.isEmpty {
@@ -256,7 +256,7 @@ struct EditorInspectorPanel: View {
     }
 
     private func linkRelRow(
-        link: EditorFeature.ViewModel.LinkRow,
+        link: EditorFeature.LinkRow,
         direction: ArrowDirection
     ) -> some View {
         HStack(spacing: 10) {
@@ -291,7 +291,7 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func linkInspector(
-        _ link: EditorFeature.ViewModel.LinkRow,
+        _ link: EditorFeature.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
         inspectorHead(branch: true, title: "K\(link.id + 1)",
@@ -305,7 +305,7 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func linkDetails(
-        _ link: EditorFeature.ViewModel.LinkRow,
+        _ link: EditorFeature.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
         GLabel("Rate (\(lingo.rateUnit))")
@@ -335,7 +335,7 @@ struct EditorInspectorPanel: View {
     }
 
     @ViewBuilder
-    private func linkRelationships(_ link: EditorFeature.ViewModel.LinkRow) -> some View {
+    private func linkRelationships(_ link: EditorFeature.LinkRow) -> some View {
         GLabel("Reverse transfer")
         let reverse = links.first { $0.fromId == link.toId && $0.toId == link.fromId }
         if let rev = reverse {

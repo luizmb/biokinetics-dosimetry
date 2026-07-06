@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3
 import PackageDescription
 
 let package = Package(
@@ -16,9 +16,10 @@ let package = Package(
     ],
     dependencies: [
         .package(path: ".."),
-        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main"),
-        .package(url: "https://github.com/luizmb/FP.git", from: "1.8.1"),
-        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.5.0"),
+        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
+        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "0.3.0"),
+        .package(url: "https://github.com/luizmb/FP.git", from: "1.13.0"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.6.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
     ],
@@ -80,7 +81,7 @@ let package = Package(
                 .product(name: "Domain",                  package: "BiokineticsDosimetry"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
-                .product(name: "SwiftRex.Concurrency",    package: "SwiftRex"),
+                .product(name: "SwiftRex.ReactiveConcurrency",    package: "SwiftRex"),
                 "UIComponents",
             ]
         ),
@@ -94,7 +95,7 @@ let package = Package(
                 .product(name: "FP",                      package: "FP"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
-                .product(name: "SwiftRex.Concurrency",    package: "SwiftRex"),
+                .product(name: "SwiftRex.ReactiveConcurrency",    package: "SwiftRex"),
                 "UIComponents",
             ]
         ),

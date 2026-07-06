@@ -13,16 +13,16 @@ import SwiftRexArchitecture
 @Lenses
 public struct AppState: Sendable {
     public var navigation: NavigationFeature.State = .init()
-    public var home:       HomeFeature.State       = HomeFeature.initialState()
-    public var editor:     EditorFeature.State     = EditorFeature.initialState()
-    public var calculator: CalculatorFeature.State = CalculatorFeature.initialState()
+    public var home:       HomeFeature.State       = HomeFeature.initialState(with: ())
+    public var editor:     EditorFeature.State     = EditorFeature.initialState(with: ())
+    public var calculator: CalculatorFeature.State = CalculatorFeature.initialState(with: ())
     public init() {}
 }
 
 // MARK: - AppAction
 
 /// Flat action space. Navigation actions are their own case, not a parent wrapper.
-@Prisms @dynamicMemberLookup
+@Prisms
 public enum AppAction: Sendable {
     case navigation(NavigationFeature.Action)
     case home(HomeFeature.Action)
@@ -32,6 +32,7 @@ public enum AppAction: Sendable {
 
 public typealias MainStoreType = any StoreType<AppAction, AppState>
 public typealias MainStore = Store<AppAction, AppState, World>
+public typealias LiftedScope<F: Feature> = Scope<AppAction, AppState, World, F>
 
 // MARK: - Store conveniences
 
@@ -42,10 +43,10 @@ public extension MainStore {
     @MainActor static func app(world: World) -> MainStoreType {
         let store = Store(
             initial: AppState(),
-            behavior: NavigationFeature.behavior().lift()
-                <> Module.home.lift().behavior
-                <> Module.editor.lift().behavior
-                <> Module.calculator.lift().behavior
+            behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
+                <> LiftedScope<HomeFeature>.home.behavior
+                <> LiftedScope<EditorFeature>.editor.behavior
+                <> LiftedScope<CalculatorFeature>.calculator.behavior
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world
@@ -91,4 +92,55 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
                 state.calculator.error = nil
             }
         )
+}
+
+// MARK: - Feature scopes
+
+public extension LiftedScope<CalculatorFeature> {
+    static var calculator: Self {
+        Scope(
+            CalculatorFeature.self,
+            action: \.calculator,
+            state: \.calculator,
+            environment: { world in
+                CalculatorFeature.Environment(
+                    solve:        world.solver,
+                    formatDouble: world.formatDouble,
+                    parseDouble:  world.parseDouble
+                )
+            }
+        )
+    }
+}
+
+public extension LiftedScope<EditorFeature> {
+    static var editor: Self {
+        Scope(
+            EditorFeature.self,
+            action: \.editor,
+            state: \.editor,
+            environment: { world in EditorFeature.Environment(newId: world.newId) }
+        )
+    }
+}
+
+public extension LiftedScope<HomeFeature> {
+    static var home: Self {
+        Scope(
+            HomeFeature.self,
+            action: \.home,
+            state: \.home,
+            environment: { world in
+                HomeModule.Environment(
+                    xmlDecoder:       world.xmlDecoder,
+                    jsonDecoder:      world.jsonDecoder,
+                    newId:            world.newId,
+                    seedId:           world.seedId,
+                    saveDocument:     world.saveDocument,
+                    loadAllDocuments: world.loadAllDocuments,
+                    deleteDocument:   world.deleteDocument
+                )
+            }
+        )
+    }
 }

@@ -1,13 +1,22 @@
 {
-  "originHash" : "9a054c1e4f038f75cf43e6f4e5d48b993bb0325528168373a6649ae3b6ccff17",
+  "originHash" : "029f36a74e0141aa117fd586c4f359ed25e6dfc582dd287af0a7e311de1a33fc",
   "pins" : [
     {
       "identity" : "fp",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/FP.git",
       "state" : {
-        "revision" : "dda7d6cb9bc20a23f0c89e5447df258e5cd17e28",
-        "version" : "1.8.1"
+        "revision" : "c1b32932021b444d8b21ca873c80bfcd4c6b8ecb",
+        "version" : "1.13.0"
+      }
+    },
+    {
+      "identity" : "hourglass",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/luizmb/Hourglass.git",
+      "state" : {
+        "revision" : "ec2ff5aac99e59d2ea208e4d391fe54da8961608",
+        "version" : "0.6.2"
       }
     },
     {
@@ -15,8 +24,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/NetworkTools.git",
       "state" : {
-        "revision" : "df80a653cc8f23bfeb3ad25e222b40c5f9ebcad6",
-        "version" : "0.5.0"
+        "revision" : "e2085f0c637747e92ce194d5464602b931f3d06c",
+        "version" : "0.6.0"
+      }
+    },
+    {
+      "identity" : "reactiveconcurrency",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/luizmb/ReactiveConcurrency.git",
+      "state" : {
+        "revision" : "4b712d4d311177182a109c7e3fb5f802fe80a648",
+        "version" : "0.3.0"
       }
     },
     {
@@ -51,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
-        "version" : "602.0.0"
+        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
+        "version" : "603.0.2"
       }
     },
     {
@@ -69,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/SwiftCalx.git",
       "state" : {
-        "revision" : "da5dbb8aacc721d86597d780e0cd9105924d1d15",
-        "version" : "0.3.0"
+        "revision" : "015ed67b24747dbf6700e3858994ca251bccd672",
+        "version" : "0.4.0"
       }
     },
     {

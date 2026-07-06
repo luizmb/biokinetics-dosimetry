@@ -5,6 +5,7 @@ import FP
 import Foundation
 import Parser
 import SwiftRex
+import SwiftUI
 import SwiftRexArchitecture
 
 /// The root feature — owns both the navigation stack and the document library.
@@ -13,7 +14,7 @@ import SwiftRexArchitecture
 /// AppState flat and avoids a cross-feature routing layer: the `.editDocument`
 /// and `.calculateDocument` view actions are mapped directly to `.push(route)`,
 /// which both updates the path and carries the document snapshot into the route.
-@Feature
+@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
 public enum HomeFeature {
 
     // MARK: - State
@@ -30,7 +31,6 @@ public enum HomeFeature {
 
     // MARK: - ViewModel
 
-    public final class ViewModel {
         public struct DocumentCard: Identifiable, Sendable, Equatable {
             public var id: UUID
             public var name: String
@@ -53,7 +53,6 @@ public enum HomeFeature {
             public var draftName: String = ""
         }
 
-        @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case openFilePicker
             case openCredits
@@ -73,17 +72,16 @@ public enum HomeFeature {
             case duplicateDocument(ModelDocument.ID)
             case saveDocument(ModelDocument)
         }
-    }
 
     // MARK: - Mappings
 
-    public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
+    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { _ in { state in
         let importError: String? = state.documents.failed.map { $0.0.localizedDescription }
-        return ViewModel.ViewState(
+        return ViewState(
             filePicker: state.filePicker,
             cards: state.documents.map { value in
                 value.map { doc in
-                    ViewModel.DocumentCard(
+                    DocumentCard(
                         id: doc.id,
                         name: doc.name,
                         description: doc.description,
@@ -105,9 +103,9 @@ public enum HomeFeature {
             draftField: state.draftField,
             draftName: state.draftName
         )
-    }
+    } }
 
-    public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
+    public static let mapAction = Reader<Environment, @Sendable (ViewAction) -> Action> { _ in { va in
         switch va {
         case .openFilePicker:             .openFilePicker
         case .filePickerDismissed:        .filePickerDismissed
@@ -127,49 +125,49 @@ public enum HomeFeature {
         case .duplicateDocument(let id):  .duplicateDocument(id)
         case .saveDocument(let doc):      .saveDocument(doc)
         }
-    }
+    } }
 
     // MARK: - Lifecycle
 
-    public static func initialState() -> State { .init() }
+    public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        typealias C = Consequence<State, Environment, Action>
+        typealias C = Reaction<State, Environment, Action>
         return .handle { action, context in
             switch action {
             case .openFilePicker:
-                return C.reduce { $0.filePicker = $0.filePicker.startLoading() }
+                return .reduce { $0.filePicker = $0.filePicker.startLoading() }
 
             case .filePickerDismissed:
-                return C.reduce { $0.filePicker = .idle }
+                return .reduce { $0.filePicker = .idle }
 
             case .openCredits:
-                return C.reduce { $0.isCreditsSheetOpen = true }
+                return .reduce { $0.isCreditsSheetOpen = true }
 
             case .closeCredits:
-                return C.reduce { $0.isCreditsSheetOpen = false }
+                return .reduce { $0.isCreditsSheetOpen = false }
 
             case .openCreationSheet:
-                return C.reduce { $0.isCreationSheetOpen = true; $0.draftField = .generic; $0.draftName = "" }
+                return .reduce { $0.isCreationSheetOpen = true; $0.draftField = .generic; $0.draftName = "" }
 
             case .dismissCreationSheet:
-                return C.reduce { $0.isCreationSheetOpen = false }
+                return .reduce { $0.isCreationSheetOpen = false }
 
             case .setDraftField(let f):
-                return C.reduce { $0.draftField = f }
+                return .reduce { $0.draftField = f }
 
             case .setDraftName(let n):
-                return C.reduce { $0.draftName = n }
+                return .reduce { $0.draftName = n }
 
             case .loadDocuments:
-                return C.produce { ctx in
+                return .produce { ctx in
                     .just(.loadResult(ctx.environment.loadAllDocuments()))
                 }
 
             case .loadResult(let result):
                 if case .success(let docs) = result, docs.isEmpty {
                     // First launch: build seeds using injected seedId, then dispatch seedsReady.
-                    return C.produce { ctx in
+                    return .produce { ctx in
                         let sid = ctx.environment.seedId
                         let seeds = SeedDocuments.all(idFor: sid)
                                   + SeedDocuments.icrpModels(idFor: sid)
@@ -180,7 +178,7 @@ public enum HomeFeature {
                         return .just(.seedsReady(seeds))
                     }
                 }
-                return C.reduce { state in
+                return .reduce { state in
                     if case .success(let docs) = result {
                         state.documents = .loaded(docs)
                     }
@@ -188,7 +186,7 @@ public enum HomeFeature {
                 }
 
             case .newDocument(let field, let name):
-                return C.produce { ctx in
+                return .produce { ctx in
                     let nuclide = Nuclide(id: "n0", name: field.lingo.substanceName, halfLife: 0)
                     let model   = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
                     let newDoc  = ModelDocument(
@@ -202,14 +200,14 @@ public enum HomeFeature {
                 }
 
             case .newDocumentReady(let newDoc):
-                return C.reduce {
+                return .reduce {
                     $0.isCreationSheetOpen = false
                     $0.documents = .loaded([newDoc] + ($0.documents.loadedOrPrevious ?? []))
                 }
                 .produce { _ in .just(.edit(document: newDoc)) }
 
             case .importXML(let data):
-                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                return .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
                     .produce { ctx in
                         .just(
                             .importResult(
@@ -230,13 +228,13 @@ public enum HomeFeature {
                     }
 
             case .importJSON(let data):
-                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                return .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
                     .produce { ctx in
                         .just(.importResult(ctx.environment.jsonDecoder.dataDecoder(for: ModelDocument.self)(data)))
                     }
 
             case .importCSV(let data):
-                return C.reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
+                return .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
                     .produce { ctx in
                         let result = parseCSVRateMatrix(data: data)
                             .map { model in model.asModelDocument(id: ctx.environment.newId()) }
@@ -249,7 +247,7 @@ public enum HomeFeature {
                     }
 
             case let .importResult(result):
-                return C.reduce { state in
+                return .reduce { state in
                     state.filePicker = .idle
                     state.documents = state.documents.applying(
                         Array.pure >>> curry(+)(state.documents.loadedOrPrevious ?? []) <£> result
@@ -262,7 +260,7 @@ public enum HomeFeature {
                 }
 
             case .saveDocument(let doc):
-                return C.reduce { state in
+                return .reduce { state in
                     let zoom = Loading<[ModelDocument], DecodingError>.prism.loaded >>> [ModelDocument].ix(id: doc.id)
                     if zoom.preview(state.documents) != nil {
                         state.documents = zoom.over(const(doc))(state.documents)
@@ -279,7 +277,7 @@ public enum HomeFeature {
                 return duplicateConsequence(id: id, context: context)
 
             case .deleteDocument(let id):
-                return C.reduce { state in
+                return .reduce { state in
                     guard let loaded = state.documents.loaded else { return }
                     state.documents = .loaded(loaded.filter(\.id >>> notEquals(id)))
                 }
@@ -289,12 +287,12 @@ public enum HomeFeature {
                 }
 
             case .insertDocument(let doc):
-                return C.reduce { state in
+                return .reduce { state in
                     state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + [doc])
                 }
 
             case .seedsReady(let seeds):
-                return C.reduce { $0.documents = .loaded(seeds) }
+                return .reduce { $0.documents = .loaded(seeds) }
                     .produce { ctx in
                         seeds.forEach { _ = ctx.environment.saveDocument($0) }
                         return .empty
@@ -314,13 +312,13 @@ public enum HomeFeature {
     private static func duplicateConsequence(
         id: ModelDocument.ID,
         context: PreReducerContext<State>
-    ) -> Consequence<State, Environment, Action> {
-        typealias C = Consequence<State, Environment, Action>
+    ) -> Reaction<State, Environment, Action> {
+        typealias C = Reaction<State, Environment, Action>
         guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
-            return C.reduce { _ in }
+            return .reduce { _ in }
         }
         let nameOnly = original.name + " (Copy)"
-        return C.produce { ctx in
+        return .produce { ctx in
             let copy = ModelDocument(
                 id:          ctx.environment.newId(),
                 name:        nameOnly,
@@ -396,3 +394,6 @@ public enum HomeFeature {
         })
     }
 }
+
+@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
+extension HomeFeature: SwiftRexArchitecture.Feature {}
