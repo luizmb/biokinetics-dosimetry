@@ -32,6 +32,7 @@ public enum AppAction: Sendable {
 
 public typealias MainStoreType = any StoreType<AppAction, AppState>
 public typealias MainStore = Store<AppAction, AppState, World>
+public typealias LiftedScope<F: Feature> = Scope<AppAction, AppState, World, F>
 
 // MARK: - Store conveniences
 
@@ -43,9 +44,9 @@ public extension MainStore {
         let store = Store(
             initial: AppState(),
             behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
-                <> Scope<AppAction, AppState, World, HomeFeature>.home.behavior
-                <> Scope<AppAction, AppState, World, EditorFeature>.editor.behavior
-                <> Scope<AppAction, AppState, World, CalculatorFeature>.calculator.behavior
+                <> LiftedScope<HomeFeature>.home.behavior
+                <> LiftedScope<EditorFeature>.editor.behavior
+                <> LiftedScope<CalculatorFeature>.calculator.behavior
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world
@@ -95,7 +96,7 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
 
 // MARK: - Feature scopes
 
-public extension Scope<AppAction, AppState, World, CalculatorFeature> {
+public extension LiftedScope<CalculatorFeature> {
     static var calculator: Self {
         Scope(
             CalculatorFeature.self,
@@ -112,7 +113,7 @@ public extension Scope<AppAction, AppState, World, CalculatorFeature> {
     }
 }
 
-public extension Scope<AppAction, AppState, World, EditorFeature> {
+public extension LiftedScope<EditorFeature> {
     static var editor: Self {
         Scope(
             EditorFeature.self,
@@ -123,7 +124,7 @@ public extension Scope<AppAction, AppState, World, EditorFeature> {
     }
 }
 
-public extension Scope<AppAction, AppState, World, HomeFeature> {
+public extension LiftedScope<HomeFeature> {
     static var home: Self {
         Scope(
             HomeFeature.self,

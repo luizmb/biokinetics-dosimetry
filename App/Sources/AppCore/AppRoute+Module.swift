@@ -38,9 +38,9 @@ public extension AppRoute {
     @MainActor @ViewBuilder
     func view(in store: MainStoreType, world: World) -> some View {
         switch self {
-        case .home:       Scope<AppAction, AppState, World, HomeFeature>.home.view(from: store, world: world)
-        case .editor:     Scope<AppAction, AppState, World, EditorFeature>.editor.view(from: store, world: world)
-        case .calculator: Scope<AppAction, AppState, World, CalculatorFeature>.calculator.view(from: store, world: world)
+        case .home:       LiftedScope<HomeFeature>.home.view(from: store, world: world)
+        case .editor:     LiftedScope<EditorFeature>.editor.view(from: store, world: world)
+        case .calculator: LiftedScope<CalculatorFeature>.calculator.view(from: store, world: world)
         }
     }
 }
