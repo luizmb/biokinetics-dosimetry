@@ -2,11 +2,12 @@ import AppDomain
 import Domain
 import Foundation
 import SwiftRex
+import SwiftUI
 import SwiftRexArchitecture
 
 // MARK: - EditorFeature
 
-@Feature
+@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
 public enum EditorFeature {
 
     // MARK: - State
@@ -96,7 +97,6 @@ public enum EditorFeature {
 
     // MARK: - Action
 
-    @dynamicMemberLookup
     public enum Action: Sendable {
         case load(ModelDocument)
         // Selection
@@ -171,7 +171,6 @@ public enum EditorFeature {
 
     // MARK: - ViewModel
 
-    public final class ViewModel {
         public struct CompartmentRow: Identifiable, Sendable, Equatable {
             public var id: String
             /// The id of the nuclide this compartment belongs to.
@@ -256,7 +255,6 @@ public enum EditorFeature {
             public var validationIssues: [CompartmentalModel.ValidationIssue] = []
         }
 
-        @dynamicMemberLookup
         public enum ViewAction: Sendable {
             case selectCompartment(String?)
             case selectLink(Int?)
@@ -307,24 +305,23 @@ public enum EditorFeature {
             case cancelVariantRename
             case save
         }
-    }
 
     // MARK: - Mappings
 
-    public static let mapState: @MainActor @Sendable (State) -> ViewModel.ViewState = { state in
+    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { _ in { state in
         let doc = state.document
         let editingModel = state.currentModel
         let canDelete = doc.model.nuclides.count > 1
-        let nuclides = doc.model.nuclides.map { n -> ViewModel.NuclideRow in
+        let nuclides = doc.model.nuclides.map { n -> NuclideRow in
             let count = editingModel.compartments.filter { $0.nuclideId == n.id }.count
-            return ViewModel.NuclideRow(
+            return NuclideRow(
                 id: n.id, name: n.name, halfLife: n.halfLife,
                 compartmentCount: count, canDelete: canDelete
             )
         }
-        let compartments = editingModel.compartments.map { c -> ViewModel.CompartmentRow in
+        let compartments = editingModel.compartments.map { c -> CompartmentRow in
             let vis = doc.visuals[c.id]
-            return ViewModel.CompartmentRow(
+            return CompartmentRow(
                 id: c.id,
                 nuclideId: c.nuclideId,
                 name: c.name,
@@ -338,10 +335,10 @@ public enum EditorFeature {
                 fraction: c.fraction
             )
         }
-        let links = editingModel.connections.enumerated().map { idx, conn -> ViewModel.LinkRow in
+        let links = editingModel.connections.enumerated().map { idx, conn -> LinkRow in
             let fromC = editingModel.compartments.first { $0.id == conn.from }
             let toC   = editingModel.compartments.first { $0.id == conn.to }
-            return ViewModel.LinkRow(
+            return LinkRow(
                 id: idx,
                 fromId: conn.from,
                 fromName: fromC?.name ?? conn.from,
@@ -370,7 +367,7 @@ public enum EditorFeature {
             return nil
         }()
 
-        return ViewModel.ViewState(
+        return ViewState(
             documentName: doc.name,
             documentDescription: doc.description,
             field: doc.field,
@@ -410,9 +407,9 @@ public enum EditorFeature {
                 return true
             }
         )
-    }
+    } }
 
-    public static let mapAction: @Sendable (ViewModel.ViewAction) -> Action = { va in
+    public static let mapAction = Reader<Environment, @Sendable (ViewAction) -> Action> { _ in { va in
         switch va {
         case .selectCompartment(let id):                           .selectCompartment(id)
         case .selectLink(let idx):                                 .selectLink(idx)
@@ -460,11 +457,11 @@ public enum EditorFeature {
         case .cancelVariantRename:                                 .cancelVariantRename
         case .save:                                                .save
         }
-    }
+    } }
 
     // MARK: - Lifecycle
 
-    public static func initialState() -> State { .init() }
+    public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         .handle { action, _ in
@@ -802,3 +799,6 @@ public enum EditorFeature {
 
     public typealias Content = EditorView
 }
+
+@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
+extension EditorFeature: SwiftRexArchitecture.Feature {}

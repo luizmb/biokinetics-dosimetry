@@ -1,4 +1,6 @@
 import AppDomain
+import CoreFP
+import FPMacros
 import SwiftRex
 import SwiftRexArchitecture
 
@@ -10,40 +12,25 @@ import SwiftRexArchitecture
 /// Everything else (home, editor, calculator state and cross-feature bridging)
 /// lives at the `AppState` / `AppAction` level in `Store+App.swift`.
 ///
-/// Because State ≡ ViewState and Action ≡ ViewAction for this feature,
-/// both are typealiases — the mapping is the identity function.
+/// Logic-only (no view): a plain enum with `behavior()`, lifted into the app store directly.
 public enum NavigationFeature {
 
-    // MARK: - ViewModel
-
-    @ViewModel
-    public final class ViewModel {
-        public struct ViewState: Sendable, Equatable {
-            public var path: [AppRoute] = []
-            public init() {}
-        }
-
-        @Prisms @dynamicMemberLookup
-        public enum ViewAction: Sendable {
-            /// Appends a single route to the navigation stack.
-            case push(AppRoute)
-            /// Replaces the entire path (used by SwiftUI back-navigation binding).
-            case setPath([AppRoute])
-        }
+    public struct State: Sendable, Equatable {
+        public var path: [AppRoute] = []
+        public init() {}
     }
 
-    // MARK: - State / Action / Environment
-
-    /// Identical to `ViewModel.ViewState` — no projection needed.
-    public typealias State = ViewModel.ViewState
-    /// Identical to `ViewModel.ViewAction` — no projection needed.
-    public typealias Action = ViewModel.ViewAction
+    @Prisms
+    public enum Action: Sendable {
+        /// Appends a single route to the navigation stack.
+        case push(AppRoute)
+        /// Replaces the entire path (used by SwiftUI back-navigation binding).
+        case setPath([AppRoute])
+    }
 
     public typealias Environment = Void
 
-    // MARK: - Behavior
-
-    public static func initialState() -> State { .init() }
+    public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Void> {
         .handle { action, _ in

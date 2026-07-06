@@ -1,37 +1,26 @@
 import AppDomain
-import FP
-import NavigationFeature
 import SwiftUI
 import UIComponents
 
-// MARK: - AppRootView
-
-/// A NavigationStack whose path is driven by a `NavigationFeature.ViewModel`.
-/// Knows nothing about routes or the coordinator — content is provided by the caller.
+/// A `NavigationStack` whose path is a store-backed binding.
+/// Knows nothing about routes or feature construction — content is provided by the caller.
+@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
 public struct AppRootView<Content: View>: View {
-
-    let viewModel: NavigationFeature.ViewModel
+    let path: Binding<[AppRoute]>
     @ViewBuilder let content: () -> Content
 
     public init(
-        viewModel: NavigationFeature.ViewModel,
+        path: Binding<[AppRoute]>,
         @ViewBuilder content: @escaping () -> Content
     ) {
-        self.viewModel = viewModel
+        self.path = path
         self.content = content
     }
 
     public var body: some View {
-        NavigationStack(
-            path: Binding(
-                get: { viewModel.path },
-                set: { viewModel.dispatch(.setPath($0)) }
-            )
-        ) {
+        NavigationStack(path: path) {
             content()
         }
-        // Inject GlassTokens for the correct color scheme at the root.
-        // All descendant views inherit these and adapt automatically on system appearance change.
         .glassEnvironment()
     }
 }

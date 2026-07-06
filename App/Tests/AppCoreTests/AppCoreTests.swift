@@ -22,7 +22,7 @@ struct HomeFeatureBehaviorTests {
     private let mockEnv = HomeModule.Environment.alwaysFails
 
     private func store(
-        initial: HomeFeature.State = HomeFeature.initialState(),
+        initial: HomeFeature.State = HomeFeature.initialState(with: ()),
         env: HomeFeature.Environment? = nil
     ) -> TestStore<HomeFeature.Action, HomeFeature.State, HomeFeature.Environment> {
         TestStore(
@@ -35,7 +35,7 @@ struct HomeFeatureBehaviorTests {
     // MARK: - Initial state
 
     @Test func initialStateIsIdle() {
-        let s = HomeFeature.initialState()
+        let s = HomeFeature.initialState(with: ())
         #expect(s.documents == .idle)
         #expect(s.filePicker == .idle)
     }
@@ -49,7 +49,7 @@ struct HomeFeatureBehaviorTests {
     }
 
     @Test func filePickerDismissedResetsFilePicker() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.filePicker = .loading(previous: nil)
         store(initial: initial).dispatch(.filePickerDismissed) { state in
             state.filePicker = .idle
@@ -59,7 +59,7 @@ struct HomeFeatureBehaviorTests {
     // MARK: - Document management
 
     @Test func newDocumentPrependsEmptyDocumentToLoadedList() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.validation])
         let s = store(initial: initial)
         let src = ActionSource(file: #file, function: #function, line: #line)
@@ -82,7 +82,7 @@ struct HomeFeatureBehaviorTests {
     }
 
     @Test func saveDocumentUpdatesExistingByID() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         let original = ModelDocument.validation
         initial.documents = .loaded([original])
         var updated = original
@@ -99,7 +99,7 @@ struct HomeFeatureBehaviorTests {
     }
 
     @Test func deleteDocumentRemovesByID() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131, .validation])
         store(initial: initial).dispatch(.deleteDocument(ModelDocument.validation.id)) { state in
             state.documents = .loaded([.iodo131])
@@ -107,7 +107,7 @@ struct HomeFeatureBehaviorTests {
     }
 
     @Test func deleteDocumentNotInListIsNoOp() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131])
         let s = store(initial: initial)
         let source = ActionSource(file: #file, function: #function, line: #line)
@@ -118,7 +118,7 @@ struct HomeFeatureBehaviorTests {
     // MARK: - importXML (synchronous side effects only)
 
     @Test func importXMLClosesFilePickerAndStartsLoadingDocuments() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.filePicker = .loading(previous: nil)
         initial.documents = .loaded([.iodo131])
         let s = store(initial: initial)
@@ -141,7 +141,7 @@ struct HomeFeatureBehaviorTests {
     // MARK: - importResult
 
     @Test func importResultSuccessAppendsDocumentAndResetsFilePicker() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131])
         initial.filePicker = .loaded()
         let doc = ModelDocument.validation
@@ -152,7 +152,7 @@ struct HomeFeatureBehaviorTests {
     }
 
     @Test func importResultFailureRecordsErrorAndResetsFilePicker() {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131])
         initial.filePicker = .loaded()
         let err = DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "bad XML"))
@@ -178,7 +178,7 @@ struct HomeFeatureBehaviorTests {
 struct HomeFeatureMapStateTests {
 
     @Test func cardsReflectLoadedDocuments() {
-        var state = HomeFeature.initialState()
+        var state = HomeFeature.initialState(with: ())
         state.documents = .loaded([.iodo131, .validation])
         let vs = HomeFeature.mapState(state)
         #expect(vs.cards.loaded?.count == 2)
@@ -187,13 +187,13 @@ struct HomeFeatureMapStateTests {
     }
 
     @Test func cardsIdleWhenDocumentsIdle() {
-        let state = HomeFeature.initialState()
+        let state = HomeFeature.initialState(with: ())
         let vs = HomeFeature.mapState(state)
         #expect(vs.cards == .idle)
     }
 
     @Test func cardCompartmentAndConnectionCountsMatch() {
-        var state = HomeFeature.initialState()
+        var state = HomeFeature.initialState(with: ())
         state.documents = .loaded([.validation])  // 3 compartments, 3 connections
         let vs = HomeFeature.mapState(state)
         #expect(vs.cards.loaded?[0].compartmentCount == 3)
@@ -201,7 +201,7 @@ struct HomeFeatureMapStateTests {
     }
 
     @Test func filePickerStateForwardedToViewState() {
-        var state = HomeFeature.initialState()
+        var state = HomeFeature.initialState(with: ())
         state.filePicker = .loading(previous: nil)
         let vs = HomeFeature.mapState(state)
         #expect(vs.filePicker == .loading(previous: nil))
@@ -293,21 +293,21 @@ struct HomeFeatureSnapshotTests {
     }
 
     @Test func snapshotLoadedDocuments() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131, .validation])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "home-loaded")
     }
 
     @Test func snapshotEmptyDocumentList() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "home-empty")
     }
 
     @Test func snapshotFilePickerOpen() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.iodo131])
         initial.filePicker = .loading(previous: nil)
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
@@ -316,14 +316,14 @@ struct HomeFeatureSnapshotTests {
 
     @Test func snapshotImportFailed() async {
         let err = DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "XML schema not supported"))
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .failed(error: err, previous: [.iodo131])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "home-import-error")
     }
 
     @Test func snapshotLoadingDocuments() async {
-        var initial = HomeFeature.initialState()
+        var initial = HomeFeature.initialState(with: ())
         initial.documents = .loading(previous: [.iodo131])
         let feature = TestFeature<HomeFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "home-loading")

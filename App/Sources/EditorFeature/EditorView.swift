@@ -6,86 +6,86 @@ import UIComponents
 
 // MARK: - EditorView (container)
 
-@BoundTo(EditorFeature.self)
+@BoundTo(EditorFeature.self, strategy: .observationSimple)
 public struct EditorView: View {
     public var body: some View {
         // All bidirectional field bindings are created here, once, in the container.
         // Each binding's `get` re-reads from the viewModel so it always returns the latest value.
 
         let inspectorTabBinding = Binding(
-            get: { viewModel.inspectorTab },
-            set: { viewModel.dispatch(.setInspectorTab($0)) }
+            get: { viewStore.state.inspectorTab },
+            set: { viewStore.dispatch(.setInspectorTab($0)) }
         )
 
         // Compartment field bindings — nil when no compartment is selected.
-        let compBindings: CompartmentFieldBindings? = viewModel.selectedCompartmentId.flatMap { id in
-            guard viewModel.compartments.contains(where: { $0.id == id }) else { return nil }
-            let isMultiNuclide = viewModel.nuclides.count > 1
+        let compBindings: CompartmentFieldBindings? = viewStore.state.selectedCompartmentId.flatMap { id in
+            guard viewStore.state.compartments.contains(where: { $0.id == id }) else { return nil }
+            let isMultiNuclide = viewStore.state.nuclides.count > 1
             return CompartmentFieldBindings(  // isMultiNuclide used to guard dispatch below
                 name: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.name ?? "" },
-                    set: { viewModel.dispatch(.updateCompartmentName(id: id, name: $0)) }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.name ?? "" },
+                    set: { viewStore.dispatch(.updateCompartmentName(id: id, name: $0)) }
                 ),
                 follow: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.follow ?? false },
-                    set: { viewModel.dispatch(.updateCompartmentFollow(id: id, value: $0)) }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.follow ?? false },
+                    set: { viewStore.dispatch(.updateCompartmentFollow(id: id, value: $0)) }
                 ),
                 dispose: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.dispose ?? false },
-                    set: { viewModel.dispatch(.updateCompartmentDispose(id: id, value: $0)) }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.dispose ?? false },
+                    set: { viewStore.dispatch(.updateCompartmentDispose(id: id, value: $0)) }
                 ),
                 intake: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.intake ?? false },
-                    set: { viewModel.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.intake ?? false },
+                    set: { viewStore.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
                 fraction: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.fraction ?? 0 },
-                    set: { viewModel.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.fraction ?? 0 },
+                    set: { viewStore.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
                 ),
                 nuclideId: Binding(
-                    get: { viewModel.compartments.first { $0.id == id }?.nuclideId ?? "" },
-                    set: { if isMultiNuclide { viewModel.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
+                    get: { viewStore.state.compartments.first { $0.id == id }?.nuclideId ?? "" },
+                    set: { if isMultiNuclide { viewStore.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
                 )
             )
         }
 
         // Link field bindings — nil when no link is selected.
-        let linkBindings: LinkFieldBindings? = viewModel.selectedLinkIndex.flatMap { idx in
-            guard viewModel.links.contains(where: { $0.id == idx }) else { return nil }
+        let linkBindings: LinkFieldBindings? = viewStore.state.selectedLinkIndex.flatMap { idx in
+            guard viewStore.state.links.contains(where: { $0.id == idx }) else { return nil }
             return LinkFieldBindings(
                 rate: Binding(
-                    get: { viewModel.links.first { $0.id == idx }?.rate ?? 0 },
-                    set: { viewModel.dispatch(.updateLinkRate(index: idx, rate: $0)) }
+                    get: { viewStore.state.links.first { $0.id == idx }?.rate ?? 0 },
+                    set: { viewStore.dispatch(.updateLinkRate(index: idx, rate: $0)) }
                 )
             )
         }
 
         let documentNameBinding = Binding(
-            get: { viewModel.documentName },
-            set: { viewModel.dispatch(.renameDocument($0)) }
+            get: { viewStore.state.documentName },
+            set: { viewStore.dispatch(.renameDocument($0)) }
         )
 
         let documentDescriptionBinding = Binding(
-            get: { viewModel.documentDescription },
-            set: { viewModel.dispatch(.updateDescription($0)) }
+            get: { viewStore.state.documentDescription },
+            set: { viewStore.dispatch(.updateDescription($0)) }
         )
 
         let fieldBinding = Binding(
-            get: { viewModel.field },
-            set: { viewModel.dispatch(.updateField($0)) }
+            get: { viewStore.state.field },
+            set: { viewStore.dispatch(.updateField($0)) }
         )
 
         // Nuclide field bindings — one entry per nuclide in the document.
-        let nuclideBindings: [NuclideEditBinding] = viewModel.nuclides.map { n in
+        let nuclideBindings: [NuclideEditBinding] = viewStore.state.nuclides.map { n in
             NuclideEditBinding(
                 id: n.id,
                 name: Binding(
-                    get: { viewModel.nuclides.first { $0.id == n.id }?.name ?? "" },
-                    set: { viewModel.dispatch(.updateNuclideName(id: n.id, name: $0)) }
+                    get: { viewStore.state.nuclides.first { $0.id == n.id }?.name ?? "" },
+                    set: { viewStore.dispatch(.updateNuclideName(id: n.id, name: $0)) }
                 ),
                 halfLife: Binding(
-                    get: { viewModel.nuclides.first { $0.id == n.id }?.halfLife ?? 0 },
-                    set: { viewModel.dispatch(.updateNuclideHalfLife(id: n.id, halfLife: $0)) }
+                    get: { viewStore.state.nuclides.first { $0.id == n.id }?.halfLife ?? 0 },
+                    set: { viewStore.dispatch(.updateNuclideHalfLife(id: n.id, halfLife: $0)) }
                 ),
                 canDelete: n.canDelete,
                 compartmentCount: n.compartmentCount
@@ -96,70 +96,70 @@ public struct EditorView: View {
             documentName:        documentNameBinding,
             documentDescription: documentDescriptionBinding,
             field:               fieldBinding,
-            lingo:               viewModel.lingo,
-            halfLife:           viewModel.halfLife,
-            nuclides:           viewModel.nuclides,
-            compartments:       viewModel.compartments,
-            links:              viewModel.links,
-            selectedCompartmentId: viewModel.selectedCompartmentId,
-            selectedLinkIndex:  viewModel.selectedLinkIndex,
+            lingo:               viewStore.state.lingo,
+            halfLife:           viewStore.state.halfLife,
+            nuclides:           viewStore.state.nuclides,
+            compartments:       viewStore.state.compartments,
+            links:              viewStore.state.links,
+            selectedCompartmentId: viewStore.state.selectedCompartmentId,
+            selectedLinkIndex:  viewStore.state.selectedLinkIndex,
             inspectorTab:       inspectorTabBinding,
             compartmentBindings: compBindings,
             linkBindings:        linkBindings,
             nuclideBindings:     nuclideBindings,
-            isLeftPanelVisible:  viewModel.isLeftPanelVisible,
-            isRightPanelVisible: viewModel.isRightPanelVisible,
-            showKValues:         viewModel.showKValues,
-            linkingBannerText:   viewModel.linkingBannerText,
-            selectionFooterLabel: viewModel.selectionFooterLabel,
-            validationIssues:    viewModel.validationIssues,
-            canvasOffsetX:      viewModel.canvasOffsetX,
-            canvasOffsetY:      viewModel.canvasOffsetY,
-            canvasScale:        viewModel.canvasScale,
-            compartmentDragOriginId: viewModel.compartmentDragOriginId,
-            compartmentDragOriginX:  viewModel.compartmentDragOriginX,
-            compartmentDragOriginY:  viewModel.compartmentDragOriginY,
-            canvasPanOriginX:        viewModel.canvasPanOriginX,
-            canvasPanOriginY:        viewModel.canvasPanOriginY,
-            canvasPinchOriginScale:  viewModel.canvasPinchOriginScale,
-            isInspectorSheetOpen:    viewModel.isInspectorSheetOpen,
-            isModelListSheetOpen:    viewModel.isModelListSheetOpen,
-            variants:                viewModel.variants,
-            editingVariant:          viewModel.editingVariant,
-            renamingVariant:         viewModel.renamingVariant,
+            isLeftPanelVisible:  viewStore.state.isLeftPanelVisible,
+            isRightPanelVisible: viewStore.state.isRightPanelVisible,
+            showKValues:         viewStore.state.showKValues,
+            linkingBannerText:   viewStore.state.linkingBannerText,
+            selectionFooterLabel: viewStore.state.selectionFooterLabel,
+            validationIssues:    viewStore.state.validationIssues,
+            canvasOffsetX:      viewStore.state.canvasOffsetX,
+            canvasOffsetY:      viewStore.state.canvasOffsetY,
+            canvasScale:        viewStore.state.canvasScale,
+            compartmentDragOriginId: viewStore.state.compartmentDragOriginId,
+            compartmentDragOriginX:  viewStore.state.compartmentDragOriginX,
+            compartmentDragOriginY:  viewStore.state.compartmentDragOriginY,
+            canvasPanOriginX:        viewStore.state.canvasPanOriginX,
+            canvasPanOriginY:        viewStore.state.canvasPanOriginY,
+            canvasPinchOriginScale:  viewStore.state.canvasPinchOriginScale,
+            isInspectorSheetOpen:    viewStore.state.isInspectorSheetOpen,
+            isModelListSheetOpen:    viewStore.state.isModelListSheetOpen,
+            variants:                viewStore.state.variants,
+            editingVariant:          viewStore.state.editingVariant,
+            renamingVariant:         viewStore.state.renamingVariant,
             variantRenameDraft:      Binding(
-                get: { viewModel.variantRenameDraft },
-                set: { viewModel.dispatch(.setVariantRenameDraft($0)) }
+                get: { viewStore.state.variantRenameDraft },
+                set: { viewStore.dispatch(.setVariantRenameDraft($0)) }
             ),
-            onSelectCompartment: { viewModel.dispatch(.selectCompartment($0)) },
-            onSelectLink:        { viewModel.dispatch(.selectLink($0)) },
-            onToggleLeftPanel:   { viewModel.dispatch(.toggleLeftPanel) },
-            onToggleRightPanel:  { viewModel.dispatch(.toggleRightPanel) },
-            onToggleKValues:     { viewModel.dispatch(.toggleKValues) },
-            onBeginLinking:      { viewModel.dispatch(.beginLinking) },
-            onLinkStep:          { viewModel.dispatch(.linkStep($0)) },
-            onCancelLinking:     { viewModel.dispatch(.cancelLinking) },
-            onAddCompartment:    { viewModel.dispatch(.addCompartment($0)) },
-            onDeleteCompartment: { viewModel.dispatch(.deleteCompartment(id: $0)) },
-            onDeleteLink:        { viewModel.dispatch(.deleteLink(index: $0)) },
-            onMoveCompartment:       { viewModel.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
-            onBeginCompartmentDrag:  { viewModel.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
-            onEndCompartmentDrag:    { viewModel.dispatch(.endCompartmentDrag) },
-            onBeginCanvasPan:        { viewModel.dispatch(.beginCanvasPan(originX: $0, originY: $1)) },
-            onEndCanvasPan:          { viewModel.dispatch(.endCanvasPan) },
-            onBeginCanvasPinch:      { viewModel.dispatch(.beginCanvasPinch(originScale: $0)) },
-            onEndCanvasPinch:        { viewModel.dispatch(.endCanvasPinch) },
-            onSetCanvasTransform:    { viewModel.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
-            onSetInspectorSheet:     { viewModel.dispatch(.setInspectorSheet($0)) },
-            onSetModelListSheet:     { viewModel.dispatch(.setModelListSheet($0)) },
-            onAddNuclide:            { viewModel.dispatch(.addNuclide) },
-            onDeleteNuclide:         { viewModel.dispatch(.deleteNuclide(id: $0)) },
-            onAddVariant:            { viewModel.dispatch(.addVariant(name: $0)) },
-            onDeleteVariant:         { viewModel.dispatch(.deleteVariant(name: $0)) },
-            onSelectEditingVariant:  { viewModel.dispatch(.selectEditingVariant($0)) },
-            onBeginVariantRename:    { viewModel.dispatch(.beginVariantRename($0)) },
-            onCommitVariantRename:   { viewModel.dispatch(.commitVariantRename) },
-            onCancelVariantRename:   { viewModel.dispatch(.cancelVariantRename) }
+            onSelectCompartment: { viewStore.dispatch(.selectCompartment($0)) },
+            onSelectLink:        { viewStore.dispatch(.selectLink($0)) },
+            onToggleLeftPanel:   { viewStore.dispatch(.toggleLeftPanel) },
+            onToggleRightPanel:  { viewStore.dispatch(.toggleRightPanel) },
+            onToggleKValues:     { viewStore.dispatch(.toggleKValues) },
+            onBeginLinking:      { viewStore.dispatch(.beginLinking) },
+            onLinkStep:          { viewStore.dispatch(.linkStep($0)) },
+            onCancelLinking:     { viewStore.dispatch(.cancelLinking) },
+            onAddCompartment:    { viewStore.dispatch(.addCompartment($0)) },
+            onDeleteCompartment: { viewStore.dispatch(.deleteCompartment(id: $0)) },
+            onDeleteLink:        { viewStore.dispatch(.deleteLink(index: $0)) },
+            onMoveCompartment:       { viewStore.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
+            onBeginCompartmentDrag:  { viewStore.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
+            onEndCompartmentDrag:    { viewStore.dispatch(.endCompartmentDrag) },
+            onBeginCanvasPan:        { viewStore.dispatch(.beginCanvasPan(originX: $0, originY: $1)) },
+            onEndCanvasPan:          { viewStore.dispatch(.endCanvasPan) },
+            onBeginCanvasPinch:      { viewStore.dispatch(.beginCanvasPinch(originScale: $0)) },
+            onEndCanvasPinch:        { viewStore.dispatch(.endCanvasPinch) },
+            onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
+            onSetInspectorSheet:     { viewStore.dispatch(.setInspectorSheet($0)) },
+            onSetModelListSheet:     { viewStore.dispatch(.setModelListSheet($0)) },
+            onAddNuclide:            { viewStore.dispatch(.addNuclide) },
+            onDeleteNuclide:         { viewStore.dispatch(.deleteNuclide(id: $0)) },
+            onAddVariant:            { viewStore.dispatch(.addVariant(name: $0)) },
+            onDeleteVariant:         { viewStore.dispatch(.deleteVariant(name: $0)) },
+            onSelectEditingVariant:  { viewStore.dispatch(.selectEditingVariant($0)) },
+            onBeginVariantRename:    { viewStore.dispatch(.beginVariantRename($0)) },
+            onCommitVariantRename:   { viewStore.dispatch(.commitVariantRename) },
+            onCancelVariantRename:   { viewStore.dispatch(.cancelVariantRename) }
         )
         .inlineNavigationTitle()
     }
@@ -174,9 +174,9 @@ struct EditorContent: View {
     var field:               Binding<ModelField>
     let lingo: FieldLingo
     let halfLife: Double
-    let nuclides: [EditorFeature.ViewModel.NuclideRow]
-    let compartments: [EditorFeature.ViewModel.CompartmentRow]
-    let links: [EditorFeature.ViewModel.LinkRow]
+    let nuclides: [EditorFeature.NuclideRow]
+    let compartments: [EditorFeature.CompartmentRow]
+    let links: [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
 

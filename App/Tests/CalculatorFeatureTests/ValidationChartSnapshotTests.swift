@@ -47,7 +47,7 @@ struct ValidationChartSnapshotTests {
                 CompartmentConnection(from: "3", to: "2", rate: 0.05)
             ]
         )
-        return ModelDocument(name: "Validacao", model: model)
+        return ModelDocument(id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000001")!, name: "Validacao", model: model)
     }
 
     // MARK: - Snapshot helper
@@ -76,7 +76,7 @@ struct ValidationChartSnapshotTests {
     /// to within 1e-5 by `ValidationModelTests.testHalfLifeZero`.
     @Test func snapshotValidationChartHalfLifeZero() async {
         let doc = validationModel(halfLife: 0)
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         initial.finalDay = 50
         initial.results = await Solver.solve(
@@ -95,7 +95,7 @@ struct ValidationChartSnapshotTests {
     /// to within 1e-5 by `ValidationModelTests.testHalfLifeFiveDays`.
     @Test func snapshotValidationChartHalfLifeFive() async {
         let doc = validationModel(halfLife: 5)
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         initial.finalDay = 50
         initial.results = await Solver.solve(

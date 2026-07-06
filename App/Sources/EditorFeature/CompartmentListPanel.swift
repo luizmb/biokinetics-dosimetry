@@ -6,9 +6,9 @@ import UIComponents
 
 struct EditorModelListPanel: View {
     let lingo: FieldLingo
-    let nuclides: [EditorFeature.ViewModel.NuclideRow]
-    let compartments: [EditorFeature.ViewModel.CompartmentRow]
-    let links: [EditorFeature.ViewModel.LinkRow]
+    let nuclides: [EditorFeature.NuclideRow]
+    let compartments: [EditorFeature.CompartmentRow]
+    let links: [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
     let selectionFooterLabel: String?
@@ -94,7 +94,7 @@ struct EditorModelListPanel: View {
 
     // MARK: - Nuclide header
 
-    private func nuclideHeader(_ nuclide: EditorFeature.ViewModel.NuclideRow) -> some View {
+    private func nuclideHeader(_ nuclide: EditorFeature.NuclideRow) -> some View {
         HStack(spacing: 4) {
             Text(nuclide.name)
                 .font(.caption.weight(.semibold))
@@ -110,7 +110,7 @@ struct EditorModelListPanel: View {
     // MARK: - Compartment row
 
     private func compartmentRow(
-        _ comp: EditorFeature.ViewModel.CompartmentRow,
+        _ comp: EditorFeature.CompartmentRow,
         proxy: ScrollViewProxy
     ) -> some View {
         let isSelected = selectedCompartmentId == comp.id
@@ -144,7 +144,7 @@ struct EditorModelListPanel: View {
 
     // MARK: - Link row
 
-    private func linkRow(_ link: EditorFeature.ViewModel.LinkRow) -> some View {
+    private func linkRow(_ link: EditorFeature.LinkRow) -> some View {
         let isSelected = selectedLinkIndex == link.id
         return HStack(spacing: 8) {
             Image(systemName: "arrow.forward")

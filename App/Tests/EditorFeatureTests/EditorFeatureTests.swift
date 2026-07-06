@@ -18,13 +18,13 @@ struct EditorFeatureBehaviorTests {
     // MARK: - Helpers
 
     private func store(
-        initial: EditorFeature.State = EditorFeature.initialState()
+        initial: EditorFeature.State = EditorFeature.initialState(with: ())
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
         TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
-        var s = EditorFeature.initialState()
+        var s = EditorFeature.initialState(with: ())
         s.document = doc
         return s
     }
@@ -32,7 +32,7 @@ struct EditorFeatureBehaviorTests {
     // MARK: - Initial state
 
     @Test func initialState() {
-        let s = EditorFeature.initialState()
+        let s = EditorFeature.initialState(with: ())
         #expect(s.selectedCompartmentId == nil)
         #expect(s.selectedLinkIndex == nil)
         #expect(s.inspectorTab == .details)
@@ -108,7 +108,7 @@ struct EditorFeatureBehaviorTests {
     }
 
     @Test func setInspectorTabBackToDetails() {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.inspectorTab = .relationships
         store(initial: initial).dispatch(.setInspectorTab(.details)) { $0.inspectorTab = .details }
     }
@@ -214,7 +214,7 @@ struct EditorFeatureBehaviorTests {
     }
 
     @Test func linkStepFirstTapSetsAwaitingTo() {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.linkingState = .awaitingFrom
         store(initial: initial).dispatch(.linkStep("A")) { $0.linkingState = .awaitingTo(fromId: "A") }
     }
@@ -245,7 +245,7 @@ struct EditorFeatureBehaviorTests {
     }
 
     @Test func cancelLinkingResetsToIdle() {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.linkingState = .awaitingTo(fromId: "A")
         store(initial: initial).dispatch(.cancelLinking) { $0.linkingState = .idle }
     }
@@ -356,7 +356,7 @@ struct EditorFeatureBehaviorTests {
 struct EditorFeatureMapStateTests {
 
     @Test func compartmentRowsReflectDocumentCompartments() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.document = .validation
         let vs = EditorFeature.mapState(state)
         #expect(vs.compartments.count == 3)
@@ -364,7 +364,7 @@ struct EditorFeatureMapStateTests {
     }
 
     @Test func selectedCompartmentMarkedInRows() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.document = .validation
         state.selectedCompartmentId = "B"
         let vs = EditorFeature.mapState(state)
@@ -373,7 +373,7 @@ struct EditorFeatureMapStateTests {
     }
 
     @Test func linkRowsReflectDocumentConnections() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.document = .validation  // A→B, B→C, C→B
         let vs = EditorFeature.mapState(state)
         #expect(vs.links.count == 3)
@@ -382,7 +382,7 @@ struct EditorFeatureMapStateTests {
     }
 
     @Test func canvasTransformForwardedToViewState() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.canvasOffset = EditorFeature.CanvasPoint(x: 42, y: -10)
         state.canvasScale = 1.8
         let vs = EditorFeature.mapState(state)
@@ -392,7 +392,7 @@ struct EditorFeatureMapStateTests {
     }
 
     @Test func nucleiRowsReflectModelNuclides() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.document = .validation  // has Nuclide("val", halfLife: 5.0)
         let vs = EditorFeature.mapState(state)
         #expect(vs.nuclides.count == 1)
@@ -403,7 +403,7 @@ struct EditorFeatureMapStateTests {
     }
 
     @Test func compartmentRowCarriesNuclideId() {
-        var state = EditorFeature.initialState()
+        var state = EditorFeature.initialState(with: ())
         state.document = .validation
         let vs = EditorFeature.mapState(state)
         #expect(vs.compartments.allSatisfy { $0.nuclideId == "val" })
@@ -417,13 +417,13 @@ struct EditorFeatureMapStateTests {
 struct EditorFeatureNuclideTests {
 
     private func store(
-        initial: EditorFeature.State = EditorFeature.initialState()
+        initial: EditorFeature.State = EditorFeature.initialState(with: ())
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
         TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
-        var s = EditorFeature.initialState()
+        var s = EditorFeature.initialState(with: ())
         s.document = doc
         return s
     }
@@ -502,7 +502,7 @@ struct EditorFeatureNuclideTests {
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = twoNuclideDoc
 
         store(initial: initial).dispatch(.deleteNuclide(id: "n2")) { state in
@@ -531,7 +531,7 @@ struct EditorFeatureNuclideTests {
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = doc
 
         store(initial: initial).dispatch(.setCompartmentNuclide(compartmentId: "a", nuclideId: "n2")) { state in
@@ -587,14 +587,14 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotValidationDocument() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "validation-document")
     }
 
     @Test func snapshotWithPanelsHidden() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = false
@@ -603,7 +603,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotLeftPanelHidden() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = true
@@ -612,7 +612,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotRightPanelHidden() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.isLeftPanelVisible = true
         initial.isRightPanelVisible = false
@@ -623,7 +623,7 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Inspector: compartment selection + tabs
 
     @Test func snapshotWithCompartmentSelected() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .details
@@ -633,7 +633,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotCompartmentRelationshipsTab() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .relationships
@@ -645,7 +645,7 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Inspector: link selection + tabs
 
     @Test func snapshotLinkSelected() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .details
@@ -655,7 +655,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotLinkRelationshipsTab() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .relationships
@@ -665,7 +665,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotInspectorEmpty() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.isRightPanelVisible = true
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
@@ -675,7 +675,7 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Canvas overlays
 
     @Test func snapshotKValuesVisible() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.showKValues = true
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
@@ -683,7 +683,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotDuringLinking() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.linkingState = .awaitingTo(fromId: "A")
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
@@ -691,7 +691,7 @@ struct EditorFeatureSnapshotTests {
     }
 
     @Test func snapshotLinkingAwaitingFrom() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.linkingState = .awaitingFrom
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
@@ -701,14 +701,14 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Multi-nuclide document (phase 2)
 
     @Test func snapshotMultiNuclideDocument() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = Self.multiNuclideDoc
         let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
         await snapBoth(feature, named: "multi-nuclide-document")
     }
 
     @Test func snapshotMultiNuclideCompartmentInspector() async {
-        var initial = EditorFeature.initialState()
+        var initial = EditorFeature.initialState(with: ())
         initial.document = Self.multiNuclideDoc
         initial.selectedCompartmentId = "k2"
         initial.inspectorTab = .details

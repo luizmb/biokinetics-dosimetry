@@ -37,7 +37,7 @@ public enum HomeModule {
 
     // MARK: - Action
 
-    @Prisms @dynamicMemberLookup
+    @Prisms
     public enum Action: Sendable {
         // File picker state machine
         case openFilePicker
@@ -99,20 +99,3 @@ public enum HomeModule {
 
 }
 
-// MARK: - Module.Home bridge
-
-public extension Module {
-    /// Makes `Module.Home.*` a valid dot-path for the public Home types.
-    typealias Home = HomeModule
-}
-
-// MARK: - Module.home factory
-
-public extension Module
-where Action == HomeModule.Action,
-      State  == HomeModule.State,
-      Environment == HomeModule.Environment,
-      Content == HomeView {
-
-    static var home: Self { .init(HomeFeature.self) }
-}

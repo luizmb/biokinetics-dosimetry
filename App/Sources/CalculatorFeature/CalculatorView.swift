@@ -10,85 +10,85 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 // MARK: - CalculatorView (container)
 
-@BoundTo(CalculatorFeature.self)
+@BoundTo(CalculatorFeature.self, strategy: .observationSimple)
 public struct CalculatorView: View {
     public var body: some View {
         let activeViewBinding = Binding(
-            get: { viewModel.activeView },
-            set: { viewModel.dispatch(.setActiveView($0)) }
+            get: { viewStore.state.activeView },
+            set: { viewStore.dispatch(.setActiveView($0)) }
         )
         let logXBinding = Binding(
-            get: { viewModel.logX },
-            set: { viewModel.dispatch(.setLogX($0)) }
+            get: { viewStore.state.logX },
+            set: { viewStore.dispatch(.setLogX($0)) }
         )
         let logYBinding = Binding(
-            get: { viewModel.logY },
-            set: { viewModel.dispatch(.setLogY($0)) }
+            get: { viewStore.state.logY },
+            set: { viewStore.dispatch(.setLogY($0)) }
         )
         // Birchall composition binding — only created when Birchall is the active solver.
         let birchallBinding: Binding<BirchallComposition>? = {
-            guard case .birchall = viewModel.solver else { return nil }
+            guard case .birchall = viewStore.state.solver else { return nil }
             return Binding(
                 get: {
-                    if case .birchall(let c) = viewModel.solver { return c }
+                    if case .birchall(let c) = viewStore.state.solver { return c }
                     return .perTime
                 },
-                set: { viewModel.dispatch(.setSolver(.birchall(composition: $0))) }
+                set: { viewStore.dispatch(.setSolver(.birchall(composition: $0))) }
             )
         }()
 
         let paramBindings = ParameterBindings(
             finalDay: Binding(
-                get: { viewModel.finalDay },
-                set: { viewModel.dispatch(.setFinalDay($0)) }
+                get: { viewStore.state.finalDay },
+                set: { viewStore.dispatch(.setFinalDay($0)) }
             ),
             stepSizeText: Binding(
-                get: { viewModel.stepSizeText },
-                set: { viewModel.dispatch(.setStepSizeText($0)) }
+                get: { viewStore.state.stepSizeText },
+                set: { viewStore.dispatch(.setStepSizeText($0)) }
             ),
             toleranceText: Binding(
-                get: { viewModel.toleranceText },
-                set: { viewModel.dispatch(.setToleranceText($0)) }
+                get: { viewStore.state.toleranceText },
+                set: { viewStore.dispatch(.setToleranceText($0)) }
             ),
             selectedVariant: Binding(
-                get: { viewModel.selectedVariant },
-                set: { viewModel.dispatch(.selectVariant($0)) }
+                get: { viewStore.state.selectedVariant },
+                set: { viewStore.dispatch(.selectVariant($0)) }
             ),
             birchallComposition: birchallBinding
         )
 
         return CalculatorContent(
-            documentName:         viewModel.documentName,
-            lingo:                viewModel.lingo,
-            halfLife:             viewModel.halfLife,
-            variants:             viewModel.variants,
-            solver:               viewModel.solver,
-            series:               viewModel.series,
-            reportRows:           viewModel.reportRows,
-            compartmentNames:     viewModel.compartmentNames,
-            isCalculating:        viewModel.isCalculating,
-            error:                viewModel.error,
-            isParamPanelVisible:  viewModel.isParamPanelVisible,
-            durationWarning:      viewModel.durationWarning,
-            estimatedDurationLabel: viewModel.estimatedDurationLabel,
-            solverShortName:      viewModel.solverShortName,
-            calculateButtonTitle: viewModel.calculateButtonTitle,
-            logXLabel:            viewModel.logXLabel,
-            logYLabel:            viewModel.logYLabel,
-            durationWarningMessage: viewModel.durationWarningMessage,
-            isParamSheetOpen:     viewModel.isParamSheetOpen,
-            validationIssues:     viewModel.validationIssues,
-            csvExportInput:       viewModel.csvExportInput,
-            pdfExportInput:       viewModel.pdfExportInput,
+            documentName:         viewStore.state.documentName,
+            lingo:                viewStore.state.lingo,
+            halfLife:             viewStore.state.halfLife,
+            variants:             viewStore.state.variants,
+            solver:               viewStore.state.solver,
+            series:               viewStore.state.series,
+            reportRows:           viewStore.state.reportRows,
+            compartmentNames:     viewStore.state.compartmentNames,
+            isCalculating:        viewStore.state.isCalculating,
+            error:                viewStore.state.error,
+            isParamPanelVisible:  viewStore.state.isParamPanelVisible,
+            durationWarning:      viewStore.state.durationWarning,
+            estimatedDurationLabel: viewStore.state.estimatedDurationLabel,
+            solverShortName:      viewStore.state.solverShortName,
+            calculateButtonTitle: viewStore.state.calculateButtonTitle,
+            logXLabel:            viewStore.state.logXLabel,
+            logYLabel:            viewStore.state.logYLabel,
+            durationWarningMessage: viewStore.state.durationWarningMessage,
+            isParamSheetOpen:     viewStore.state.isParamSheetOpen,
+            validationIssues:     viewStore.state.validationIssues,
+            csvExportInput:       viewStore.state.csvExportInput,
+            pdfExportInput:       viewStore.state.pdfExportInput,
             activeView:           activeViewBinding,
             logX:                 logXBinding,
             logY:                 logYBinding,
             paramBindings:        paramBindings,
-            onCalculate:          { viewModel.dispatch(.calculate) },
-            onSetSolver:          { viewModel.dispatch(.setSolver($0)) },
-            onToggleSeries:       { viewModel.dispatch(.toggleSeries($0)) },
-            onToggleParamPanel:   { viewModel.dispatch(.toggleParamPanel) },
-            onSetParamSheet:      { viewModel.dispatch(.setParamSheet($0)) },
+            onCalculate:          { viewStore.dispatch(.calculate) },
+            onSetSolver:          { viewStore.dispatch(.setSolver($0)) },
+            onToggleSeries:       { viewStore.dispatch(.toggleSeries($0)) },
+            onToggleParamPanel:   { viewStore.dispatch(.toggleParamPanel) },
+            onSetParamSheet:      { viewStore.dispatch(.setParamSheet($0)) },
         )
         .inlineNavigationTitle()
     }
@@ -103,8 +103,8 @@ struct CalculatorContent: View {
     let halfLife: Double
     let variants: [String]
     let solver: SolverMethod
-    let series: [CalculatorFeature.ViewModel.Series]
-    let reportRows: [CalculatorFeature.ViewModel.ReportRow]
+    let series: [CalculatorFeature.Series]
+    let reportRows: [CalculatorFeature.ReportRow]
     let compartmentNames: [String]
     let isCalculating: Bool
     let error: String?

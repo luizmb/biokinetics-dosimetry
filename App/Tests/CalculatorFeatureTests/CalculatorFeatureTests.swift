@@ -26,7 +26,7 @@ struct CalculatorFeatureBehaviorTests {
         .succeeds(with: mockResults)
     }
     private func store(
-        initial: CalculatorFeature.State = CalculatorFeature.initialState()
+        initial: CalculatorFeature.State = CalculatorFeature.initialState(with: ())
     ) -> TestStore<CalculatorFeature.Action, CalculatorFeature.State, CalculatorFeature.Environment> {
         TestStore(initial: initial, behavior: CalculatorFeature.behavior(), environment: env)
     }
@@ -34,7 +34,7 @@ struct CalculatorFeatureBehaviorTests {
     // MARK: - Initial state
 
     @Test func initialState() {
-        let s = CalculatorFeature.initialState()
+        let s = CalculatorFeature.initialState(with: ())
         #expect(s.results == nil)
         #expect(!s.isCalculating)
         #expect(s.error == nil)
@@ -48,7 +48,7 @@ struct CalculatorFeatureBehaviorTests {
     // MARK: - .load
 
     @Test func loadSetsDocumentAndClearsResultsAndError() {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.results = mockResults
         initial.error = "previous error"
         initial.isCalculating = true
@@ -76,7 +76,7 @@ struct CalculatorFeatureBehaviorTests {
     // MARK: - .calculate
 
     @Test func calculateSetsIsCalculatingThenDeliversResultsViaEffect() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         let s = store(initial: initial)
 
@@ -89,7 +89,7 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func calculateClearsExistingError() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         initial.error = "stale error"
         let s = store(initial: initial)
@@ -105,7 +105,7 @@ struct CalculatorFeatureBehaviorTests {
     // MARK: - .resultsReady / .resultsFailed
 
     @Test func resultsReadyStoresDataAndClearsIsCalculating() {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.isCalculating = true
         store(initial: initial).dispatch(.resultsReady(mockResults)) { state in
             state.results = mockResults
@@ -114,7 +114,7 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func resultsFailedStoresErrorAndClearsIsCalculating() {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.isCalculating = true
         store(initial: initial).dispatch(.resultsFailed("solver overflow")) { state in
             state.error = "solver overflow"
@@ -215,7 +215,7 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func toggleSeriesRemovesIdWhenPresent() {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.visibleSeriesIds = ["plasma", "thyroid"]
         store(initial: initial).dispatch(.toggleSeries("plasma")) {
             $0.visibleSeriesIds.remove("plasma")
@@ -235,7 +235,7 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func setActiveViewBackToChart() {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.activeView = .report
         store(initial: initial).dispatch(.setActiveView(.chart)) { $0.activeView = .chart }
     }
@@ -258,14 +258,14 @@ struct CalculatorFeatureBehaviorTests {
 struct CalculatorFeatureMapStateTests {
 
     @Test func emptyResultsProducesEmptySeriesAndReportRows() {
-        let state = CalculatorFeature.initialState()
+        let state = CalculatorFeature.initialState(with: ())
         let vs = CalculatorFeature.mapState(state)
         #expect(vs.series.isEmpty)
         #expect(vs.reportRows.isEmpty)
     }
 
     @Test func documentNameAndHalfLifeForwardedCorrectly() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         let vs = CalculatorFeature.mapState(state)
         #expect(vs.documentName == ModelDocument.validation.name)
@@ -273,7 +273,7 @@ struct CalculatorFeatureMapStateTests {
     }
 
     @Test func seriesCountMatchesFollowedCompartments() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         // validation has A(follow), B(follow), C(follow) → 3 followed compartments
         state.results = Array(
@@ -286,7 +286,7 @@ struct CalculatorFeatureMapStateTests {
     }
 
     @Test func reportRowCountMatchesStepCount() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0], [0.9, 0.45, 0.05], [0.8, 0.4, 0.1]]
         let vs = CalculatorFeature.mapState(state)
@@ -296,7 +296,7 @@ struct CalculatorFeatureMapStateTests {
     }
 
     @Test func seriesVisibilityRespectsVisibleIds() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0]]
         state.visibleSeriesIds = ["A"]  // Only A visible
@@ -306,7 +306,7 @@ struct CalculatorFeatureMapStateTests {
     }
 
     @Test func emptyVisibleIdsShowsAllSeries() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0]]
         state.visibleSeriesIds = []  // Empty → show all
@@ -315,7 +315,7 @@ struct CalculatorFeatureMapStateTests {
     }
 
     @Test func parametersForwardedToViewState() {
-        var state = CalculatorFeature.initialState()
+        var state = CalculatorFeature.initialState(with: ())
         state.solver = .rungeKutta45(tolerance: 1e-8)
         state.finalDay = 365
         state.stepSize = 0.5;  state.stepSizeText  = "0.5"
@@ -406,14 +406,14 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotWithDocument() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "loaded-validation")
     }
 
     @Test func snapshotAfterCalculate() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.results = (0..<201).map { step -> [Double] in
             let t = Double(step)
@@ -424,7 +424,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotReportTab() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.activeView = .report
         initial.results = Array(repeating: [1.0, 0.5, 0.0], count: 5)
@@ -433,7 +433,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotParamPanelHidden() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.isParamPanelVisible = false
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "param-panel-hidden")
@@ -442,7 +442,7 @@ struct CalculatorFeatureSnapshotTests {
     // MARK: - Calculation states
 
     @Test func snapshotCalculating() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.isCalculating = true
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -450,7 +450,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotError() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.error = "Solver diverged: matrix is singular"
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -460,7 +460,7 @@ struct CalculatorFeatureSnapshotTests {
     // MARK: - Solver variants (ParameterPanel layout changes per solver)
 
     @Test func snapshotSolverRK4() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.solver = .rungeKutta4(stepSize: 0.5)
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -468,7 +468,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotSolverRK45() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.solver = .rungeKutta45(tolerance: 1e-8)
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -476,7 +476,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotSolverBirchallSemigroup() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.solver = .birchall(composition: .semigroup)
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -486,7 +486,7 @@ struct CalculatorFeatureSnapshotTests {
     // MARK: - Chart variants
 
     @Test func snapshotLogLinear() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.logX = false
         initial.logY = false
@@ -499,7 +499,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotSeriesFiltered() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.results = (0..<201).map { step -> [Double] in
             let t = Double(step)
@@ -511,7 +511,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotReportEmpty() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
         initial.activeView = .report
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
@@ -525,7 +525,7 @@ struct CalculatorFeatureSnapshotTests {
     //   veryLong → h=0.001,final=1000 → 4.64e-6 × 81 × 1_000_000 ≈ 376 s
 
     @Test func snapshotDurationBrief() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .iodo131
         initial.solver = .rungeKutta4(stepSize: 0.1)
         initial.finalDay = 1000
@@ -534,7 +534,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotDurationSlow() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .iodo131
         initial.solver = .rungeKutta4(stepSize: 0.01)
         initial.finalDay = 1000
@@ -543,7 +543,7 @@ struct CalculatorFeatureSnapshotTests {
     }
 
     @Test func snapshotDurationVeryLong() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = .iodo131
         initial.solver = .rungeKutta4(stepSize: 0.001)
         initial.finalDay = 1000
@@ -554,14 +554,14 @@ struct CalculatorFeatureSnapshotTests {
     // MARK: - Variant picker
 
     @Test func snapshotWithVariants() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = Self.docWithVariants
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "with-variants")
     }
 
     @Test func snapshotWithVariantSelected() async {
-        var initial = CalculatorFeature.initialState()
+        var initial = CalculatorFeature.initialState(with: ())
         initial.document = Self.docWithVariants
         initial.selectedVariant = "Type F"
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
