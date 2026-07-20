@@ -42,7 +42,7 @@ public extension MainStore {
     @MainActor static func app(world: World) -> MainStoreType {
         let store = Store(
             initial: AppState(),
-            behavior: NavigationFeature.behavior().lift(Relay.Empty.action(AppAction.prism.navigation).state(\AppState.navigation).environment { _ in () })
+            behavior: NavigationFeature.behavior().lift(.action(\.navigation).state(\.navigation).environment(ignore))
                 <> AppScopes.home.behavior(of: HomeFeature.self)
                 <> AppScopes.editor.behavior(of: EditorFeature.self)
                 <> AppScopes.calculator.behavior(of: CalculatorFeature.self)
@@ -78,13 +78,13 @@ private func saveEditorOnBackBehavior() -> Behavior<AppAction, AppState, World> 
 private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
     Behavior<AppAction, AppState, World>.identity
         .on(
-            .action(AppAction.prism.home >>> HomeModule.Action.prism.edit),
-            dispatch: .action(review: { doc in .navigation(.setPath([.editor])) }),
+            .action(\.home.edit),
+            dispatch: .action(review: const(.navigation(.setPath([.editor])))),
             reduce: { doc, state in state.editor.document = doc }
         )
         .on(
-            .action(AppAction.prism.home >>> HomeModule.Action.prism.calculate),
-            dispatch: .action(review: { doc in .navigation(.setPath([.calculator])) }),
+            .action(\.home.calculate),
+            dispatch: .action(review: const(.navigation(.setPath([.calculator])))),
             reduce: { doc, state in
                 state.calculator.document = doc
                 state.calculator.results = nil   // clear stale results from a previous document
