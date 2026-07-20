@@ -11,9 +11,8 @@ import SwiftRexReactiveConcurrency
 
 // MARK: - CalculatorFeature
 
-@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
+@Feature(strategy: .observationSimple)
 public enum CalculatorFeature {
-
     // MARK: - State
 
     public struct State: Sendable, Equatable {
@@ -313,8 +312,7 @@ public enum CalculatorFeature {
     public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        typealias C = Reaction<State, Environment, Action>
-        return .handle { action, context in
+        .handle { action, context in
             switch action {
             case .load(let doc):
                 .reduce { state in
@@ -329,7 +327,7 @@ public enum CalculatorFeature {
                 .reduce { $0.selectedVariant = key }
             case .calculate:
                 // Capture pre-mutation state in phase 1 (@MainActor — context.stateBefore is safe here)
-                calculateConsequence(context: context)
+                calculateReaction(context: context)
             case .resultsReady(let data):
                 .reduce { $0.results = data; $0.isCalculating = false }
             case .resultsFailed(let msg):
@@ -387,10 +385,8 @@ public enum CalculatorFeature {
                 .reduce { $0.activeView = v }
             case .toggleParamPanel:
                 .reduce { $0.isParamPanelVisible.toggle() }
-
             case .setParamSheet(let v):
                 .reduce { $0.isParamSheetOpen = v }
-
             }
         }
     }
@@ -398,10 +394,9 @@ public enum CalculatorFeature {
     /// Builds the consequence for `.calculate`, extracted so the switch arms in `behavior()` are
     /// all single expressions (required for Swift's implicit-return switch expression inference).
     @MainActor
-    private static func calculateConsequence(
+    private static func calculateReaction(
         context: PreReducerContext<State>
-    ) -> Reaction<State, Environment, Action> {
-        typealias C = Reaction<State, Environment, Action>
+    ) -> Reaction<Action, State, Environment> {
         let snapshot = context.stateBefore
         let state = snapshot ?? State()
         let doc = state.document
@@ -425,6 +420,3 @@ public enum CalculatorFeature {
 
     public typealias Content = CalculatorView
 }
-
-@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
-extension CalculatorFeature: SwiftRexArchitecture.Feature {}

@@ -358,7 +358,7 @@ struct EditorFeatureMapStateTests {
     @Test func compartmentRowsReflectDocumentCompartments() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.compartments.count == 3)
         #expect(vs.compartments.map(\.id) == ["A", "B", "C"])
     }
@@ -367,7 +367,7 @@ struct EditorFeatureMapStateTests {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
         state.selectedCompartmentId = "B"
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.compartments.first { $0.id == "B" }?.isSelected == true)
         #expect(vs.compartments.filter { $0.isSelected }.count == 1)
     }
@@ -375,7 +375,7 @@ struct EditorFeatureMapStateTests {
     @Test func linkRowsReflectDocumentConnections() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation  // A→B, B→C, C→B
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.links.count == 3)
         #expect(vs.links[0].fromId == "A")
         #expect(vs.links[0].toId == "B")
@@ -385,7 +385,7 @@ struct EditorFeatureMapStateTests {
         var state = EditorFeature.initialState(with: ())
         state.canvasOffset = EditorFeature.CanvasPoint(x: 42, y: -10)
         state.canvasScale = 1.8
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.canvasOffsetX == 42)
         #expect(vs.canvasOffsetY == -10)
         #expect(vs.canvasScale == 1.8)
@@ -394,7 +394,7 @@ struct EditorFeatureMapStateTests {
     @Test func nucleiRowsReflectModelNuclides() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation  // has Nuclide("val", halfLife: 5.0)
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.nuclides.count == 1)
         #expect(vs.nuclides[0].id == "val")
         #expect(vs.nuclides[0].halfLife == 5.0)
@@ -405,7 +405,7 @@ struct EditorFeatureMapStateTests {
     @Test func compartmentRowCarriesNuclideId() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
-        let vs = EditorFeature.mapState(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
         #expect(vs.compartments.allSatisfy { $0.nuclideId == "val" })
     }
 }
@@ -498,7 +498,7 @@ struct EditorFeatureNuclideTests {
             Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
             Compartment(id: "b", nuclideId: "n2", name: "B", follow: true, intake: false, dispose: false, fraction: 0),
         ]
-        let twoNuclideDoc = ModelDocument(id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000002")!, 
+        let twoNuclideDoc = ModelDocument(id: UUID(uuidString: "FFFFFFFF-0000-0000-0000-000000000002")!, 
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
@@ -527,7 +527,7 @@ struct EditorFeatureNuclideTests {
             Compartment(id: "a", nuclideId: "n1", name: "A", follow: true, intake: true, dispose: false, fraction: 1),
         ]
         let doc = ModelDocument(
-            id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000003")!,
+            id: UUID(uuidString: "FFFFFFFF-0000-0000-0000-000000000003")!,
             name: "Two",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: [])
         )
@@ -582,7 +582,7 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Baseline states
 
     @Test func snapshotDefaultDocument() async {
-        let feature = TestFeature<EditorFeature>(environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: EditorFeature.initialState(with: ()), environment: EditorFeature.Environment())
         await snapBoth(feature, named: "default-document")
     }
 
@@ -733,7 +733,7 @@ struct EditorFeatureSnapshotTests {
             CompartmentConnection(from: "b2", to: "k2", rate: 0.12),
         ]
         return ModelDocument(
-            id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000004")!,
+            id: UUID(uuidString: "FFFFFFFF-0000-0000-0000-000000000004")!,
             name: "Multi-Nuclide",
             model: CompartmentalModel(nuclides: [n1, n2], compartments: comps, connections: connections),
             visuals: [

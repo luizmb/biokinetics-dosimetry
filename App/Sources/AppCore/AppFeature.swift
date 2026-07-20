@@ -32,7 +32,6 @@ public enum AppAction: Sendable {
 
 public typealias MainStoreType = any StoreType<AppAction, AppState>
 public typealias MainStore = Store<AppAction, AppState, World>
-public typealias LiftedScope<F: Feature> = Scope<AppAction, AppState, World, F>
 
 // MARK: - Store conveniences
 
@@ -43,10 +42,10 @@ public extension MainStore {
     @MainActor static func app(world: World) -> MainStoreType {
         let store = Store(
             initial: AppState(),
-            behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
-                <> LiftedScope<HomeFeature>.home.behavior
-                <> LiftedScope<EditorFeature>.editor.behavior
-                <> LiftedScope<CalculatorFeature>.calculator.behavior
+            behavior: NavigationFeature.behavior().lift(Relay.Empty.action(AppAction.prism.navigation).state(\AppState.navigation).environment { _ in () })
+                <> AppScopes.home.behavior(of: HomeFeature.self)
+                <> AppScopes.editor.behavior(of: EditorFeature.self)
+                <> AppScopes.calculator.behavior(of: CalculatorFeature.self)
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world
@@ -79,13 +78,13 @@ private func saveEditorOnBackBehavior() -> Behavior<AppAction, AppState, World> 
 private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
     Behavior<AppAction, AppState, World>.identity
         .on(
-            AppAction.prism.home >>> HomeModule.Action.prism.edit,
-            dispatch: { doc in .navigation(.setPath([.editor])) },
+            .action(AppAction.prism.home >>> HomeModule.Action.prism.edit),
+            dispatch: .action(review: { doc in .navigation(.setPath([.editor])) }),
             reduce: { doc, state in state.editor.document = doc }
         )
         .on(
-            AppAction.prism.home >>> HomeModule.Action.prism.calculate,
-            dispatch: { doc in .navigation(.setPath([.calculator])) },
+            .action(AppAction.prism.home >>> HomeModule.Action.prism.calculate),
+            dispatch: .action(review: { doc in .navigation(.setPath([.calculator])) }),
             reduce: { doc, state in
                 state.calculator.document = doc
                 state.calculator.results = nil   // clear stale results from a previous document
@@ -96,51 +95,32 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
 
 // MARK: - Feature scopes
 
-public extension LiftedScope<CalculatorFeature> {
-    static var calculator: Self {
-        Scope(
-            CalculatorFeature.self,
-            action: \.calculator,
-            state: \.calculator,
-            environment: { world in
-                CalculatorFeature.Environment(
-                    solve:        world.solver,
-                    formatDouble: world.formatDouble,
-                    parseDouble:  world.parseDouble
-                )
-            }
-        )
-    }
-}
+public enum AppScopes {
+    public static let calculator = Relay.Empty
+        .action(AppAction.prism.calculator).state(\AppState.calculator)
+        .environment { (world: World) in
+            CalculatorFeature.Environment(
+                solve:        world.solver,
+                formatDouble: world.formatDouble,
+                parseDouble:  world.parseDouble
+            )
+        }
 
-public extension LiftedScope<EditorFeature> {
-    static var editor: Self {
-        Scope(
-            EditorFeature.self,
-            action: \.editor,
-            state: \.editor,
-            environment: { world in EditorFeature.Environment(newId: world.newId) }
-        )
-    }
-}
+    public static let editor = Relay.Empty
+        .action(AppAction.prism.editor).state(\AppState.editor)
+        .environment { (world: World) in EditorFeature.Environment(newId: world.newId) }
 
-public extension LiftedScope<HomeFeature> {
-    static var home: Self {
-        Scope(
-            HomeFeature.self,
-            action: \.home,
-            state: \.home,
-            environment: { world in
-                HomeModule.Environment(
-                    xmlDecoder:       world.xmlDecoder,
-                    jsonDecoder:      world.jsonDecoder,
-                    newId:            world.newId,
-                    seedId:           world.seedId,
-                    saveDocument:     world.saveDocument,
-                    loadAllDocuments: world.loadAllDocuments,
-                    deleteDocument:   world.deleteDocument
-                )
-            }
-        )
-    }
+    public static let home = Relay.Empty
+        .action(AppAction.prism.home).state(\AppState.home)
+        .environment { (world: World) in
+            HomeModule.Environment(
+                xmlDecoder:       world.xmlDecoder,
+                jsonDecoder:      world.jsonDecoder,
+                newId:            world.newId,
+                seedId:           world.seedId,
+                saveDocument:     world.saveDocument,
+                loadAllDocuments: world.loadAllDocuments,
+                deleteDocument:   world.deleteDocument
+            )
+        }
 }
