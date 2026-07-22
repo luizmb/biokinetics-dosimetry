@@ -95,9 +95,22 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
 
 // MARK: - Feature scopes
 
-public enum AppScopes {
-    public static let calculator = Relay.Scope.identity
-        .action(AppAction.prism.calculator).state(\AppState.calculator)
+public enum AppScopes: Rig {
+    public typealias Action = AppAction
+    public typealias State = AppState
+    public typealias Environment = World
+
+    // Total-state scope shape pinned to the app triad (duplex `Prism` / total `ReadsWrites` / `Narrows`).
+    // Annotating a scope `Global<_,_,_>` roots the bare optics, so each declares as
+    // `.action(\.x).state(\.x).environment(…)` with no explicit witnesses.
+    public typealias Global<A, S, E> = Relay.Scope<
+        Relay.ActionAxis.Prism<Action, A>,
+        Relay.StateAxis.ReadsWrites<State, S>,
+        Relay.EnvironmentAxis.Narrows<Environment, E>
+    >
+
+    public static let calculator: Global<_, _, _> =
+        .action(\.calculator).state(\.calculator)
         .environment { (world: World) in
             CalculatorFeature.Environment(
                 solve:        world.solver,
@@ -106,12 +119,12 @@ public enum AppScopes {
             )
         }
 
-    public static let editor = Relay.Scope.identity
-        .action(AppAction.prism.editor).state(\AppState.editor)
-        .environment { (world: World) in EditorFeature.Environment(newId: world.newId) }
+    public static let editor: Global<_, _, _> =
+        .action(\.editor).state(\.editor)
+        .environment(\.newId >>> EditorFeature.Environment.init)
 
-    public static let home = Relay.Scope.identity
-        .action(AppAction.prism.home).state(\AppState.home)
+    public static let home: Global<_, _, _> =
+        .action(\.home).state(\.home)
         .environment { (world: World) in
             HomeModule.Environment(
                 xmlDecoder:       world.xmlDecoder,
