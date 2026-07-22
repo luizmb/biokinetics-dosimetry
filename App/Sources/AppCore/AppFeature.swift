@@ -96,7 +96,7 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
 // MARK: - Feature scopes
 
 public enum AppScopes {
-    public static let calculator = Relay.Empty
+    public static let calculator = Relay.Scope.identity
         .action(AppAction.prism.calculator).state(\AppState.calculator)
         .environment { (world: World) in
             CalculatorFeature.Environment(
@@ -106,11 +106,11 @@ public enum AppScopes {
             )
         }
 
-    public static let editor = Relay.Empty
+    public static let editor = Relay.Scope.identity
         .action(AppAction.prism.editor).state(\AppState.editor)
         .environment { (world: World) in EditorFeature.Environment(newId: world.newId) }
 
-    public static let home = Relay.Empty
+    public static let home = Relay.Scope.identity
         .action(AppAction.prism.home).state(\AppState.home)
         .environment { (world: World) in
             HomeModule.Environment(
