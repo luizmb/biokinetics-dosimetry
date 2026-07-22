@@ -111,29 +111,24 @@ public enum AppScopes: Rig {
 
     public static let calculator: Global<_, _, _> =
         .action(\.calculator).state(\.calculator)
-        .environment { (world: World) in
-            CalculatorFeature.Environment(
-                solve:        world.solver,
-                formatDouble: world.formatDouble,
-                parseDouble:  world.parseDouble
-            )
-        }
+        .environment(fanout(
+            keypaths: \.solver, \.formatDouble, \.parseDouble,
+            into: CalculatorFeature.Environment.init
+        ))
 
     public static let editor: Global<_, _, _> =
         .action(\.editor).state(\.editor)
         .environment(\.newId >>> EditorFeature.Environment.init)
 
+    // `home` stays a closure: its `Environment` takes existential (`Sendable & DataDecoderFactory`)
+    // decoders, and routing an existential through the variadic `fanout` pack crashes the Swift compiler.
     public static let home: Global<_, _, _> =
         .action(\.home).state(\.home)
         .environment { (world: World) in
             HomeModule.Environment(
-                xmlDecoder:       world.xmlDecoder,
-                jsonDecoder:      world.jsonDecoder,
-                newId:            world.newId,
-                seedId:           world.seedId,
-                saveDocument:     world.saveDocument,
-                loadAllDocuments: world.loadAllDocuments,
-                deleteDocument:   world.deleteDocument
+                xmlDecoder: world.xmlDecoder, jsonDecoder: world.jsonDecoder, newId: world.newId,
+                seedId: world.seedId, saveDocument: world.saveDocument,
+                loadAllDocuments: world.loadAllDocuments, deleteDocument: world.deleteDocument
             )
         }
 }

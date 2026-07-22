@@ -10,11 +10,11 @@ let package = Package(
         .library(name: "Parser", targets: ["Parser"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/luizmb/FP.git", from: "2.1.0"),
-        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.7.1"),
+        .package(url: "https://github.com/luizmb/FP.git", from: "2.2.0"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.8.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
-        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.5.1"),
-        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "1.0.0"),
+        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "0.6.0"),
+        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "1.1.0"),
     ],
     targets: [
         // Pure value types — lingua franca for all other targets.

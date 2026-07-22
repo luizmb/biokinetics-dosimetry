@@ -17,9 +17,9 @@ let package = Package(
     dependencies: [
         .package(path: ".."),
         .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
-        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "1.0.0"),
-        .package(url: "https://github.com/luizmb/FP.git", from: "2.1.0"),
-        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.7.1"),
+        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "1.1.0"),
+        .package(url: "https://github.com/luizmb/FP.git", from: "2.2.0"),
+        .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.8.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
     ],
