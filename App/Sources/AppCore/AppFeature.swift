@@ -111,10 +111,7 @@ public enum AppScopes: Rig {
 
     public static let calculator: Global<_, _, _> =
         .action(\.calculator).state(\.calculator)
-        .environment(fanout(
-            keypaths: \.solver, \.formatDouble, \.parseDouble,
-            into: CalculatorFeature.Environment.init
-        ))
+        .environment(fanout(\.solver, \.formatDouble, \.parseDouble) >>> CalculatorFeature.Environment.init)
 
     public static let editor: Global<_, _, _> =
         .action(\.editor).state(\.editor)
@@ -123,8 +120,7 @@ public enum AppScopes: Rig {
     public static let home: Global<_, _, _> =
         .action(\.home).state(\.home)
         .environment(fanout(
-            keypaths: \.xmlDecoder, \.jsonDecoder, \.newId, \.seedId,
-                      \.saveDocument, \.loadAllDocuments, \.deleteDocument,
-            into: HomeModule.Environment.init
-        ))
+            \.xmlDecoder, \.jsonDecoder, \.newId, \.seedId,
+            \.saveDocument, \.loadAllDocuments, \.deleteDocument
+        ) >>> HomeModule.Environment.init)
 }
