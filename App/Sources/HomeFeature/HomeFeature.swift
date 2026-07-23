@@ -132,7 +132,6 @@ public enum HomeFeature {
     public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        typealias C = Reaction<Action, State, Environment>
         return .handle { action, context in
             switch action {
             case .openFilePicker:
@@ -312,7 +311,6 @@ public enum HomeFeature {
         id: ModelDocument.ID,
         context: PreReducerContext<State>
     ) -> Reaction<Action, State, Environment> {
-        typealias C = Reaction<Action, State, Environment>
         guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
             return .reduce { _ in }
         }
