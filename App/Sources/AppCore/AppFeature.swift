@@ -100,24 +100,17 @@ public enum AppScopes: Rig {
     public typealias State = AppState
     public typealias Environment = World
 
-    // Total-state scope shape pinned to the app triad (duplex `Prism` / total `ReadsWrites` / `Narrows`).
-    // Annotating a scope `Global<_,_,_>` roots the bare optics, so each declares as
-    // `.action(\.x).state(\.x).environment(…)` with no explicit witnesses.
-    public typealias Global<A, S, E> = Relay.Scope<
-        Relay.ActionAxis.Prism<Action, A>,
-        Relay.StateAxis.ReadsWrites<State, S>,
-        Relay.EnvironmentAxis.Narrows<Environment, E>
-    >
-
-    public static let calculator: Global<_, _, _> =
+    // `ScopeOf<AppScopes>` pins the app triad (`Action`/`State`/`Environment`) as the entry point, so each
+    // declaration is just `.action(\.x).state(\.x).environment(…)` — no explicit witnesses.
+    public static let calculator = ScopeOf<AppScopes>
         .action(\.calculator).state(\.calculator)
         .environment(fanout(\.solver, \.formatDouble, \.parseDouble) >>> CalculatorFeature.Environment.init)
 
-    public static let editor: Global<_, _, _> =
+    public static let editor = ScopeOf<AppScopes>
         .action(\.editor).state(\.editor)
         .environment(\.newId >>> EditorFeature.Environment.init)
 
-    public static let home: Global<_, _, _> =
+    public static let home = ScopeOf<AppScopes>
         .action(\.home).state(\.home)
         .environment(fanout(
             \.xmlDecoder, \.jsonDecoder, \.newId, \.seedId,
