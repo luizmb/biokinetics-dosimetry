@@ -14,7 +14,7 @@ import SwiftRexArchitecture
 /// AppState flat and avoids a cross-feature routing layer: the `.editDocument`
 /// and `.calculateDocument` view actions are mapped directly to `.push(route)`,
 /// which both updates the path and carries the document snapshot into the route.
-@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
+@Feature(strategy: .observationSimple)
 public enum HomeFeature {
 
     // MARK: - State
@@ -132,7 +132,6 @@ public enum HomeFeature {
     public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        typealias C = Reaction<State, Environment, Action>
         return .handle { action, context in
             switch action {
             case .openFilePicker:
@@ -249,9 +248,8 @@ public enum HomeFeature {
             case let .importResult(result):
                 return .reduce { state in
                     state.filePicker = .idle
-                    state.documents = state.documents.applying(
-                        Array.pure >>> curry(+)(state.documents.loadedOrPrevious ?? []) <£> result
-                    )
+                    let previous = state.documents.loadedOrPrevious ?? []
+                    state.documents = state.documents.applying(result.map { previous + [$0] })
                 }
                 .produce { ctx in
                     guard case .success(let doc) = result else { return .empty }
@@ -312,8 +310,7 @@ public enum HomeFeature {
     private static func duplicateConsequence(
         id: ModelDocument.ID,
         context: PreReducerContext<State>
-    ) -> Reaction<State, Environment, Action> {
-        typealias C = Reaction<State, Environment, Action>
+    ) -> Reaction<Action, State, Environment> {
         guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
             return .reduce { _ in }
         }
@@ -394,6 +391,3 @@ public enum HomeFeature {
         })
     }
 }
-
-@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
-extension HomeFeature: SwiftRexArchitecture.Feature {}

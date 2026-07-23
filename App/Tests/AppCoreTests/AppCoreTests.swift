@@ -180,7 +180,7 @@ struct HomeFeatureMapStateTests {
     @Test func cardsReflectLoadedDocuments() {
         var state = HomeFeature.initialState(with: ())
         state.documents = .loaded([.iodo131, .validation])
-        let vs = HomeFeature.mapState(state)
+        let vs = HomeFeature.mapState(.alwaysFails)(state)
         #expect(vs.cards.loaded?.count == 2)
         #expect(vs.cards.loaded?[0].name == ModelDocument.iodo131.name)
         #expect(vs.cards.loaded?[1].name == ModelDocument.validation.name)
@@ -188,14 +188,14 @@ struct HomeFeatureMapStateTests {
 
     @Test func cardsIdleWhenDocumentsIdle() {
         let state = HomeFeature.initialState(with: ())
-        let vs = HomeFeature.mapState(state)
+        let vs = HomeFeature.mapState(.alwaysFails)(state)
         #expect(vs.cards == .idle)
     }
 
     @Test func cardCompartmentAndConnectionCountsMatch() {
         var state = HomeFeature.initialState(with: ())
         state.documents = .loaded([.validation])  // 3 compartments, 3 connections
-        let vs = HomeFeature.mapState(state)
+        let vs = HomeFeature.mapState(.alwaysFails)(state)
         #expect(vs.cards.loaded?[0].compartmentCount == 3)
         #expect(vs.cards.loaded?[0].connectionCount == 3)
     }
@@ -203,7 +203,7 @@ struct HomeFeatureMapStateTests {
     @Test func filePickerStateForwardedToViewState() {
         var state = HomeFeature.initialState(with: ())
         state.filePicker = .loading(previous: nil)
-        let vs = HomeFeature.mapState(state)
+        let vs = HomeFeature.mapState(.alwaysFails)(state)
         #expect(vs.filePicker == .loading(previous: nil))
     }
 }
@@ -215,44 +215,44 @@ struct HomeFeatureMapStateTests {
 struct HomeFeatureMapActionTests {
 
     @Test func openFilePickerMapsToOpenFilePicker() {
-        let action = HomeFeature.mapAction(.openFilePicker)
+        let action = HomeFeature.mapAction(.alwaysFails)(.openFilePicker)
         #expect(HomeFeature.Action.prism.openFilePicker.preview(action) != nil)
     }
 
     @Test func filePickerDismissedMapsToFilePickerDismissed() {
-        let action = HomeFeature.mapAction(.filePickerDismissed)
+        let action = HomeFeature.mapAction(.alwaysFails)(.filePickerDismissed)
         #expect(HomeFeature.Action.prism.filePickerDismissed.preview(action) != nil)
     }
 
     @Test func newDocumentMapsToNewDocument() {
-        let action = HomeFeature.mapAction(.newDocument(field: .generic, name: "Test"))
+        let action = HomeFeature.mapAction(.alwaysFails)(.newDocument(field: .generic, name: "Test"))
         #expect(HomeFeature.Action.prism.newDocument.preview(action) != nil)
     }
 
     @Test func importXMLMapsToImportXML() {
         let data = Data("xml".utf8)
-        let action = HomeFeature.mapAction(.importXML(data))
+        let action = HomeFeature.mapAction(.alwaysFails)(.importXML(data))
         #expect(HomeFeature.Action.prism.importXML.preview(action) == data)
     }
 
     @Test func editDocumentMapsToEdit() {
-        let action = HomeFeature.mapAction(.editDocument(.validation))
+        let action = HomeFeature.mapAction(.alwaysFails)(.editDocument(.validation))
         #expect(HomeFeature.Action.prism.edit.preview(action) == .validation)
     }
 
     @Test func calculateDocumentMapsToCalculate() {
-        let action = HomeFeature.mapAction(.calculateDocument(.iodo131))
+        let action = HomeFeature.mapAction(.alwaysFails)(.calculateDocument(.iodo131))
         #expect(HomeFeature.Action.prism.calculate.preview(action) == .iodo131)
     }
 
     @Test func deleteDocumentMapsToDeleteDocument() {
         let id = ModelDocument.validation.id
-        let action = HomeFeature.mapAction(.deleteDocument(id))
+        let action = HomeFeature.mapAction(.alwaysFails)(.deleteDocument(id))
         #expect(HomeFeature.Action.prism.deleteDocument.preview(action) == id)
     }
 
     @Test func saveDocumentMapsToSaveDocument() {
-        let action = HomeFeature.mapAction(.saveDocument(.validation))
+        let action = HomeFeature.mapAction(.alwaysFails)(.saveDocument(.validation))
         #expect(HomeFeature.Action.prism.saveDocument.preview(action) == .validation)
     }
 }

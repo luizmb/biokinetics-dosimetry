@@ -32,7 +32,6 @@ public enum AppAction: Sendable {
 
 public typealias MainStoreType = any StoreType<AppAction, AppState>
 public typealias MainStore = Store<AppAction, AppState, World>
-public typealias LiftedScope<F: Feature> = Scope<AppAction, AppState, World, F>
 
 // MARK: - Store conveniences
 
@@ -43,10 +42,10 @@ public extension MainStore {
     @MainActor static func app(world: World) -> MainStoreType {
         let store = Store(
             initial: AppState(),
-            behavior: NavigationFeature.behavior().lift(action: \.navigation, state: \.navigation, environment: { _ in () })
-                <> LiftedScope<HomeFeature>.home.behavior
-                <> LiftedScope<EditorFeature>.editor.behavior
-                <> LiftedScope<CalculatorFeature>.calculator.behavior
+            behavior: NavigationFeature.behavior().lift(.action(\.navigation).state(\.navigation).environment(ignore))
+                <> AppScopes.home.behavior(of: HomeFeature.self)
+                <> AppScopes.editor.behavior(of: EditorFeature.self)
+                <> AppScopes.calculator.behavior(of: CalculatorFeature.self)
                 <> bridgeBehavior()
                 <> saveEditorOnBackBehavior(),
             environment: world
@@ -79,13 +78,13 @@ private func saveEditorOnBackBehavior() -> Behavior<AppAction, AppState, World> 
 private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
     Behavior<AppAction, AppState, World>.identity
         .on(
-            AppAction.prism.home >>> HomeModule.Action.prism.edit,
-            dispatch: { doc in .navigation(.setPath([.editor])) },
+            .action(\.home.edit),
+            dispatch: .action(review: const(.navigation(.setPath([.editor])))),
             reduce: { doc, state in state.editor.document = doc }
         )
         .on(
-            AppAction.prism.home >>> HomeModule.Action.prism.calculate,
-            dispatch: { doc in .navigation(.setPath([.calculator])) },
+            .action(\.home.calculate),
+            dispatch: .action(review: const(.navigation(.setPath([.calculator])))),
             reduce: { doc, state in
                 state.calculator.document = doc
                 state.calculator.results = nil   // clear stale results from a previous document
@@ -96,51 +95,25 @@ private func bridgeBehavior() -> Behavior<AppAction, AppState, World> {
 
 // MARK: - Feature scopes
 
-public extension LiftedScope<CalculatorFeature> {
-    static var calculator: Self {
-        Scope(
-            CalculatorFeature.self,
-            action: \.calculator,
-            state: \.calculator,
-            environment: { world in
-                CalculatorFeature.Environment(
-                    solve:        world.solver,
-                    formatDouble: world.formatDouble,
-                    parseDouble:  world.parseDouble
-                )
-            }
-        )
-    }
-}
+public enum AppScopes: Rig {
+    public typealias Action = AppAction
+    public typealias State = AppState
+    public typealias Environment = World
 
-public extension LiftedScope<EditorFeature> {
-    static var editor: Self {
-        Scope(
-            EditorFeature.self,
-            action: \.editor,
-            state: \.editor,
-            environment: { world in EditorFeature.Environment(newId: world.newId) }
-        )
-    }
-}
+    // `ScopeOf<AppScopes>` pins the app triad (`Action`/`State`/`Environment`) as the entry point, so each
+    // declaration is just `.action(\.x).state(\.x).environment(…)` — no explicit witnesses.
+    public static let calculator = ScopeOf<AppScopes>
+        .action(\.calculator).state(\.calculator)
+        .environment(fanout(\.solver, \.formatDouble, \.parseDouble) >>> CalculatorFeature.Environment.init)
 
-public extension LiftedScope<HomeFeature> {
-    static var home: Self {
-        Scope(
-            HomeFeature.self,
-            action: \.home,
-            state: \.home,
-            environment: { world in
-                HomeModule.Environment(
-                    xmlDecoder:       world.xmlDecoder,
-                    jsonDecoder:      world.jsonDecoder,
-                    newId:            world.newId,
-                    seedId:           world.seedId,
-                    saveDocument:     world.saveDocument,
-                    loadAllDocuments: world.loadAllDocuments,
-                    deleteDocument:   world.deleteDocument
-                )
-            }
-        )
-    }
+    public static let editor = ScopeOf<AppScopes>
+        .action(\.editor).state(\.editor)
+        .environment(\.newId >>> EditorFeature.Environment.init)
+
+    public static let home = ScopeOf<AppScopes>
+        .action(\.home).state(\.home)
+        .environment(fanout(
+            \.xmlDecoder, \.jsonDecoder, \.newId, \.seedId,
+            \.saveDocument, \.loadAllDocuments, \.deleteDocument
+        ) >>> HomeModule.Environment.init)
 }

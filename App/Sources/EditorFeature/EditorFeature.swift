@@ -7,7 +7,7 @@ import SwiftRexArchitecture
 
 // MARK: - EditorFeature
 
-@Feature(type: .moduleEntryPoint, strategy: .observationSimple)
+@Feature(strategy: .observationSimple)
 public enum EditorFeature {
 
     // MARK: - State
@@ -86,13 +86,15 @@ public enum EditorFeature {
     }
 
     public struct CanvasPoint: Sendable, Equatable {
-        public var x, y: Double
+        public var x: Double
+        public var y: Double
         public init(x: Double, y: Double) { self.x = x; self.y = y }
     }
 
     public struct CompartmentDragOrigin: Sendable, Equatable {
         public var id: String
-        public var x, y: Double
+        public var x: Double
+        public var y: Double
     }
 
     // MARK: - Action
@@ -177,9 +179,12 @@ public enum EditorFeature {
             public var nuclideId: String
             public var name: String
             public var tint: CompartmentTint
-            public var x, y: Double
+            public var x: Double
+            public var y: Double
             public var isSelected: Bool
-            public var follow, intake, dispose: Bool
+            public var follow: Bool
+            public var intake: Bool
+            public var dispose: Bool
             public var fraction: Double
         }
 
@@ -799,6 +804,3 @@ public enum EditorFeature {
 
     public typealias Content = EditorView
 }
-
-@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
-extension EditorFeature: SwiftRexArchitecture.Feature {}

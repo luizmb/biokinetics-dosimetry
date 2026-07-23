@@ -47,7 +47,7 @@ struct ValidationChartSnapshotTests {
                 CompartmentConnection(from: "3", to: "2", rate: 0.05)
             ]
         )
-        return ModelDocument(id: UUID(uuidString: "FFFFFFFF-TEST-0000-0000-000000000001")!, name: "Validacao", model: model)
+        return ModelDocument(id: UUID(uuidString: "FFFFFFFF-0000-0000-0000-000000000001")!, name: "Validacao", model: model)
     }
 
     // MARK: - Snapshot helper

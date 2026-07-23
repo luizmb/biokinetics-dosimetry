@@ -259,7 +259,7 @@ struct CalculatorFeatureMapStateTests {
 
     @Test func emptyResultsProducesEmptySeriesAndReportRows() {
         let state = CalculatorFeature.initialState(with: ())
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.series.isEmpty)
         #expect(vs.reportRows.isEmpty)
     }
@@ -267,7 +267,7 @@ struct CalculatorFeatureMapStateTests {
     @Test func documentNameAndHalfLifeForwardedCorrectly() {
         var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.documentName == ModelDocument.validation.name)
         #expect(vs.halfLife == ModelDocument.validation.halfLife)
     }
@@ -281,7 +281,7 @@ struct CalculatorFeatureMapStateTests {
             count: 10
         )
         state.visibleSeriesIds = ["A", "B", "C"]
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.series.count == 3)
     }
 
@@ -289,7 +289,7 @@ struct CalculatorFeatureMapStateTests {
         var state = CalculatorFeature.initialState(with: ())
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0], [0.9, 0.45, 0.05], [0.8, 0.4, 0.1]]
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.reportRows.count == 3)
         #expect(vs.reportRows[0].id == 0)
         #expect(vs.reportRows[2].id == 2)
@@ -300,7 +300,7 @@ struct CalculatorFeatureMapStateTests {
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0]]
         state.visibleSeriesIds = ["A"]  // Only A visible
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.series.first { $0.id == "A" }?.isVisible == true)
         #expect(vs.series.first { $0.id == "B" }?.isVisible == false)
     }
@@ -310,7 +310,7 @@ struct CalculatorFeatureMapStateTests {
         state.document = .validation
         state.results = [[1.0, 0.5, 0.0]]
         state.visibleSeriesIds = []  // Empty → show all
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.series.allSatisfy { $0.isVisible })
     }
 
@@ -324,7 +324,7 @@ struct CalculatorFeatureMapStateTests {
         state.logY = false
         state.activeView = .report
         state.isParamPanelVisible = false
-        let vs = CalculatorFeature.mapState(state)
+        let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.solver == .rungeKutta45(tolerance: 1e-8))
         #expect(vs.finalDay == 365)
         #expect(vs.stepSizeText  == "0.5")
@@ -342,7 +342,7 @@ struct CalculatorFeatureMapStateTests {
 struct CalculatorFeatureMapActionTests {
 
     @Test func allViewActionsMapWithoutCrash() {
-        let viewActions: [CalculatorFeature.ViewModel.ViewAction] = [
+        let viewActions: [CalculatorFeature.ViewAction] = [
             .calculate,
             .selectVariant(nil),
             .selectVariant("Type F"),
@@ -359,7 +359,7 @@ struct CalculatorFeatureMapActionTests {
         ]
         // Mapping should compile and run cleanly — correctness covered by behavior tests.
         for va in viewActions {
-            _ = CalculatorFeature.mapAction(va)
+            _ = CalculatorFeature.mapAction(.alwaysFails)(va)
         }
     }
 }
