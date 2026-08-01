@@ -43,7 +43,7 @@ let package = Package(
         .target(
             name: "AppDomain",
             dependencies: [
-                .product(name: "Domain", package: "BiokineticsDosimetry"),
+                .product(name: "Domain", package: "biokinetics-dosimetry"),
                 .product(name: "FP",     package: "FP"),
                 "Style",
             ]
@@ -64,8 +64,8 @@ let package = Package(
             name: "HomeFeature",
             dependencies: [
                 "AppDomain",
-                .product(name: "Domain",                package: "BiokineticsDosimetry"),
-                .product(name: "Parser",                package: "BiokineticsDosimetry"),
+                .product(name: "Domain",                package: "biokinetics-dosimetry"),
+                .product(name: "Parser",                package: "biokinetics-dosimetry"),
                 .product(name: "FP",                    package: "FP"),
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "SwiftRex",              package: "SwiftRex"),
@@ -78,7 +78,7 @@ let package = Package(
             name: "EditorFeature",
             dependencies: [
                 "AppDomain",
-                .product(name: "Domain",                  package: "BiokineticsDosimetry"),
+                .product(name: "Domain",                  package: "biokinetics-dosimetry"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.ReactiveConcurrency",    package: "SwiftRex"),
@@ -90,8 +90,8 @@ let package = Package(
             name: "CalculatorFeature",
             dependencies: [
                 "AppDomain",
-                .product(name: "Domain",                  package: "BiokineticsDosimetry"),
-                .product(name: "Solver",                  package: "BiokineticsDosimetry"),
+                .product(name: "Domain",                  package: "biokinetics-dosimetry"),
+                .product(name: "Solver",                  package: "biokinetics-dosimetry"),
                 .product(name: "FP",                      package: "FP"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
@@ -110,8 +110,8 @@ let package = Package(
                 "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
-                .product(name: "Domain",                package: "BiokineticsDosimetry"),
-                .product(name: "Solver",                package: "BiokineticsDosimetry"),
+                .product(name: "Domain",                package: "biokinetics-dosimetry"),
+                .product(name: "Solver",                package: "biokinetics-dosimetry"),
                 .product(name: "SwiftRex",              package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
                 .product(name: "FP",                    package: "FP"),
@@ -137,8 +137,8 @@ let package = Package(
             name: "CalculatorFeatureTests",
             dependencies: [
                 "CalculatorFeature",
-                .product(name: "Domain",               package: "BiokineticsDosimetry"),
-                .product(name: "Solver",               package: "BiokineticsDosimetry"),
+                .product(name: "Domain",               package: "biokinetics-dosimetry"),
+                .product(name: "Solver",               package: "biokinetics-dosimetry"),
                 .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
                 .product(name: "SwiftRex.Testing",     package: "SwiftRex"),
