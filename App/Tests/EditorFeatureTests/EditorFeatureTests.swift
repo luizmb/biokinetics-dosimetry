@@ -430,17 +430,23 @@ struct EditorFeatureNuclideTests {
 
     // MARK: - addNuclide
 
-    @Test func addNuclideAppendsNewNuclide() {
+    @Test func addNuclideAppendsNewNuclide() async {
+        // .addNuclide only produces an effect (it draws the new nuclide's id from the
+        // environment) — the actual mutation lands via the .addNuclideWithId it emits, so
+        // this needs runEffects()/receive() like CalculatorFeatureTests' effect-driven
+        // cases, not a bare dispatch(_:source:) (which never runs pending effects).
         let initial = loaded()
         let s = store(initial: initial)
-        // Dispatch without the state-equality check because the new nuclide has a random ID.
-        let src = ActionSource(file: #filePath, function: #function, line: #line)
-        s.dispatch(.addNuclide, source: src)
-        let nuclides = s.state.document.model.nuclides
-        #expect(nuclides.count == 2)
-        // Name comes from field lingo; .validation fixture uses .generic → "New Substance"
-        #expect(nuclides[1].name == "New \(ModelField.generic.lingo.substanceName)")
-        #expect(nuclides[1].halfLife == 0)
+        s.dispatch(.addNuclide) { _ in }
+        await s.runEffects()
+        s.receive(EditorFeature.Action.prism.addNuclideWithId) { id, state in
+            // Name comes from field lingo; .validation fixture uses .generic → "New Substance"
+            state.document.model = state.document.model.with(
+                nuclides: state.document.model.nuclides + [
+                    Nuclide(id: id, name: "New \(state.document.field.lingo.substanceName)", halfLife: 0)
+                ]
+            )
+        }
     }
 
     // MARK: - updateNuclideName
