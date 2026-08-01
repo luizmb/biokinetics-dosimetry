@@ -38,7 +38,10 @@ jobs:
         run: cd App && swift test 2>&1
 
       # App/BiokineticsDosimetry.xcodeproj is gitignored — regenerate it from
-      # App/project.yml, same as ci.yml.
+      # App/project.yml, same as ci.yml. Not preinstalled on macos-26 runners.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
       - name: xcodegen generate
         run: cd App && xcodegen generate 2>&1
 

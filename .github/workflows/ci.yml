@@ -28,8 +28,12 @@ jobs:
       - name: swift test (App)
         run: cd App && swift test 2>&1
 
-      # App/BiokineticsDosimetry.xcodeproj is gitignored — XcodeGen (preinstalled on
-      # GitHub's macOS runners) generates it fresh from App/project.yml every run.
+      # App/BiokineticsDosimetry.xcodeproj is gitignored — XcodeGen generates it fresh
+      # from App/project.yml every run. Not preinstalled on macos-26 runners (confirmed
+      # the hard way: "xcodegen: command not found"), so install it first.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
       - name: xcodegen generate
         run: cd App && xcodegen generate 2>&1
 
