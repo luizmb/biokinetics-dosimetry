@@ -30,7 +30,6 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: Sources/App/Info.plist
         ENABLE_TESTING_SEARCH_PATHS: YES
-        CODE_SIGN_STYLE: Automatic
 
 schemes:
   App:
