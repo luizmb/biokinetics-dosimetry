@@ -155,9 +155,17 @@ jobs:
             -authenticationKeyID "$API_KEY_ID" \
             -authenticationKeyIssuerID "$API_ISSUER_ID"
 
+          # -allowProvisioningUpdates here too, not just on archive — confirmed the hard
+          # way: export failed with "No 'iOS App Store' profiles for team '***' matching
+          # 'BiokineticsDosimetry AppStore Distribution' are installed" even though the
+          # archive step (moments earlier, same job) had just resolved that same profile
+          # successfully. Letting export verify/fetch it via the API too, rather than
+          # assuming archive's resolution carries over, is Apple's own recommended
+          # practice for headless CI signing.
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/BiokineticsDosimetry.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist" \
+            -allowProvisioningUpdates \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8" \
             -authenticationKeyID "$API_KEY_ID" \
             -authenticationKeyIssuerID "$API_ISSUER_ID"
