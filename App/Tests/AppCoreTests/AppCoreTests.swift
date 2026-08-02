@@ -58,12 +58,21 @@ struct HomeFeatureBehaviorTests {
 
     // MARK: - Document management
 
+    // .newDocument only produces .newDocumentReady (it draws the new document's id from
+    // the environment) — that's what actually mutates `documents`, and it in turn
+    // produces .edit. Both hops need their own runEffects()/receive(); jumping straight
+    // to .edit skips the mutation entirely.
+
     @Test func newDocumentPrependsEmptyDocumentToLoadedList() async {
         var initial = HomeFeature.initialState(with: ())
         initial.documents = .loaded([.validation])
         let s = store(initial: initial)
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.newDocument(field: .generic, name: "Untitled"), source: src)
+        s.dispatch(.newDocument(field: .generic, name: "Untitled")) { _ in }
+        await s.runEffects()
+        s.receive(HomeFeature.Action.prism.newDocumentReady) { newDoc, state in
+            state.isCreationSheetOpen = false
+            state.documents = .loaded([newDoc, .validation])
+        }
         await s.runEffects()
         s.receive(HomeFeature.Action.prism.edit) { _, _ in }
         #expect(s.state.documents.loaded?.count == 2)
@@ -73,8 +82,12 @@ struct HomeFeatureBehaviorTests {
 
     @Test func newDocumentFromIdleInitializesWithEmpty() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.newDocument(field: .generic, name: "Untitled"), source: src)
+        s.dispatch(.newDocument(field: .generic, name: "Untitled")) { _ in }
+        await s.runEffects()
+        s.receive(HomeFeature.Action.prism.newDocumentReady) { newDoc, state in
+            state.isCreationSheetOpen = false
+            state.documents = .loaded([newDoc])
+        }
         await s.runEffects()
         s.receive(HomeFeature.Action.prism.edit) { _, _ in }
         #expect(s.state.documents.loaded?.count == 1)

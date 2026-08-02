@@ -3,7 +3,7 @@ name: BiokineticsDosimetry
 options:
   deploymentTarget:
     iOS: "17.0"
-  bundleIdPrefix: io.lu.caixinhas
+  bundleIdPrefix: lu.ios
 
 packages:
   BiokineticsDosimetryApp:
@@ -18,15 +18,19 @@ targets:
     dependencies:
       - package: BiokineticsDosimetryApp
         product: App.Core
+    configFiles:
+      Debug: Config/Shared.xcconfig
+      Release: Config/Shared.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.lu.caixinhas.BiokineticsDosimetry
+        PRODUCT_BUNDLE_IDENTIFIER: lu.ios.biokinetics
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: Sources/App/Info.plist
         ENABLE_TESTING_SEARCH_PATHS: YES
+        CODE_SIGN_STYLE: Automatic
 
 schemes:
   App:

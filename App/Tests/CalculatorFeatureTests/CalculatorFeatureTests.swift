@@ -40,7 +40,9 @@ struct CalculatorFeatureBehaviorTests {
         #expect(s.error == nil)
         #expect(s.logX == true)
         #expect(s.logY == true)
-        #expect(s.activeView == .chart)
+        // Parameters is pre-selected on open (13dcbd7) so the calculator opens showing
+        // configuration, not an empty chart — .chart here predates that decision.
+        #expect(s.activeView == .parameters)
         #expect(s.isParamPanelVisible == true)
         #expect(s.visibleSeriesIds.isEmpty)
     }
@@ -154,43 +156,63 @@ struct CalculatorFeatureBehaviorTests {
         store().dispatch(.setFinalDay(-10)) { $0.finalDay = 1 }
     }
 
+    // .setStepSize/.setTolerance only produce an effect (clamping + formatting happen via
+    // the environment) — the actual mutation lands via the .stepSizeResolved/
+    // .toleranceResolved they emit, so these need runEffects()/receive(), not a bare
+    // dispatch(_:source:) read immediately after (which never runs pending effects).
+
     @Test func setStepSizeWithValidValueUpdatesDirectly() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.setStepSize(0.5), source: src)
+        s.dispatch(.setStepSize(0.5)) { _ in }
         await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { pair, state in
+            state.stepSize = pair.0
+            state.stepSizeText = pair.1
+        }
         #expect(s.state.stepSize == 0.5)
     }
 
     @Test func setStepSizeBelowMinimumClampsTo0_001() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.setStepSize(0.0), source: src)
+        s.dispatch(.setStepSize(0.0)) { _ in }
         await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { pair, state in
+            state.stepSize = pair.0
+            state.stepSizeText = pair.1
+        }
         #expect(s.state.stepSize == 0.001)
     }
 
     @Test func setToleranceWithValidValue() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.setTolerance(1e-8), source: src)
+        s.dispatch(.setTolerance(1e-8)) { _ in }
         await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
+            state.tolerance = pair.0
+            state.toleranceText = pair.1
+        }
         #expect(s.state.tolerance == 1e-8)
     }
 
     @Test func setToleranceBelowMinimumClampsTo1e_14() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.setTolerance(1e-20), source: src)
+        s.dispatch(.setTolerance(1e-20)) { _ in }
         await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
+            state.tolerance = pair.0
+            state.toleranceText = pair.1
+        }
         #expect(s.state.tolerance == 1e-14)
     }
 
     @Test func setToleranceAboveMaximumClampsTo1e_2() async {
         let s = store()
-        let src = ActionSource(file: #file, function: #function, line: #line)
-        s.dispatch(.setTolerance(1.0), source: src)
+        s.dispatch(.setTolerance(1.0)) { _ in }
         await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
+            state.tolerance = pair.0
+            state.toleranceText = pair.1
+        }
         #expect(s.state.tolerance == 1e-2)
     }
 
