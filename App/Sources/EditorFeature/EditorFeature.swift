@@ -168,8 +168,6 @@ public enum EditorFeature {
         // Sheet presentation (iPhone)
         case setInspectorSheet(Bool)
         case setModelListSheet(Bool)
-        // Save
-        case save
     }
 
     // MARK: - Environment
@@ -319,7 +317,6 @@ public enum EditorFeature {
             case setVariantRenameDraft(String)
             case commitVariantRename
             case cancelVariantRename
-            case save
         }
 
     // MARK: - Mappings
@@ -471,7 +468,6 @@ public enum EditorFeature {
         case .setVariantRenameDraft(let s):                        .setVariantRenameDraft(s)
         case .commitVariantRename:                                 .commitVariantRename
         case .cancelVariantRename:                                 .cancelVariantRename
-        case .save:                                                .save
         }
     } }
 
@@ -806,9 +802,6 @@ public enum EditorFeature {
 
             case .cancelVariantRename:
                 .reduce { $0.renamingVariant = nil }
-
-            case .save:
-                .doNothing   // Handled by AppCoordinator via environment (future)
             }
         }
     }

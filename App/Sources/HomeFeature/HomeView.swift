@@ -13,30 +13,20 @@ public struct HomeView: View {
             cards: viewStore.state.cards.loadedOrPrevious ?? [],
             isLoading: viewStore.state.cards.is(.loading),
             importErrorMessage: viewStore.state.importErrorMessage,
-            isFilePickerPresented: Binding(
-                get: { viewStore.state.filePicker.is(.loading) },
-                set: { presenting in
-                    if !presenting && viewStore.state.filePicker.is(.loading) {
-                        viewStore.dispatch(.filePickerDismissed)
-                    }
-                }
+            isFilePickerPresented: viewStore.binding(
+                .state(\.isFilePickerOpen),
+                dispatch: .action(review: { $0 ? .openFilePicker : .filePickerDismissed })
             ),
-            isCreationSheetPresented: Binding(
-                get: { viewStore.state.isCreationSheetOpen },
-                set: { if !$0 { viewStore.dispatch(.dismissCreationSheet) } }
+            isCreationSheetPresented: viewStore.binding(
+                .state(\.isCreationSheetOpen),
+                dispatch: .action(review: { $0 ? .openCreationSheet : .dismissCreationSheet })
             ),
-            draftField: Binding(
-                get: { viewStore.state.draftField },
-                set: { viewStore.dispatch(.setDraftField($0)) }
-            ),
-            draftName: Binding(
-                get: { viewStore.state.draftName },
-                set: { viewStore.dispatch(.setDraftName($0)) }
-            ),
+            draftField: viewStore.binding(.state(\.draftField), dispatch: .action(\.setDraftField)),
+            draftName:  viewStore.binding(.state(\.draftName),  dispatch: .action(\.setDraftName)),
             onOpenFilePicker:   { viewStore.dispatch(.openFilePicker) },
-            isCreditsSheetPresented: Binding(
-                get: { viewStore.state.isCreditsSheetOpen },
-                set: { if !$0 { viewStore.dispatch(.closeCredits) } }
+            isCreditsSheetPresented: viewStore.binding(
+                .state(\.isCreditsSheetOpen),
+                dispatch: .action(review: { $0 ? .openCredits : .closeCredits })
             ),
             onOpenCredits: { viewStore.dispatch(.openCredits) },
             onOpenCreationSheet: { viewStore.dispatch(.openCreationSheet) },

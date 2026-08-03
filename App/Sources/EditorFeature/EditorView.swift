@@ -122,15 +122,10 @@ public struct EditorView: View {
             canvasPanOriginX:        viewStore.state.canvasPanOriginX,
             canvasPanOriginY:        viewStore.state.canvasPanOriginY,
             canvasPinchOriginScale:  viewStore.state.canvasPinchOriginScale,
-            isInspectorSheetOpen:    viewStore.state.isInspectorSheetOpen,
-            isModelListSheetOpen:    viewStore.state.isModelListSheetOpen,
             variants:                viewStore.state.variants,
             editingVariant:          viewStore.state.editingVariant,
             renamingVariant:         viewStore.state.renamingVariant,
-            variantRenameDraft:      Binding(
-                get: { viewStore.state.variantRenameDraft },
-                set: { viewStore.dispatch(.setVariantRenameDraft($0)) }
-            ),
+            variantRenameDraft:      viewStore.binding(.state(\.variantRenameDraft), dispatch: .action(\.setVariantRenameDraft)),
             onSelectCompartment: { viewStore.dispatch(.selectCompartment($0)) },
             onSelectLink:        { viewStore.dispatch(.selectLink($0)) },
             onToggleLeftPanel:   { viewStore.dispatch(.toggleLeftPanel) },
@@ -150,8 +145,8 @@ public struct EditorView: View {
             onBeginCanvasPinch:      { viewStore.dispatch(.beginCanvasPinch(originScale: $0)) },
             onEndCanvasPinch:        { viewStore.dispatch(.endCanvasPinch) },
             onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
-            onSetInspectorSheet:     { viewStore.dispatch(.setInspectorSheet($0)) },
-            onSetModelListSheet:     { viewStore.dispatch(.setModelListSheet($0)) },
+            inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen), dispatch: .action(\.setInspectorSheet)),
+            modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen), dispatch: .action(\.setModelListSheet)),
             onAddNuclide:            { viewStore.dispatch(.addNuclide) },
             onDeleteNuclide:         { viewStore.dispatch(.deleteNuclide(id: $0)) },
             onAddVariant:            { viewStore.dispatch(.addVariant(name: $0)) },
@@ -202,8 +197,6 @@ struct EditorContent: View {
     let canvasPanOriginX: Double?
     let canvasPanOriginY: Double?
     let canvasPinchOriginScale: Double?
-    let isInspectorSheetOpen: Bool
-    let isModelListSheetOpen: Bool
     let variants: [String]
     let editingVariant: String?
     let renamingVariant: String?
@@ -229,8 +222,8 @@ struct EditorContent: View {
     var onBeginCanvasPinch: (Double) -> Void
     var onEndCanvasPinch: () -> Void
     var onSetCanvasTransform: (Double, Double, Double) -> Void
-    var onSetInspectorSheet: (Bool) -> Void
-    var onSetModelListSheet: (Bool) -> Void
+    var inspectorSheet: Binding<Bool>
+    var modelListSheet: Binding<Bool>
     var onAddNuclide: () -> Void
     var onDeleteNuclide: (String) -> Void
     var onAddVariant: (String) -> Void
@@ -358,14 +351,8 @@ struct EditorContent: View {
 
             VStack { Spacer(); compactBottomToolbar }
         }
-        .sheet(isPresented: Binding(
-            get: { isInspectorSheetOpen },
-            set: { onSetInspectorSheet($0) }
-        )) { inspectorSheet }
-        .sheet(isPresented: Binding(
-            get: { isModelListSheetOpen },
-            set: { onSetModelListSheet($0) }
-        )) { modelListSheet }
+        .sheet(isPresented: inspectorSheet) { inspectorSheetContent }
+        .sheet(isPresented: modelListSheet) { modelListSheetContent }
     }
 
     // MARK: - Canvas (shared)
@@ -389,12 +376,12 @@ struct EditorContent: View {
                 if linkingBannerText != nil { if let id { onLinkStep(id) } }
                 else {
                     onSelectCompartment(id)
-                    if isCompact, id != nil { onSetInspectorSheet(true) }
+                    if isCompact, id != nil { inspectorSheet.wrappedValue = true }
                 }
             },
             onSelectLink: { idx in
                 onSelectLink(idx)
-                if isCompact, idx != nil { onSetInspectorSheet(true) }
+                if isCompact, idx != nil { inspectorSheet.wrappedValue = true }
             },
             onMoveCompartment: onMoveCompartment,
             onBeginCompartmentDrag: onBeginCompartmentDrag,
@@ -432,7 +419,7 @@ struct EditorContent: View {
                 .buttonStyle(PlainButtonStyle())
             }
             GPill(intensity: 0.8) {
-                Button { onSetModelListSheet(true) } label: {
+                Button { modelListSheet.wrappedValue = true } label: {
                     Label("Model", systemImage: "list.bullet")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.primary)
@@ -446,7 +433,7 @@ struct EditorContent: View {
 
     // MARK: - Inspector sheet (iPhone)
 
-    private var inspectorSheet: some View {
+    private var inspectorSheetContent: some View {
         let title: String = {
             if let id = selectedCompartmentId {
                 return compartments.first(where: { $0.id == id })?.name ?? "Inspector"
@@ -476,7 +463,7 @@ struct EditorContent: View {
                     onSelectLink: onSelectLink,
                     onBeginLinking: onBeginLinking,
                     onDeleteSelected: {
-                        onSetInspectorSheet(false)
+                        inspectorSheet.wrappedValue = false
                         if let id = selectedCompartmentId { onDeleteCompartment(id) }
                         else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                     },
@@ -500,7 +487,7 @@ struct EditorContent: View {
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSetInspectorSheet(false) }
+                    Button("Done") { inspectorSheet.wrappedValue = false }
                 }
             }
         }
@@ -510,17 +497,17 @@ struct EditorContent: View {
 
     // MARK: - Model list sheet (iPhone)
 
-    private var modelListSheet: some View {
+    private var modelListSheetContent: some View {
         NavigationStack {
             EditorModelListPanel(
                 lingo: lingo, nuclides: nuclides, compartments: compartments, links: links,
                 selectedCompartmentId: selectedCompartmentId,
                 selectedLinkIndex: selectedLinkIndex,
                 selectionFooterLabel: selectionFooterLabel,
-                onSelectCompartment: { id in onSetModelListSheet(false); onSelectCompartment(id) },
-                onSelectLink: { idx in onSetModelListSheet(false); onSelectLink(idx) },
+                onSelectCompartment: { id in modelListSheet.wrappedValue = false; onSelectCompartment(id) },
+                onSelectLink: { idx in modelListSheet.wrappedValue = false; onSelectLink(idx) },
                 onDeleteSelected: {
-                    onSetModelListSheet(false)
+                    modelListSheet.wrappedValue = false
                     if let id = selectedCompartmentId { onDeleteCompartment(id) }
                     else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                 }
@@ -529,7 +516,7 @@ struct EditorContent: View {
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSetModelListSheet(false) }
+                    Button("Done") { modelListSheet.wrappedValue = false }
                 }
             }
         }
@@ -611,7 +598,7 @@ struct EditorContent: View {
                 // in Document mode (shows nuclides + half-life).
                 Button {
                     onSelectCompartment(nil)   // also clears selectedLinkIndex via reducer
-                    onSetInspectorSheet(true)
+                    inspectorSheet.wrappedValue = true
                 } label: {
                     Image(systemName: "doc.text")
                 }

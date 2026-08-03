@@ -33,8 +33,6 @@ public enum CalculatorFeature {
         public var visibleSeriesIds: Set<String> = []
         public var activeView: CalcView = .parameters
         public var isParamPanelVisible: Bool = true
-        /// iPhone: whether the params bottom sheet is open.
-        public var isParamSheetOpen: Bool = false
 
         public init() {}
 
@@ -75,7 +73,6 @@ public enum CalculatorFeature {
         case toggleSeries(String)
         case setActiveView(CalcView)
         case toggleParamPanel
-        case setParamSheet(Bool)
     }
 
     // MARK: - Environment
@@ -153,7 +150,6 @@ public enum CalculatorFeature {
             public var logYLabel: String = "Log Y"
             /// Full duration-warning message pre-formatted for the banner, or nil when .none.
             public var durationWarningMessage: String? = nil
-            public var isParamSheetOpen: Bool = false
             /// All structural and completeness issues detected in the current model.
             public var validationIssues: [CompartmentalModel.ValidationIssue] = []
             /// Non-nil when results are available — carries data for lazy CSV generation.
@@ -176,7 +172,6 @@ public enum CalculatorFeature {
             case toggleSeries(String)
             case setActiveView(CalcView)
             case toggleParamPanel
-            case setParamSheet(Bool)
         }
 
     // MARK: - Mappings
@@ -269,7 +264,6 @@ public enum CalculatorFeature {
             logXLabel: logXLabel,
             logYLabel: logYLabel,
             durationWarningMessage: durationWarningMessage,
-            isParamSheetOpen: state.isParamSheetOpen,
             validationIssues: doc.model.validationIssues.filter { issue in
                 if case .missingHalfLife = issue { return doc.field == .nuclear }
                 return true
@@ -314,7 +308,6 @@ public enum CalculatorFeature {
         case .toggleSeries(let id):     .toggleSeries(id)
         case .setActiveView(let v):     .setActiveView(v)
         case .toggleParamPanel:         .toggleParamPanel
-        case .setParamSheet(let v):     .setParamSheet(v)
         }
     } }
 
@@ -396,8 +389,6 @@ public enum CalculatorFeature {
                 .reduce { $0.activeView = v }
             case .toggleParamPanel:
                 .reduce { $0.isParamPanelVisible.toggle() }
-            case .setParamSheet(let v):
-                .reduce { $0.isParamSheetOpen = v }
             }
         }
     }
