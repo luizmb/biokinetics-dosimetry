@@ -10,6 +10,9 @@ jobs:
   test:
     name: Build & Test (macOS)
     runs-on: macos-26
+    # Adding the iOS test step makes this job materially longer, so cap it: a hung macOS
+    # runner otherwise bills to the 6-hour default at 10x the Linux rate.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -58,3 +61,27 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
             CODE_SIGNING_ALLOWED=NO \
             2>&1
+
+      # The only step that compiles the iOS-only code — every `#if os(iOS)` block, which
+      # is all three snapshot suites. `swift test` above runs on macOS and compiles them
+      # straight out, so without this the suites can (and did) stop compiling for months
+      # without CI noticing. Snapshot references are pixel comparisons, so they are also
+      # the step most likely to fail on a runner whose simulator differs from a dev
+      # machine's; the artifact upload is what makes such a failure diagnosable.
+      - name: xcodebuild test App (iOS-only suites + snapshots)
+        run: |
+          xcodebuild test \
+            -project App/BiokineticsDosimetry.xcodeproj \
+            -scheme App \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1
+
+      - name: Upload snapshot failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-failures
+          path: TestResults.xcresult
+          retention-days: 7
