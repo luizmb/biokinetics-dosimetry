@@ -33,4 +33,8 @@ struct TestFeature<F: Feature> {
 /// runs every other iOS-only test, which is the failure that actually went unnoticed for months
 /// (the suites stopped compiling and nothing reported it). It does not verify rendering. Recording
 /// on the same architecture CI uses is what would close that gap.
+///
+/// Note that these tests run *inside the simulator*, which does not inherit the host environment:
+/// `xcodebuild` forwards only variables named `TEST_RUNNER_<NAME>`, stripping the prefix. So the
+/// workflow sets `TEST_RUNNER_CI`, not `CI` — GitHub's own `CI=true` never reaches this process.
 let snapshotsAreComparable = ProcessInfo.processInfo.environment["CI"] == nil

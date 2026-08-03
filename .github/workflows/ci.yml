@@ -74,6 +74,13 @@ jobs:
       # behaves, not that it renders. The artifact upload below is kept so that any test
       # failure here is diagnosable rather than a wall of log.
       - name: xcodebuild test App (iOS-only suites)
+        # TEST_RUNNER_ prefix, not a bare CI=true: these tests run inside the simulator, and
+        # xcodebuild does not hand the host environment to that process. It forwards exactly
+        # the variables named TEST_RUNNER_<NAME>, stripping the prefix. GitHub's own CI=true
+        # is therefore invisible to the test runner — which is how the first attempt at this
+        # gate passed locally (the MCP tool adds the prefix) and ran the suites anyway here.
+        env:
+          TEST_RUNNER_CI: "true"
         run: |
           xcodebuild test \
             -project App/BiokineticsDosimetry.xcodeproj \
