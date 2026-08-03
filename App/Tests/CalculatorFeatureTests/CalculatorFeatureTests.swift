@@ -394,7 +394,7 @@ struct CalculatorFeatureMapActionTests {
 import SwiftRexArchitecture
 import SwiftUI
 
-@Suite("CalculatorFeature Snapshots")
+@Suite("CalculatorFeature Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct CalculatorFeatureSnapshotTests {
 

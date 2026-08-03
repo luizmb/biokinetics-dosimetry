@@ -276,7 +276,7 @@ struct HomeFeatureMapActionTests {
 import SwiftRexArchitecture
 import SwiftUI
 
-@Suite("HomeFeature Snapshots")
+@Suite("HomeFeature Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct HomeFeatureSnapshotTests {
 

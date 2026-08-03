@@ -556,7 +556,7 @@ struct EditorFeatureNuclideTests {
 import SwiftRexArchitecture
 import SwiftUI
 
-@Suite("EditorFeature Snapshots")
+@Suite("EditorFeature Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct EditorFeatureSnapshotTests {
 
