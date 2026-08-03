@@ -32,7 +32,7 @@ private let autosaveQuietPeriod: Duration = .milliseconds(400)
 /// read, which is the right way round: the document is sampled once the user has stopped, so a burst
 /// costs one read and one write rather than one per keystroke.
 func autosaveEditedDocumentBehavior() -> Behavior<AppAction, AppState, World> {
-    scheduleAutosaveTick() <> writeOnAutosaveTick()
+    scheduleAutosaveTick() <> writeOnAutosaveTick() <> flushOnLeavingTheEditor()
 }
 
 /// Any editor action restarts the quiet period. Deliberately unconditional: classifying which of the
@@ -63,6 +63,41 @@ private func writeOnAutosaveTick() -> Behavior<AppAction, AppState, World> {
         else { return .doNothing }
 
         return .produce { _ in .just(.home(.saveDocument(edited))) }
+    }
+}
+
+/// Leaving the editor writes immediately, without waiting the quiet period out.
+///
+/// The tick reads the document off the stack when it *fires*, so on its own it would lose whatever was
+/// typed in the last window before a pop: by then the entry — and the document with it — is gone.
+/// Navigation is the last moment the departing entry is still readable. The two halves therefore cover
+/// what the other cannot: the tick handles "kept editing, then the app died", this handles "edited,
+/// then left straight away". Neither double-writes, because both ask Home whether anything changed.
+///
+/// Keying on the navigation action rather than an editor `.back` is what makes it total: the editor has
+/// no Back button, and the system back button and the edge-swipe arrive only as `setPath`.
+private func flushOnLeavingTheEditor() -> Behavior<AppAction, AppState, World> {
+    .handle { action, context in
+        guard let navigation = AppAction.prism.navigation.preview(action),
+              let before = context.stateBefore
+        else { return .doNothing }
+
+        // `resolving` is the reducer's own rule, so "what is about to leave" cannot drift from what
+        // actually leaves. On a push it drops everything and yields nothing, as it should.
+        let surviving = before.resolving(navigation).count
+        let unsaved = before.path
+            .dropFirst(surviving)
+            .compactMap(StackEntry.prism.editor.preview)
+            .map(\.document)
+            .filter { storedDocument(id: $0.id, in: before) != $0 }
+
+        guard !unsaved.isEmpty else { return .doNothing }
+
+        return .produce { _ in
+            unsaved
+                .map { Effect.just(.home(.saveDocument($0))) }
+                .reduce(Effect.empty, <>)
+        }
     }
 }
 

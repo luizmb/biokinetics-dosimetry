@@ -1,5 +1,6 @@
 @testable import AppCore
 import AppDomain
+import CalculatorFeature
 import CoreFP
 import CoreFPOperators
 import EditorFeature
@@ -40,7 +41,9 @@ private struct ImmediateClock: Clock, Sendable {
 private func store(initial: AppState) -> TestStore<AppAction, AppState, World> {
     TestStore(
         initial: initial,
-        behavior: AppScopes.editor.behavior(of: EditorFeature.self) <> autosaveEditedDocumentBehavior(),
+        behavior: navigationBehavior()
+            <> AppScopes.editor.behavior(of: EditorFeature.self)
+            <> autosaveEditedDocumentBehavior(),
         environment: .matrixFakeAll,
         exhaustive: false,
         clock: { _ in ImmediateClock() }
@@ -125,6 +128,58 @@ struct AppAutosaveTests {
         let s = store(initial: AppState())
 
         s.dispatch(AppAction.autosaveEditor) { _ in }
+        await s.runEffects()
+
+        #expect(s.receivedActions.isEmpty)
+    }
+
+    /// Editing and leaving straight away — inside the quiet period — must still write.
+    ///
+    /// This is the hole the debounced tick leaves on its own: it reads the document off the stack when
+    /// it fires, and by then the pop has taken the entry with it. Every exit is covered, because the
+    /// editor has no Back button and the system chrome only ever sends `setPath`.
+    @Test(arguments: [
+        NavigationAction.pop,
+        NavigationAction.popToRoot,
+        NavigationAction.setPath([]),
+    ])
+    func leavingTheEditorWritesImmediately(exit: NavigationAction) async {
+        let s = store(initial: editing(.validation))
+
+        s.dispatch(AppAction.editor(.renameDocument("Renamed"))) { state in
+            AppScopes.editor.state.modify(&state) { $0.document.name = "Renamed" }
+        }
+        // Deliberately no runEffects() for the tick — the user left before the quiet period elapsed.
+        s.dispatch(AppAction.navigation(exit)) { state in
+            state.path = []
+        }
+        await s.runEffects()
+
+        let written = s.receive(savedDocument) { _, _ in }
+        #expect(written != nil, "the edit left with the screen — this is how a force-quit loses work")
+        #expect(savedDocument.preview(written ?? .appLaunch)?.name == "Renamed")
+    }
+
+    /// ...but leaving with nothing unsaved does not write. The tick and the flush both ask Home whether
+    /// anything changed, so an edit that already reached disk is not written twice on the way out.
+    @Test func leavingWithNothingUnsavedWritesNothing() async {
+        let s = store(initial: editing(.validation))
+
+        s.dispatch(AppAction.navigation(.pop)) { state in
+            state.path = []
+        }
+        await s.runEffects()
+
+        #expect(s.receivedActions.isEmpty)
+    }
+
+    /// Pushing is not leaving — nothing departs, so nothing is written.
+    @Test func pushingDoesNotWrite() async {
+        let s = store(initial: editing(.validation))
+
+        s.dispatch(AppAction.navigation(.push(.calculator(.iodo131)))) { state in
+            state.path.append(.calculator(CalculatorFeature.State(document: .iodo131)))
+        }
         await s.runEffects()
 
         #expect(s.receivedActions.isEmpty)
