@@ -411,7 +411,7 @@ struct CalculatorFeatureSnapshotTests {
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) async where F.Content: View {
+    ) async {
         await feature.ignoringActions {
                 assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
                                named: "\(baseName)-iphone", file: file, testName: testName, line: line)
@@ -423,7 +423,7 @@ struct CalculatorFeatureSnapshotTests {
     // MARK: - Baseline states
 
     @Test func snapshotIdleState() async {
-        let feature = TestFeature<CalculatorFeature>(environment: env)
+        let feature = TestFeature<CalculatorFeature>(initial: CalculatorFeature.initialState(with: ()), environment: env)
         await snapBoth(feature, named: "idle")
     }
 
