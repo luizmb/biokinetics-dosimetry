@@ -48,6 +48,17 @@ public enum EditorFeature {
         public init() {
         }
 
+        /// A fresh editor for `document`.
+        ///
+        /// Seeding is construction: navigation appends a screen that is already complete, so there is
+        /// never a half-initialised editor for someone else to finish assembling. Every field `.load`
+        /// resets — selection, linking, canvas transform — is already an `init()` default, so this is
+        /// exactly a freshly-loaded editor.
+        public init(document: ModelDocument) {
+            self.init()
+            self.document = document
+        }
+
         // MARK: Variant-aware model access
 
         /// The model currently being edited — base model or a named variant.

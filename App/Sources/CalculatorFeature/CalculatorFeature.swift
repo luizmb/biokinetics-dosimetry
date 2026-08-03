@@ -37,6 +37,17 @@ public enum CalculatorFeature {
         public var isParamSheetOpen: Bool = false
 
         public init() {}
+
+        /// A fresh calculator for `document`.
+        ///
+        /// Seeding is construction, so a re-push can never show the previous document's results: the
+        /// `results`/`error`/`isCalculating` defaults are already empty. Mirrors `.load`, which the
+        /// app no longer needs to dispatch.
+        public init(document: ModelDocument) {
+            self.init()
+            self.document = document
+            visibleSeriesIds = Set(document.model.compartments.filter(\.follow).map(\.id))
+        }
     }
 
     public enum CalcView: String, Sendable, Equatable {
