@@ -10,6 +10,9 @@ jobs:
   test:
     name: Build & Test (macOS)
     runs-on: macos-26
+    # Adding the iOS test step makes this job materially longer, so cap it: a hung macOS
+    # runner otherwise bills to the 6-hour default at 10x the Linux rate.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -58,3 +61,39 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
             CODE_SIGNING_ALLOWED=NO \
             2>&1
+
+      # The only step that compiles the iOS-only code — every `#if os(iOS)` block. `swift
+      # test` above runs on macOS and compiles them straight out, so without this they can
+      # (and did) stop compiling for months without CI noticing.
+      #
+      # The snapshot suites themselves are skipped here: they are pixel comparisons, and a
+      # simulator does not rasterise identically across CPU architectures. The references
+      # in this repo were recorded on an x86_64 host while these runners are arm64, so
+      # every image differs on antialiasing alone. See `snapshotsAreComparable` in the
+      # TestFeatureShim files. This step therefore verifies that the iOS code compiles and
+      # behaves, not that it renders. The artifact upload below is kept so that any test
+      # failure here is diagnosable rather than a wall of log.
+      - name: xcodebuild test App (iOS-only suites)
+        # TEST_RUNNER_ prefix, not a bare CI=true: these tests run inside the simulator, and
+        # xcodebuild does not hand the host environment to that process. It forwards exactly
+        # the variables named TEST_RUNNER_<NAME>, stripping the prefix. GitHub's own CI=true
+        # is therefore invisible to the test runner — which is how the first attempt at this
+        # gate passed locally (the MCP tool adds the prefix) and ran the suites anyway here.
+        env:
+          TEST_RUNNER_CI: "true"
+        run: |
+          xcodebuild test \
+            -project App/BiokineticsDosimetry.xcodeproj \
+            -scheme App \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: TestResults.xcresult
+          retention-days: 7

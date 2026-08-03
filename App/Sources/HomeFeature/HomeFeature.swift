@@ -45,6 +45,11 @@ public enum HomeFeature {
 
         public struct ViewState: Sendable, Equatable {
             public var filePicker: Loading<Terminal, Never> = .idle
+
+            /// The picker's presentation as SwiftUI sees it. Derived, so the `Loading` state machine
+            /// stays the truth and the binding has a plain `Bool` to read.
+            public var isFilePickerOpen: Bool { filePicker.is(.loading) }
+
             public var cards: Loading<[DocumentCard], DecodingError> = .idle
             public var importErrorMessage: String? = nil
             public var isCreditsSheetOpen: Bool = false

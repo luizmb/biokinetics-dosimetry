@@ -276,7 +276,7 @@ struct HomeFeatureMapActionTests {
 import SwiftRexArchitecture
 import SwiftUI
 
-@Suite("HomeFeature Snapshots")
+@Suite("HomeFeature Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct HomeFeatureSnapshotTests {
 
@@ -291,7 +291,7 @@ struct HomeFeatureSnapshotTests {
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) async where F.Content: View {
+    ) async {
         await feature.ignoringActions {
                 assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
                                named: "\(baseName)-iphone", file: file, testName: testName, line: line)
@@ -301,7 +301,7 @@ struct HomeFeatureSnapshotTests {
     }
 
     @Test func snapshotIdleState() async {
-        let feature = TestFeature<HomeFeature>(environment: env)
+        let feature = TestFeature<HomeFeature>(initial: HomeFeature.initialState(with: ()), environment: env)
         await snapBoth(feature, named: "home-idle")
     }
 

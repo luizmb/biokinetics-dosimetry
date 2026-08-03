@@ -76,7 +76,6 @@ public struct CalculatorView: View {
             logXLabel:            viewStore.state.logXLabel,
             logYLabel:            viewStore.state.logYLabel,
             durationWarningMessage: viewStore.state.durationWarningMessage,
-            isParamSheetOpen:     viewStore.state.isParamSheetOpen,
             validationIssues:     viewStore.state.validationIssues,
             csvExportInput:       viewStore.state.csvExportInput,
             pdfExportInput:       viewStore.state.pdfExportInput,
@@ -88,7 +87,6 @@ public struct CalculatorView: View {
             onSetSolver:          { viewStore.dispatch(.setSolver($0)) },
             onToggleSeries:       { viewStore.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewStore.dispatch(.toggleParamPanel) },
-            onSetParamSheet:      { viewStore.dispatch(.setParamSheet($0)) },
         )
         .inlineNavigationTitle()
     }
@@ -116,7 +114,6 @@ struct CalculatorContent: View {
     let logXLabel: String
     let logYLabel: String
     let durationWarningMessage: String?
-    let isParamSheetOpen: Bool
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
@@ -132,7 +129,6 @@ struct CalculatorContent: View {
     var onSetSolver: (SolverMethod) -> Void
     var onToggleSeries: (String) -> Void
     var onToggleParamPanel: () -> Void
-    var onSetParamSheet: (Bool) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -301,36 +297,6 @@ struct CalculatorContent: View {
             .tabItem { Label("Report", systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
         }
-    }
-
-    // MARK: - iPhone params sheet
-
-    private var paramsSheet: some View {
-        NavigationStack {
-            ScrollView {
-                ParameterContent(
-                    paramBindings: paramBindings,
-                    lingo: lingo,
-                    variants: variants, solver: solver,
-                    isCalculating: isCalculating,
-                    validationIssues: validationIssues,
-                    calculateButtonTitle: calculateButtonTitle,
-                    durationWarningMessage: durationWarningMessage,
-                    durationWarningTone: bannerTone(durationWarning),
-                    onSetSolver: onSetSolver,
-                    onCalculate: { onSetParamSheet(false); onCalculate() }
-                )
-            }
-            .navigationTitle("Parameters")
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSetParamSheet(false) }
-                }
-            }
-        }
-        .presentationDetents([.fraction(0.78)])
-        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Toolbar

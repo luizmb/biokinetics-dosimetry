@@ -8,14 +8,13 @@ let package = Package(
         .library(name: "Style",              targets: ["Style"]),
         .library(name: "UIComponents",       targets: ["UIComponents"]),
         .library(name: "AppDomain",          targets: ["AppDomain"]),
-        .library(name: "NavigationFeature",  targets: ["NavigationFeature"]),
         .library(name: "HomeFeature",        targets: ["HomeFeature"]),
         .library(name: "EditorFeature",      targets: ["EditorFeature"]),
         .library(name: "CalculatorFeature",  targets: ["CalculatorFeature"]),
         .library(name: "App.Core",           targets: ["AppCore"]),
     ],
     dependencies: [
-        .package(path: ".."),
+        .package(name: "biokinetics-dosimetry", path: ".."),
         .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
         .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "1.1.0"),
         .package(url: "https://github.com/luizmb/FP.git", from: "2.2.0"),
@@ -43,22 +42,14 @@ let package = Package(
         .target(
             name: "AppDomain",
             dependencies: [
-                .product(name: "Domain", package: "biokinetics-dosimetry"),
-                .product(name: "FP",     package: "FP"),
+                .product(name: "Domain",   package: "biokinetics-dosimetry"),
+                .product(name: "FP",       package: "FP"),
+                .product(name: "FPMacros", package: "FP"),
                 "Style",
             ]
         ),
 
         // MARK: - Feature targets
-
-        .target(
-            name: "NavigationFeature",
-            dependencies: [
-                "AppDomain",
-                .product(name: "SwiftRex",              package: "SwiftRex"),
-                .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-            ]
-        ),
 
         .target(
             name: "HomeFeature",
@@ -106,15 +97,19 @@ let package = Package(
             name: "AppCore",
             dependencies: [
                 "AppDomain",
-                "NavigationFeature",
                 "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
                 .product(name: "Domain",                package: "biokinetics-dosimetry"),
                 .product(name: "Solver",                package: "biokinetics-dosimetry"),
                 .product(name: "SwiftRex",              package: "SwiftRex"),
+                .product(name: "SwiftRex.SwiftUI",      package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
+                .product(name: "SwiftRex.Operators",    package: "SwiftRex"),
                 .product(name: "FP",                    package: "FP"),
+                .product(name: "CoreFP",                package: "FP"),
+                .product(name: "CoreFPOperators",       package: "FP"),
+                .product(name: "FPMacros",              package: "FP"),
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "XMLCoder",              package: "XMLCoder"),
                 "UIComponents",
@@ -149,11 +144,12 @@ let package = Package(
             name: "AppCoreTests",
             dependencies: [
                 "AppCore",
-                "NavigationFeature",
+                "AppDomain",
                 "HomeFeature",
                 "EditorFeature",
                 "CalculatorFeature",
                 .product(name: "FP",                   package: "FP"),
+                .product(name: "SwiftRex.SwiftUI",     package: "SwiftRex"),
                 .product(name: "Core",                 package: "NetworkTools"),
                 .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),

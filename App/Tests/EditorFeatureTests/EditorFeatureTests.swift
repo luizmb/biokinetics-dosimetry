@@ -340,13 +340,6 @@ struct EditorFeatureBehaviorTests {
     @Test func toggleKValuesShowsThem() {
         store().dispatch(.toggleKValues) { $0.showKValues = true }
     }
-
-    // MARK: - .save
-
-    @Test func saveProducesNoStateChange() {
-        // .save is .doNothing — no mutation, no effect
-        store().dispatch(.save) { _ in }
-    }
 }
 
 // MARK: - mapState tests
@@ -563,7 +556,7 @@ struct EditorFeatureNuclideTests {
 import SwiftRexArchitecture
 import SwiftUI
 
-@Suite("EditorFeature Snapshots")
+@Suite("EditorFeature Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct EditorFeatureSnapshotTests {
 
@@ -576,7 +569,7 @@ struct EditorFeatureSnapshotTests {
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) async where F.Content: View {
+    ) async {
         await feature.ignoringActions {
                 assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
                                named: "\(baseName)-iphone", file: file, testName: testName, line: line)

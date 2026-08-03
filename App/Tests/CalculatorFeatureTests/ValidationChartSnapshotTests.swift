@@ -20,7 +20,7 @@ import SwiftUI
 /// Model:  A --0.1--> B <--0.05-- C
 ///                    B ---0.2--> C
 /// Intake: A = 1.0,  step = 1 d,  final = 50 d
-@Suite("ValidationChart Snapshots")
+@Suite("ValidationChart Snapshots", .enabled(if: snapshotsAreComparable))
 @MainActor
 struct ValidationChartSnapshotTests {
 
@@ -58,7 +58,7 @@ struct ValidationChartSnapshotTests {
         testName: String = #function,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) async where F.Content: View {
+    ) async {
         await feature.ignoringActions {
                 assertSnapshot(of: feature.view, as: .image(layout: Self.iPhoneLayout),
                                named: "\(baseName)-iphone", file: file, testName: testName, line: line)

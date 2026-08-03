@@ -10,3 +10,6 @@ xcuserdata/
 *.swp
 .claude/
 Config/Local.xcconfig
+
+# xcodebuild test result bundles (CI uploads these as artifacts on failure)
+*.xcresult
