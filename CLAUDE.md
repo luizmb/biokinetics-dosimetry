@@ -18,7 +18,7 @@ scenario where a missing-specialization problem bites:
   `@inlinable` annotations gave ~14× there.)
 - SwiftCalx 1.0.0 ships `@inlinable` solver hot paths, so they specialize here. Moving from
   SwiftCalx 0.6 / FP 2.2 to 1.0 / 3.0 measured (Uranium model, p50): Birchall perTime 100 days
-  524 ms → 1 ms, semigroup 1000 days 125 ms → 0.33 ms, RK4 (h=0.01) 100 days 1.18 s → 25 ms,
+  524 ms → 1 ms, semigroup 1000 days 125 ms → 0.33 ms, RK4 (h=0.01) 100 days 1.18 s → 25 ms from the bump, then 69 µs evaluated as its propagator (`Solve.swift`),
   RK45 100 days 16 ms → 4.7 ms. See `../SwiftCalx/docs/PERFORMANCE.md` for the analysis.
 
 Local hot paths worth auditing the same way:
