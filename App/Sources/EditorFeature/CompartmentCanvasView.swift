@@ -87,7 +87,7 @@ struct CompartmentCanvasView: View {
                         p.move(to: tail)
                         p.addLine(to: CGPoint(x: sp.x, y: sp.y - sz.height/2*s - 8))
                     }
-                    .stroke(intakeColor, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                    .stroke(intakeColor, style: StrokeStyle(lineWidth: 3.5 * lineScale(s), lineCap: .round))
                     .allowsHitTesting(false)
 
                     // Arrowhead (reuse existing helper)
@@ -96,7 +96,7 @@ struct CompartmentCanvasView: View {
                         .allowsHitTesting(false)
 
                     // Fraction label
-                    if comp.fraction > 0 {
+                    if comp.fraction > 0, s >= 0.5 {
                         Text(comp.fraction.formatted(.number.precision(.fractionLength(2))))
                             .font(.system(size: 9, weight: .semibold, design: .monospaced))
                             .foregroundStyle(intakeColor)
@@ -130,7 +130,7 @@ struct CompartmentCanvasView: View {
                         : Color.primary.opacity(0.5)
 
                     screenArrowLine(from: from, to: to, srcSize: srcSz, dstSize: dstSz, scale: s)
-                        .stroke(col, style: StrokeStyle(lineWidth: sel ? 2 : 1.4, lineCap: .round))
+                        .stroke(col, style: StrokeStyle(lineWidth: (sel ? 2 : 1.4) * lineScale(s), lineCap: .round))
                         .allowsHitTesting(false)
 
                     screenArrowHead(from: from, to: to, dstSize: dstSz, scale: s)
@@ -255,6 +255,13 @@ struct CompartmentCanvasView: View {
 
     // MARK: - Helpers
 
+    /// Arrowheads follow the zoom, within limits, so they neither swamp a zoomed-out model nor
+    /// vanish zoomed in.
+    private func markScale(_ s: CGFloat) -> CGFloat { min(1.4, max(0.3, s)) }
+
+    /// Lines thin out zoomed out, down to half width, and never thicken.
+    private func lineScale(_ s: CGFloat) -> CGFloat { min(1, max(0.5, s)) }
+
     private static let canvasSpace = "compartmentCanvas"
 
     /// Converts a canvas-space point to screen-space.
@@ -321,7 +328,7 @@ struct CompartmentCanvasView: View {
         let ux = dx/len, uy = dy/len, nx = -uy, ny = ux
         let tDst = edgeDist(ux: ux, uy: uy, hw: dstSize.width/2*scale, hh: dstSize.height/2*scale)
         let tip = CGPoint(x: e.x - ux*tDst, y: e.y - uy*tDst)
-        let sz: CGFloat = 7
+        let sz: CGFloat = 7 * markScale(scale)
         var p = Path()
         p.move(to: tip)
         p.addLine(to: CGPoint(x: tip.x-ux*sz+nx*sz*0.5, y: tip.y-uy*sz+ny*sz*0.5))
