@@ -473,9 +473,11 @@ public enum CalculatorFeature {
             case .setStepSizeText(let text):
                 .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
-                    if let v = ctx.environment.parseDouble(t) {
+                    // The field keeps what was typed: reformatting each keystroke ("0,5" → "0,500000")
+                    // rewrote the text under the cursor. Only a clamped value is written back.
+                    if let v = ctx.environment.parseDouble(t) ?? Double(t) {
                         let clamped = max(0.001, v)
-                        return .just(.stepSizeResolved(clamped, ctx.environment.formatDouble(clamped, 6)))
+                        return .just(.stepSizeResolved(clamped, clamped == v ? t : ctx.environment.formatDouble(clamped, 6)))
                     }
                     return .just(.stepSizeResolved(0, t))  // store raw text; stepSize unchanged until valid
                 }
