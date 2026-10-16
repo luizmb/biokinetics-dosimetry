@@ -65,7 +65,11 @@ public struct CalculatorView: View {
                 get: { viewStore.state.selectedVariant },
                 set: { viewStore.dispatch(.selectVariant($0)) }
             ),
-            birchallComposition: birchallBinding
+            birchallComposition: birchallBinding,
+            manualStepsText: Binding(
+                get: { viewStore.state.manualStepsText },
+                set: { viewStore.dispatch(.setManualStepsText($0)) }
+            )
         )
 
         return CalculatorContent(
@@ -88,6 +92,14 @@ public struct CalculatorView: View {
             logYLabel:            viewStore.state.logYLabel,
             durationWarningMessage: viewStore.state.durationWarningMessage,
             validationIssues:     viewStore.state.validationIssues.value,
+            hints: SolverHints(
+                integrationStepHint: viewStore.state.integrationStepHint,
+                integrationStepIsUnstable: viewStore.state.integrationStepIsUnstable,
+                stepBudgetHint: viewStore.state.stepBudgetHint,
+                stepBudgetWarning: viewStore.state.stepBudgetWarning,
+                automaticStepsPerDay: viewStore.state.automaticStepsPerDay
+            ),
+            remedies: viewStore.state.remedies.value,
             csvExportInput:       viewStore.state.csvExportInput.value,
             pdfExportInput:       viewStore.state.pdfExportInput.value,
             activeView:           activeViewBinding,
@@ -98,6 +110,7 @@ public struct CalculatorView: View {
             onSetSolver:          { viewStore.dispatch(.setSolver($0)) },
             onToggleSeries:       { viewStore.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewStore.dispatch(.toggleParamPanel) },
+            onRemedy:             { viewStore.dispatch(.applyRemedy($0)) },
         )
         .inlineNavigationTitle()
     }
@@ -126,6 +139,8 @@ struct CalculatorContent: View {
     let logYLabel: String
     let durationWarningMessage: String?
     let validationIssues: [CompartmentalModel.ValidationIssue]
+    let hints: SolverHints
+    let remedies: [CalculatorFeature.Remedy]
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
 
@@ -140,6 +155,7 @@ struct CalculatorContent: View {
     var onSetSolver: (SolverMethod) -> Void
     var onToggleSeries: (String) -> Void
     var onToggleParamPanel: () -> Void
+    var onRemedy: (CalculatorFeature.Remedy) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -168,6 +184,7 @@ struct CalculatorContent: View {
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
                     durationWarningTone: bannerTone(durationWarning),
+                    hints: hints,
                     onSetSolver: onSetSolver,
                     onCalculate: onCalculate
                 )
@@ -212,7 +229,9 @@ struct CalculatorContent: View {
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
                         finalDay: paramBindings.finalDay.wrappedValue,
                         lingo: lingo, validationIssues: validationIssues,
-                        onToggleSeries: onToggleSeries
+                        remedies: remedies,
+                        onToggleSeries: onToggleSeries,
+                        onRemedy: onRemedy
                     )
                 }
             }
@@ -239,15 +258,25 @@ struct CalculatorContent: View {
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
                     durationWarningTone: bannerTone(durationWarning),
+                    hints: hints,
                     showCalculateButton: false,
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
+                if let msg = durationWarningMessage {
+                    GBanner(
+                        tone: bannerTone(durationWarning),
+                        systemImage: bannerTone(durationWarning) == .neutral ? "clock" : "exclamationmark.triangle",
+                        message: msg
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                }
                 GButton(
                     isCalculating ? "Calculating…" : "Calculate",
                     icon: isCalculating ? nil : Image(systemName: "play.fill"),
                     size: .lg, fullWidth: true,
-                    disabled: isCalculating || validationIssues.hasErrors,
+                    disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
                     action: {
                         onCalculate()
                         activeView.wrappedValue = .chart
@@ -291,7 +320,9 @@ struct CalculatorContent: View {
                         finalDay: paramBindings.finalDay.wrappedValue,
                         lingo: lingo,
                         validationIssues: validationIssues,
-                        onToggleSeries: onToggleSeries
+                        remedies: remedies,
+                        onToggleSeries: onToggleSeries,
+                        onRemedy: onRemedy
                     )
                 }
             }

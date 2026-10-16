@@ -45,7 +45,7 @@ struct SolverViabilityTests {
         #expect(limit < 0.08)
     }
 
-    /// A rate of 5,000/day needs ~1,500 Dormand–Prince steps a day; the loose budget allows 50.
+    /// A rate of 5,000/day needs ~3,000 Dormand–Prince steps a day; a manual cap of 50 runs out.
     @Test func rk45OutOfBudgetIsAFailureNotAFlatTail() async throws {
         let model = CompartmentalModel(
             nuclides: [],
@@ -55,13 +55,23 @@ struct SolverViabilityTests {
             ],
             connections: [CompartmentConnection(from: "a", to: "b", rate: 5_000)]
         )
-        let plan = BiokineticsSimulationPlan(step: 1, final: 100, solver: .rungeKutta45(tolerance: 1e-10, budget: .loose))
+        let plan = BiokineticsSimulationPlan(step: 1, final: 100, solver: .rungeKutta45(tolerance: 1e-10, budget: .manual(stepsPerDay: 50)))
         let result = await solve(plan: plan, model: model).run()
         guard case let .failure(.stepBudgetExhausted(reached, final, _)) = result else {
             Issue.record("expected .stepBudgetExhausted, got \(result)")
             return
         }
         #expect(reached < final)
+    }
+
+    /// Read off the matrix before running: Uranium's spectral bound is 44.4/day.
+    @Test func uraniumLimits() throws {
+        let limits = try uraniumModel().solverLimits
+        #expect(abs(limits.rk4StableStep - 2.785 / 44.4) < 1e-3)
+        #expect(abs(limits.rk45StepsPerDay - 44.4 / 3.3) < 0.05)
+        #expect(limits.stoppingDay(stepsPerDay: limits.automaticStepsPerDay, days: 1_000) == nil)
+        let stop = try #require(limits.stoppingDay(stepsPerDay: 5, days: 1_000))
+        #expect(stop > 400 && stop < 550)
     }
 
     @Test func theAutomaticBudgetFinishesThatStiffModel() async throws {

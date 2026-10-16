@@ -20,16 +20,46 @@ func spectralBound(_ A: Matrix<Double>) -> Double {
     return min(rows, columns)
 }
 
+/// What a model allows the explicit solvers, read off its matrix before anything runs.
+public struct SolverLimits: Equatable, Sendable {
+    /// RK4 grows without bound at or above this integration step (days).
+    public let rk4StableStep: Double
+    /// Steps per simulated day RK45 is expected to need: its stability limit, which on a stiff model
+    /// sets the step whatever the tolerance.
+    public let rk45StepsPerDay: Double
+
+    /// The `.automatic` budget, per day: four times the expectation.
+    public var automaticStepsPerDay: Int { Int((4 * rk45StepsPerDay).rounded(.up)) }
+
+    /// Roughly where a run capped at `stepsPerDay` stops, or `nil` when the cap covers `days`.
+    public func stoppingDay(stepsPerDay: Int, days: Double) -> Double? {
+        let allowed = Double(stepsPerDay) * days + Double(StepBudget.startAllowance)
+        let needed = rk45StepsPerDay * days
+        return allowed >= needed ? nil : allowed / rk45StepsPerDay
+    }
+}
+
+public extension CompartmentalModel {
+    /// The explicit solvers' limits for this model.
+    var solverLimits: SolverLimits {
+        let bound = spectralBound(linearSystem().matrix)
+        return SolverLimits(
+            rk4StableStep: rk4StabilityInterval / bound,
+            rk45StepsPerDay: bound / dormandPrinceStabilityInterval
+        )
+    }
+}
+
 extension StepBudget {
-    /// The RK45 step allowance (accepted + rejected) for `days` of a model whose eigenvalues are
-    /// bounded by `rateBound`, plus a fixed allowance for the start, where the controller is still
-    /// finding its step.
-    func steps(rateBound: Double, days: Double) -> Int {
-        let perDay: Double = switch self {
-        case .automatic: 4 * rateBound / dormandPrinceStabilityInterval
-        case .loose: 50
-        case .stiff: 5_000
+    /// Steps the controller may spend finding its step at the start, on top of the per-day budget.
+    static let startAllowance = 2_000
+
+    /// The RK45 step allowance (accepted + rejected) for `days` of a model with these limits.
+    func steps(limits: SolverLimits, days: Double) -> Int {
+        let perDay = switch self {
+        case .automatic: limits.automaticStepsPerDay
+        case let .manual(stepsPerDay): max(1, stepsPerDay)
         }
-        return Int((perDay * days).rounded(.up)) + 2_000
+        return Int((Double(perDay) * days).rounded(.up)) + Self.startAllowance
     }
 }

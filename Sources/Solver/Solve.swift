@@ -24,6 +24,7 @@ public func solve(
     model: CompartmentalModel
 ) -> DeferredTask<Result<[[Double]], SolveError>> {
     let system = model.linearSystem()
+    let limits = model.solverLimits
     let step = plan.step
     let stepCount = plan.stepCount
     let solver = plan.solver
@@ -37,7 +38,7 @@ public func solve(
         case .rungeKutta4(let h):
             rungeKutta4(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, h: h)
         case let .rungeKutta45(tolerance, budget):
-            rungeKutta45(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, tolerance: tolerance, budget: budget)
+            rungeKutta45(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, tolerance: tolerance, budget: budget, limits: limits)
         }
     }
 }
@@ -104,7 +105,8 @@ private func rungeKutta45(
     step: Double,
     stepCount: Int,
     tolerance: Double,
-    budget: StepBudget
+    budget: StepBudget,
+    limits: SolverLimits
 ) -> Result<[[Double]], SolveError> {
     let outputTimes = (0 ... stepCount + 1).map { Double($0) * step }
     let finalDay = outputTimes.last ?? 0
@@ -113,7 +115,7 @@ private func rungeKutta45(
         from: x0.asAcceleratedVector,
         derivative: { _, y in A.apply(to: y) },
         tolerance: tolerance,
-        maxIterations: budget.steps(rateBound: spectralBound(A), days: finalDay)
+        maxIterations: budget.steps(limits: limits, days: finalDay)
     )
     .map { $0.map(\.storage) }
     .mapError { failure in

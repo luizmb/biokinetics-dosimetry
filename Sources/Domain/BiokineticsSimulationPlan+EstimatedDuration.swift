@@ -23,7 +23,9 @@ extension BiokineticsSimulationPlan {
     ///
     /// - Parameter compartmentCount: Total number of compartments in the model.
     /// - Returns: Estimated `TimeInterval` in seconds.
-    public func estimatedDuration(compartmentCount: Int) -> TimeInterval {
+    /// - Parameter rk45StepsPerDay: the steps per day RK45 is expected to need on this model (its
+    ///   `SolverLimits`); Uranium's ~12.5 when unknown.
+    public func estimatedDuration(compartmentCount: Int, rk45StepsPerDay: Double = 12.5) -> TimeInterval {
         let n = Double(compartmentCount)
         let steps = Double(stepCount + 2)   // matches actual row count produced
 
@@ -49,10 +51,13 @@ extension BiokineticsSimulationPlan {
             let stepsPerRow = max(1, (step / h).rounded())
             return 4.4e-10 * n * n * n * (4 + 2 * log2(stepsPerRow)) + 1e-9 * n * n * steps
 
-        case .rungeKutta45:
-            // ~3.1 µs a step at n=19 (≈ 8.6e-9·n²). The step count follows the model's fastest
-            // rate, which isn't known here; this assumes Uranium's ~12.5 steps a day.
-            return 8.6e-9 * n * n * 12.5 * final
+        case let .rungeKutta45(_, budget):
+            // ~3.1 µs a step at n=19 (≈ 8.6e-9·n²); a manual cap stops it sooner.
+            let perDay = switch budget {
+            case .automatic: rk45StepsPerDay
+            case let .manual(cap): min(rk45StepsPerDay, Double(cap))
+            }
+            return 8.6e-9 * n * n * perDay * final
         }
     }
 
@@ -71,8 +76,8 @@ extension BiokineticsSimulationPlan {
     }
 
     /// Categorises the estimated duration into a UI warning level.
-    public func durationWarning(compartmentCount: Int) -> DurationWarning {
-        switch estimatedDuration(compartmentCount: compartmentCount) {
+    public func durationWarning(compartmentCount: Int, rk45StepsPerDay: Double = 12.5) -> DurationWarning {
+        switch estimatedDuration(compartmentCount: compartmentCount, rk45StepsPerDay: rk45StepsPerDay) {
         case ..<3:     .none
         case 3..<15:   .brief
         case 15..<60:  .slow

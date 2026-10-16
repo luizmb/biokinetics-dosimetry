@@ -20,7 +20,19 @@ struct ParameterBindings {
     var stepBudget:           Binding<StepBudget>?        // non-nil only when RK45 is selected
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
+    var manualStepsText:      Binding<String>
 }
+
+/// What the model allows the explicit solvers, worded for the fields they sit under.
+struct SolverHints: Equatable {
+    var integrationStepHint: String?
+    var integrationStepIsUnstable = false
+    var stepBudgetHint: String?
+    var stepBudgetWarning: String?
+    var automaticStepsPerDay = 0
+}
+
+private enum BudgetMode: Hashable, Sendable { case automatic, manual }
 
 // MARK: - ParameterContent (pure)
 
@@ -37,6 +49,7 @@ struct ParameterContent: View {
     let calculateButtonTitle: String
     let durationWarningMessage: String?
     let durationWarningTone: GBannerTone
+    var hints = SolverHints()
     var showCalculateButton: Bool = true
 
     // One-way callbacks for actions that involve more than a simple value swap.
@@ -130,7 +143,7 @@ struct ParameterContent: View {
                         GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
                         GField(paramBindings.integrationStepText)
                             .padding(.horizontal, 18)
-                            .padding(.bottom, 18)
+                        fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
@@ -142,13 +155,22 @@ struct ParameterContent: View {
 
                     if let budget = paramBindings.stepBudget {
                         GLabel("Step budget").padding(.horizontal, 18)
-                        GSegmented(selection: budget, options: [
-                            (label: "Automatic", value: StepBudget.automatic),
-                            (label: "Loose", value: .loose),
-                            (label: "Stiff", value: .stiff)
-                        ])
+                        GSegmented(
+                            selection: Binding(
+                                get: { if case .manual = budget.wrappedValue { BudgetMode.manual } else { .automatic } },
+                                set: { mode in
+                                    budget.wrappedValue = mode == .manual ? .manual(stepsPerDay: hints.automaticStepsPerDay) : .automatic
+                                }
+                            ),
+                            options: [(label: "Automatic", value: BudgetMode.automatic), (label: "Manual", value: .manual)]
+                        )
                         .padding(.horizontal, 18)
-                        .padding(.bottom, 18)
+                        if case .manual = budget.wrappedValue {
+                            GLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
+                            GField(paramBindings.manualStepsText)
+                                .padding(.horizontal, 18)
+                        }
+                        fieldNote(hints.stepBudgetWarning ?? hints.stepBudgetHint, tone: hints.stepBudgetWarning == nil ? nil : .orange)
                     }
                 }
                 .padding(.bottom, 8)
@@ -166,7 +188,7 @@ struct ParameterContent: View {
                     GButton(
                         calculateButtonTitle,
                         icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors,
+                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
                         action: onCalculate
                     )
                 }
@@ -178,6 +200,21 @@ struct ParameterContent: View {
     }
 
     // MARK: - Helpers
+
+    /// A line under a field: what the model allows, or a warning in `tone`.
+    @ViewBuilder
+    private func fieldNote(_ text: String?, tone: Color?) -> some View {
+        if let text {
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(tone ?? g.muted)
+                .padding(.horizontal, 22)
+                .padding(.top, 6)
+                .padding(.bottom, 18)
+        } else {
+            Color.clear.frame(height: 18)
+        }
+    }
 
     private func solverKey(for method: SolverMethod) -> String {
         switch method {

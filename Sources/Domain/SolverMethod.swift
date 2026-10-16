@@ -16,11 +16,10 @@ extension SolverMethod {
 /// How many steps RK45 may take. On a stiff model an explicit method is held near its stability
 /// limit whatever the tolerance asks for, so the steps it needs grow with the simulated days times
 /// the model's fastest rate.
-public enum StepBudget: String, CaseIterable, Equatable, Hashable, Sendable {
+public enum StepBudget: Equatable, Hashable, Sendable {
     /// Sized from the model: four times the steps its fastest rate implies over the horizon.
     case automatic
-    /// 50 steps per simulated day: smooth models with slow rates.
-    case loose
-    /// 5,000 steps per simulated day: rates up to ~4,000/day.
-    case stiff
+    /// At most `stepsPerDay` per simulated day: a cap on how long a run may take. Below what the
+    /// model needs, the run stops early and says where.
+    case manual(stepsPerDay: Int)
 }

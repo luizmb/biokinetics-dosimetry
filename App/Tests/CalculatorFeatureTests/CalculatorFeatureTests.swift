@@ -148,8 +148,8 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func setSolverToRungeKutta45() {
-        store().dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8, budget: .stiff))) {
-            $0.solver = .rungeKutta45(tolerance: 1e-8, budget: .stiff)
+        store().dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8, budget: .automatic))) {
+            $0.solver = .rungeKutta45(tolerance: 1e-8, budget: .automatic)
             $0.toleranceText = "1e-8"
         }
     }
@@ -172,10 +172,76 @@ struct CalculatorFeatureBehaviorTests {
     @Test func setStepBudgetChangesOnlyRK45() {
         var initial = CalculatorFeature.initialState(with: ())
         initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
-        store(initial: initial).dispatch(.setStepBudget(.stiff)) {
-            $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .stiff)
+        store(initial: initial).dispatch(.setStepBudget(.manual(stepsPerDay: 54))) {
+            $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 54))
+            $0.manualStepsText = "54"
         }
-        store().dispatch(.setStepBudget(.stiff)) { _ in }
+    }
+
+    @Test func manualStepsTextSetsTheCap() {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 54))
+        store(initial: initial).dispatch(.setManualStepsText("5")) {
+            $0.manualStepsText = "5"
+            $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        }
+    }
+
+    @Test func aFailedRunOffersItsFixes() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.document = doc
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        let s = store(initial: initial)
+        s.dispatch(.solveFailed(.stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000))) {
+            $0.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000)
+        }
+        let vs = CalculatorFeature.mapState(env)(s.state)
+        #expect(vs.remedies == [.useAutomaticBudget, .useBirchall])
+        #expect(vs.error?.hasPrefix("RK45 stopped at day") == true)
+    }
+
+    @Test func aRemedyChangesTheSettingsAndRunsAgain() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        initial.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000)
+        let s = store(initial: initial)
+        s.dispatch(.applyRemedy(.useAutomaticBudget)) { $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic) }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.calculate) { _, state in
+            state.isCalculating = true
+            state.solveFailure = nil
+        }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.resultsReady) { data, state in
+            state.results = data
+            state.isCalculating = false
+        }
+        #expect(s.state.solveFailure == nil)
+        #expect(s.state.results == mockResults)
+    }
+
+    /// The model's limits reach the fields before anything runs.
+    @Test func anUnstableStepIsCaughtAtTheField() {
+        var state = CalculatorFeature.initialState(with: ())
+        state.document = doc
+        state.solver = .rungeKutta4(stepSize: 50)
+        let vs = CalculatorFeature.mapState(env)(state)
+        #expect(vs.integrationStepIsUnstable)
+        #expect(vs.integrationStepHint?.hasPrefix("Stable below") == true)
+        state.solver = .rungeKutta4(stepSize: 0.01)
+        #expect(!CalculatorFeature.mapState(env)(state).integrationStepIsUnstable)
+    }
+
+    @Test func aLowManualCapSaysWhereItWillStop() {
+        var state = CalculatorFeature.initialState(with: ())
+        state.document = doc
+        state.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        let automatic = CalculatorFeature.mapState(env)(state)
+        #expect(automatic.stepBudgetWarning == nil)
+        #expect(automatic.stepBudgetHint?.hasPrefix("This model needs about") == true)
+        state.finalDay = 1_000_000
+        state.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 0))
+        #expect(CalculatorFeature.mapState(env)(state).stepBudgetWarning != nil)
     }
 
     @Test func toleranceTextReadsExponentNotation() async {
@@ -195,7 +261,7 @@ struct CalculatorFeatureBehaviorTests {
         #expect(CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format)
             == "An RK4 step of 1.0000 d is unstable for this model. Use a step below 0.063 d, or Birchall.")
         #expect(CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 10_000), format: format)
-            == "RK45 stopped at day 835.9 of 1001 after 10000 steps. Use the Stiff budget, or Birchall.")
+            == "RK45 stopped at day 835.9 of 1001 after 10000 steps. Raise the step budget, or use Birchall.")
     }
 
     @Test func setFinalDayWithValidValueUpdatesDirectly() {
@@ -535,6 +601,18 @@ struct CalculatorFeatureSnapshotTests {
         await snapBoth(feature, named: "error-state")
     }
 
+    /// A run that stopped: the reason, worded as advice, and the fixes as buttons.
+    @Test func snapshotSolveFailure() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.document = .validation
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        initial.manualStepsText = "5"
+        initial.activeView = .chart
+        initial.solveFailure = .stepBudgetExhausted(reachedDay: 41.3, finalDay: 200, steps: 3_000)
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "solve-failure")
+    }
+
     // MARK: - Solver variants (ParameterPanel layout changes per solver)
 
     @Test func snapshotSolverRK4() async {
@@ -602,29 +680,41 @@ struct CalculatorFeatureSnapshotTests {
     //   slow     → h=0.01, final=1000 → 4.64e-6 × 81 × 100_000 ≈ 37.6 s
     //   veryLong → h=0.001,final=1000 → 4.64e-6 × 81 × 1_000_000 ≈ 376 s
 
+    /// Validation with A → B at 10⁶/day: RK45 is held near h ≈ 3.3 / 10⁶ d, so its runs get long
+    /// (estimates: 300 d ≈ 7 s, 1,000 d ≈ 23 s, 5,000 d ≈ 2 min).
+    private var stiffValidation: ModelDocument {
+        var doc = ModelDocument.validation
+        doc.model = doc.model.with(connections: [
+            CompartmentConnection(from: "A", to: "B", rate: 1e6),
+            CompartmentConnection(from: "B", to: "C", rate: 0.2),
+            CompartmentConnection(from: "C", to: "B", rate: 1.0)
+        ])
+        return doc
+    }
+
     @Test func snapshotDurationBrief() async {
         var initial = CalculatorFeature.initialState(with: ())
-        initial.document = .iodo131
-        initial.solver = .rungeKutta4(stepSize: 0.1)
-        initial.finalDay = 1000
+        initial.document = stiffValidation
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        initial.finalDay = 300
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "duration-brief")
     }
 
     @Test func snapshotDurationSlow() async {
         var initial = CalculatorFeature.initialState(with: ())
-        initial.document = .iodo131
-        initial.solver = .rungeKutta4(stepSize: 0.01)
-        initial.finalDay = 1000
+        initial.document = stiffValidation
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        initial.finalDay = 1_000
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "duration-slow")
     }
 
     @Test func snapshotDurationVeryLong() async {
         var initial = CalculatorFeature.initialState(with: ())
-        initial.document = .iodo131
-        initial.solver = .rungeKutta4(stepSize: 0.001)
-        initial.finalDay = 1000
+        initial.document = stiffValidation
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        initial.finalDay = 5_000
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "duration-very-long")
     }
