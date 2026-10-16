@@ -59,6 +59,11 @@ public enum CalculatorFeature {
     }
 
     /// A one-tap way out of a failed run: changes the settings and runs again.
+    /// A typed parameter field, formatted when editing ends.
+    public enum ParameterField: Sendable, Equatable, Hashable {
+        case reportEvery, integrationStep, tolerance, manualSteps
+    }
+
     public enum Remedy: Sendable, Equatable, Hashable {
         case useAutomaticBudget
         case useBirchall
@@ -99,6 +104,8 @@ public enum CalculatorFeature {
         case setIntegrationStepText(String)
         case setStepBudget(StepBudget)
         case setManualStepsText(String)
+        case commitField(ParameterField)
+        case fieldFormatted(ParameterField, String)
         case stepSizeResolved(Double, String)
         case toleranceResolved(Double, String)
         case integrationStepResolved(Double, String)
@@ -222,6 +229,7 @@ public enum CalculatorFeature {
             case setIntegrationStepText(String)
             case setStepBudget(StepBudget)
             case setManualStepsText(String)
+            case commitField(ParameterField)
             case applyRemedy(Remedy)
             case setLogX(Bool)
             case setLogY(Bool)
@@ -400,6 +408,7 @@ public enum CalculatorFeature {
         case .setIntegrationStepText(let t): .setIntegrationStepText(t)
         case .setStepBudget(let b):     .setStepBudget(b)
         case .setManualStepsText(let t): .setManualStepsText(t)
+        case .commitField(let f):       .commitField(f)
         case .applyRemedy(let r):       .applyRemedy(r)
         case .setLogX(let v):           .setLogX(v)
         case .setLogY(let v):           .setLogY(v)
@@ -473,13 +482,13 @@ public enum CalculatorFeature {
             case .setStepSizeText(let text):
                 .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
-                    // The field keeps what was typed: reformatting each keystroke ("0,5" → "0,500000")
-                    // rewrote the text under the cursor. Only a clamped value is written back.
-                    if let v = ctx.environment.parseDouble(t) ?? Double(t) {
-                        let clamped = max(0.001, v)
-                        return .just(.stepSizeResolved(clamped, clamped == v ? t : ctx.environment.formatDouble(clamped, 6)))
+                    // Typed text is never rewritten: on the way to a value the text passes through
+                    // "", "0" and "0,", and clamping those wrote "0,001000" back under the cursor.
+                    // The value follows only text that reads as one in range.
+                    if let v = ctx.environment.parseDouble(t) ?? Double(t), v >= 0.001 {
+                        return .just(.stepSizeResolved(v, t))
                     }
-                    return .just(.stepSizeResolved(0, t))  // store raw text; stepSize unchanged until valid
+                    return .just(.stepSizeResolved(0, t))
                 }
             case .stepSizeResolved(let v, let t):
                 .reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
@@ -493,9 +502,9 @@ public enum CalculatorFeature {
                 .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
                     // `Double(_:)` reads exponent notation ("1e-13"), which the locale formatter doesn't.
-                    if let v = ctx.environment.parseDouble(t) ?? Double(t) {
-                        let clamped = max(1e-14, min(1e-2, v))
-                        return .just(.toleranceResolved(clamped, clamped == v ? t : Self.scientific(clamped)))
+                    // Never rewritten either: "1e-1" on the way to "1e-13" is out of range for a moment.
+                    if let v = ctx.environment.parseDouble(t) ?? Double(t), (1e-14 ... 1e-2).contains(v) {
+                        return .just(.toleranceResolved(v, t))
                     }
                     return .just(.toleranceResolved(0, t))
                 }
@@ -532,6 +541,17 @@ public enum CalculatorFeature {
                     if let cap = Int(text.trimmingCharacters(in: .whitespaces)), cap > 0,
                        case let .rungeKutta45(tolerance, .manual) = state.solver {
                         state.solver = .rungeKutta45(tolerance: tolerance, budget: .manual(stepsPerDay: cap))
+                    }
+                }
+            case .commitField(let field):
+                commitFieldReaction(field, context: context)
+            case .fieldFormatted(let field, let text):
+                .reduce { state in
+                    switch field {
+                    case .reportEvery: state.stepSizeText = text
+                    case .integrationStep: state.integrationStepText = text
+                    case .tolerance: state.toleranceText = text
+                    case .manualSteps: state.manualStepsText = text
                     }
                 }
             case .setLogX(let v):
@@ -580,6 +600,33 @@ public enum CalculatorFeature {
                     }
                 }
             }
+    }
+
+    /// Editing ended: the field shows the value it stands for, formatted. Text left invalid snaps
+    /// back to the last good value.
+    @MainActor
+    private static func commitFieldReaction(
+        _ field: ParameterField,
+        context: PreReducerContext<State>
+    ) -> Reaction<Action, State, Environment> {
+        let state = context.stateBefore ?? State()
+        return .produce { ctx in
+            let format = { (value: Double) in Self.trimmed(ctx.environment.formatDouble(value, 6)) }
+            let text: String? = switch field {
+            case .reportEvery: format(state.stepSize)
+            case .integrationStep: if case let .rungeKutta4(h) = state.solver { format(h) } else { nil }
+            case .tolerance: if case let .rungeKutta45(tolerance, _) = state.solver { Self.scientific(tolerance) } else { nil }
+            case .manualSteps: if case let .rungeKutta45(_, .manual(cap)) = state.solver { "\(cap)" } else { nil }
+            }
+            return text.map { .just(.fieldFormatted(field, $0)) } ?? .empty
+        }
+    }
+
+    /// A locale-formatted number without trailing zeros: "0,500000" → "0,5", "2.000000" → "2".
+    public static func trimmed(_ formatted: String) -> String {
+        guard formatted.contains(where: { $0 == "." || $0 == "," }) else { return formatted }
+        let withoutZeros = formatted.reversed().drop { $0 == "0" }
+        return String(withoutZeros.drop { $0 == "." || $0 == "," }.reversed())
     }
 
     /// "1e-13": tolerances span orders of magnitude, so they're shown by exponent.

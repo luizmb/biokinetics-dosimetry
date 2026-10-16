@@ -331,16 +331,27 @@ public struct GField: View {
     private let suffix: String?
     private let isMono: Bool
 
-    public init(_ text: Binding<String>, suffix: String? = nil, mono: Bool = true) {
+    private let keyboard: GFieldKeyboard
+    private let onEndEditing: () -> Void
+
+    /// - Parameter onEndEditing: called when editing ends (the field loses focus): where a store
+    ///   formats what was typed, so nothing is rewritten under the cursor while typing.
+    public init(
+        _ text: Binding<String>, suffix: String? = nil, mono: Bool = true, keyboard: GFieldKeyboard = .text,
+        onEndEditing: @escaping () -> Void = {}
+    ) {
         self._text = text
         self.suffix = suffix
         self.isMono = mono
+        self.keyboard = keyboard
+        self.onEndEditing = onEndEditing
     }
 
     public var body: some View {
         ZStack(alignment: .trailing) {
             GCard(cornerRadius: 12, intensity: 0.5) {
-                TextField("", text: $text)
+                TextField("", text: $text, onEditingChanged: { editing in if !editing { onEndEditing() } })
+                    .gFieldKeyboard(keyboard)
                     .font(.system(size: 16, design: isMono ? .monospaced : .default))
                     .foregroundStyle(g.ink)
                     .frame(height: 44)
@@ -354,6 +365,33 @@ public struct GField: View {
                     .padding(.trailing, 14)
             }
         }
+    }
+}
+
+/// The keyboard a field asks for.
+public enum GFieldKeyboard: Sendable {
+    case text
+    /// Digits and the locale's decimal separator.
+    case decimal
+    /// Digits only.
+    case integer
+    /// Digits and punctuation: exponent notation ("1e-13").
+    case scientific
+}
+
+private extension View {
+    @ViewBuilder
+    func gFieldKeyboard(_ keyboard: GFieldKeyboard) -> some View {
+        #if os(iOS)
+            switch keyboard {
+            case .text: self
+            case .decimal: keyboardType(.decimalPad)
+            case .integer: keyboardType(.numberPad)
+            case .scientific: keyboardType(.numbersAndPunctuation).autocorrectionDisabled().textInputAutocapitalization(.never)
+            }
+        #else
+            self
+        #endif
     }
 }
 

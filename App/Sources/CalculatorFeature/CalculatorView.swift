@@ -69,7 +69,8 @@ public struct CalculatorView: View {
             manualStepsText: Binding(
                 get: { viewStore.state.manualStepsText },
                 set: { viewStore.dispatch(.setManualStepsText($0)) }
-            )
+            ),
+            onCommitField: { viewStore.dispatch(.commitField($0)) }
         )
 
         return CalculatorContent(

@@ -21,6 +21,7 @@ struct ParameterBindings {
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
     var manualStepsText:      Binding<String>
+    var onCommitField:        (CalculatorFeature.ParameterField) -> Void
 }
 
 /// What the model allows the explicit solvers, worded for the fields they sit under.
@@ -118,20 +119,20 @@ struct ParameterContent: View {
                     .padding(.bottom, 18)
 
                     GLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    GField(paramBindings.stepSizeText)
+                    GField(paramBindings.stepSizeText, keyboard: .decimal) { paramBindings.onCommitField(.reportEvery) }
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
 
                     if case .rungeKutta4 = solver {
                         GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        GField(paramBindings.integrationStepText)
+                        GField(paramBindings.integrationStepText, keyboard: .decimal) { paramBindings.onCommitField(.integrationStep) }
                             .padding(.horizontal, 18)
                         fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
                         GLabel("Tolerance").padding(.horizontal, 18)
-                        GField(paramBindings.toleranceText)
+                        GField(paramBindings.toleranceText, keyboard: .scientific) { paramBindings.onCommitField(.tolerance) }
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     }
@@ -150,7 +151,7 @@ struct ParameterContent: View {
                         .padding(.horizontal, 18)
                         if case .manual = budget.wrappedValue {
                             GLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
-                            GField(paramBindings.manualStepsText)
+                            GField(paramBindings.manualStepsText, keyboard: .integer) { paramBindings.onCommitField(.manualSteps) }
                                 .padding(.horizontal, 18)
                         }
                         fieldNote(hints.stepBudgetWarning ?? hints.stepBudgetHint, tone: hints.stepBudgetWarning == nil ? nil : .orange)
