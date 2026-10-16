@@ -338,8 +338,8 @@ struct EditorContent: View {
             canvas
                 .ignoresSafeArea()
             // A soft fade where the canvas runs under the navigation bar and the buttons.
-            EdgeFade(.top, depth: 130)
-            EdgeFade(.bottom, depth: 120)
+            EdgeFade(.top)
+            EdgeFade(.bottom)
 
             if let text = linkingBannerText {
                 GlassLinkingBanner(message: text, onCancel: onCancelLinking)
@@ -348,8 +348,10 @@ struct EditorContent: View {
                     .animation(.spring(), value: text)
             }
 
-            VStack { Spacer(); compactBottomToolbar }
         }
+        // In the safe area, not on top of it: the system knows the buttons are there, so the fade
+        // and anything else that respects the safe area clears them on any device.
+        .safeAreaInset(edge: .bottom) { compactBottomToolbar }
         .sheet(isPresented: inspectorSheet) { inspectorSheetContent }
         .sheet(isPresented: modelListSheet) { modelListSheetContent }
     }
