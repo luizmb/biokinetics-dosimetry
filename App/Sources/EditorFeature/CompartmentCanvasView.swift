@@ -163,7 +163,10 @@ struct CompartmentCanvasView: View {
                 ForEach(compartments) { comp in
                     let sz = nodeSize(comp.id)
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
-                    CompartmentNode(comp: comp, isLinkingTarget: isLinking, size: sz, scale: s, isPinching: isPinching)
+                    CompartmentNode(
+                        comp: comp, isLinkingTarget: isLinking, size: sz, scale: s,
+                        isPinching: isPinching, isDragging: compartmentDragOriginId == comp.id
+                    )
                         // The node's own rounded shape is its touch area. Attached after
                         // `.position` (which fills the whole canvas) every node competed for every
                         // touch: overlapping nodes moved together and drags fought the pan.
@@ -196,10 +199,9 @@ struct CompartmentCanvasView: View {
                                     }
                                 }
                         )
+                        // Drawing order stays the model's: reordering glass inside the container
+                        // re-inserts it, which played the shrink-and-grow transition on drag start.
                         .position(x: sp.x, y: sp.y)
-                        // The node being dragged, or the selected one, sits on top, so it's the one
-                        // a touch on overlapping nodes picks.
-                        .zIndex(compartmentDragOriginId == comp.id ? 2 : comp.isSelected ? 1 : 0)
                 }
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -319,6 +321,9 @@ private struct CompartmentNode: View {
     /// While two fingers zoom, every node changes size each frame and rebuilding the glass at each
     /// size stalls the pinch; the nodes are plain cards until the fingers lift, then settle back.
     let isPinching: Bool
+    /// The node being dragged brightens. From the store, so only that node does: the glass's own
+    /// `.interactive()` lit every glass shape under the finger.
+    let isDragging: Bool
     @Environment(\.colorScheme) private var colorScheme
     private var dark: Bool { colorScheme == .dark }
 
@@ -334,8 +339,10 @@ private struct CompartmentNode: View {
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
         .background { if isPinching { shape.fill(.regularMaterial) } }
-        .glassEffect(isPinching ? .identity : .clear.tint(glassTint).interactive(), in: shape)
+        .glassEffect(isPinching ? .identity : .clear.tint(isDragging ? Color.white.opacity(dark ? 0.25 : 0.55) : glassTint), in: shape)
+        .glassEffectTransition(.identity)
         .animation(.easeOut(duration: 0.2), value: isPinching)
+        .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
     private var label: some View {
