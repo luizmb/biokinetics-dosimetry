@@ -58,8 +58,9 @@ struct CompartmentCanvasView: View {
                                   height: Double(geo.size.height) / canvasScale)
 
             ZStack {
-                // ── Fixed dot-grid backdrop ────────────────────────────────────
-                dotGrid(size: geo.size)
+                // ── Graph paper and soft colour fields for the glass to bend ───
+                GlassBackdrop(origin: screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy), scale: s)
+                    .allowsHitTesting(false)
 
                 // ── Intake arrows — bold arrows from above for intake compartments ──
                 ForEach(compartments.filter { $0.intake }) { comp in
@@ -159,6 +160,10 @@ struct CompartmentCanvasView: View {
                 }
 
                 // ── Compartment nodes — screen-space positioning ───────────────
+                // One container for every node: a single glass render pass, and nodes dragged
+                // over each other fuse into one piece of glass.
+                GlassEffectContainer(spacing: 6) {
+                ZStack {
                 ForEach(compartments) { comp in
                     let sz = nodeSize(comp.id)
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
@@ -182,6 +187,9 @@ struct CompartmentCanvasView: View {
                                 }
                                 .onEnded { _ in onEndCompartmentDrag() }
                         )
+                }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
             .contentShape(Rectangle())
@@ -291,22 +299,6 @@ struct CompartmentCanvasView: View {
         p.closeSubpath()
         return p
     }
-
-    @ViewBuilder
-    private func dotGrid(size: CGSize) -> some View {
-        Canvas { ctx, sz in
-            let sp: CGFloat = 28
-            for col in 0...Int(sz.width/sp)+2 {
-                for row in 0...Int(sz.height/sp)+2 {
-                    ctx.fill(
-                        Path(ellipseIn: CGRect(x: CGFloat(col)*sp-1, y: CGFloat(row)*sp-1,
-                                               width: 2, height: 2)),
-                        with: .color(.primary.opacity(0.07)))
-                }
-            }
-        }
-        .frame(width: size.width, height: size.height)
-    }
 }
 
 // MARK: - CompartmentNode
@@ -317,24 +309,18 @@ private struct CompartmentNode: View {
     let size: CGSize
     @Environment(\.colorScheme) private var colorScheme
     private var dark: Bool { colorScheme == .dark }
+    private let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(comp.tint.surfaceGradient(dark: dark))
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(LinearGradient(stops: [
-                    .init(color: .white.opacity(dark ? 0.22 : 0.65), location: 0),
-                    .init(color: .white.opacity(dark ? 0.06 : 0.18), location: 0.45),
-                    .init(color: .clear, location: 1)],
-                    startPoint: .top, endPoint: .bottom))
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(.white.opacity(dark ? 0.18 : 0.85), lineWidth: 0.8)
-                .blendMode(.screen)
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(comp.isSelected ? comp.tint.indicator(dark: dark)
-                                        : comp.tint.border(dark: dark),
-                        lineWidth: comp.isSelected ? 1.6 : 0.8)
+            // Intake compartments hold their dose: the level is the intake fraction.
+            if comp.intake, comp.fraction > 0 {
+                LiquidShape(level: comp.fraction * 0.55)
+                    .fill(LinearGradient(
+                        colors: [comp.tint.indicator(dark: dark).opacity(0.45), comp.tint.indicator(dark: dark).opacity(0.7)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+            }
             VStack(spacing: 3) {
                 Text(comp.name.trimmingCharacters(in: .whitespacesAndNewlines))
                     .font(.system(size: 11, weight: .semibold))
@@ -342,22 +328,24 @@ private struct CompartmentNode: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                 HStack(spacing: 4) {
-                    if comp.follow  { dot(.blue)   }
+                    if comp.follow { dot(.blue) }
                     if comp.dispose { dot(.orange) }
-                    if comp.intake  { dot(.green)  }
+                    if comp.intake { dot(.green) }
                 }
             }
             .padding(.horizontal, 8)
-            if isLinkingTarget && !comp.isSelected {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.accentColor.opacity(0.6), lineWidth: 1.5)
-            }
         }
         .frame(width: size.width, height: size.height)
-        .shadow(color: comp.isSelected ? comp.tint.selectionGlow(dark: dark) : .clear,
-                radius: 10)
+        .clipShape(shape)
+        .glassEffect(.regular.tint(glassTint).interactive(), in: shape)
         .scaleEffect(comp.isSelected ? 1.04 : 1.0)
         .animation(.spring(response: 0.2, dampingFraction: 0.7), value: comp.isSelected)
+    }
+
+    /// No border: the glass edge is the outline. Selection and linking show as a deeper tint.
+    private var glassTint: Color {
+        if isLinkingTarget, !comp.isSelected { return Color.accentColor.opacity(0.28) }
+        return comp.tint.indicator(dark: dark).opacity(comp.isSelected ? 0.42 : 0.16)
     }
 
     private func dot(_ c: Color) -> some View {
