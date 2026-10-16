@@ -10,11 +10,11 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 // MARK: - CalculatorView (container)
 
-@BoundTo(CalculatorFeature.self, strategy: .observationSimple)
+@BoundTo(CalculatorFeature.self)
 public struct CalculatorView: View {
     public var body: some View {
         let activeViewBinding = Binding(
-            get: { viewStore.state.activeView },
+            get: { viewStore.state.activeView.value },
             set: { viewStore.dispatch(.setActiveView($0)) }
         )
         let logXBinding = Binding(
@@ -27,10 +27,10 @@ public struct CalculatorView: View {
         )
         // Birchall composition binding — only created when Birchall is the active solver.
         let birchallBinding: Binding<BirchallComposition>? = {
-            guard case .birchall = viewStore.state.solver else { return nil }
+            guard case .birchall = viewStore.state.solver.value else { return nil }
             return Binding(
                 get: {
-                    if case .birchall(let c) = viewStore.state.solver { return c }
+                    if case .birchall(let c) = viewStore.state.solver.value { return c }
                     return .perTime
                 },
                 set: { viewStore.dispatch(.setSolver(.birchall(composition: $0))) }
@@ -59,26 +59,26 @@ public struct CalculatorView: View {
 
         return CalculatorContent(
             documentName:         viewStore.state.documentName,
-            lingo:                viewStore.state.lingo,
+            lingo:                viewStore.state.lingo.value,
             halfLife:             viewStore.state.halfLife,
-            variants:             viewStore.state.variants,
-            solver:               viewStore.state.solver,
-            series:               viewStore.state.series,
-            reportRows:           viewStore.state.reportRows,
-            compartmentNames:     viewStore.state.compartmentNames,
+            variants:             viewStore.state.variants.value,
+            solver:               viewStore.state.solver.value,
+            series:               viewStore.state.series.value,
+            reportRows:           viewStore.state.reportRows.value,
+            compartmentNames:     viewStore.state.compartmentNames.value,
             isCalculating:        viewStore.state.isCalculating,
             error:                viewStore.state.error,
             isParamPanelVisible:  viewStore.state.isParamPanelVisible,
-            durationWarning:      viewStore.state.durationWarning,
+            durationWarning:      viewStore.state.durationWarning.value,
             estimatedDurationLabel: viewStore.state.estimatedDurationLabel,
             solverShortName:      viewStore.state.solverShortName,
             calculateButtonTitle: viewStore.state.calculateButtonTitle,
             logXLabel:            viewStore.state.logXLabel,
             logYLabel:            viewStore.state.logYLabel,
             durationWarningMessage: viewStore.state.durationWarningMessage,
-            validationIssues:     viewStore.state.validationIssues,
-            csvExportInput:       viewStore.state.csvExportInput,
-            pdfExportInput:       viewStore.state.pdfExportInput,
+            validationIssues:     viewStore.state.validationIssues.value,
+            csvExportInput:       viewStore.state.csvExportInput.value,
+            pdfExportInput:       viewStore.state.pdfExportInput.value,
             activeView:           activeViewBinding,
             logX:                 logXBinding,
             logY:                 logYBinding,

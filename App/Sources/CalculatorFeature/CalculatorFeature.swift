@@ -11,7 +11,7 @@ import SwiftRexReactiveConcurrency
 
 // MARK: - CalculatorFeature
 
-@Feature(strategy: .observationSimple)
+@Feature
 public enum CalculatorFeature {
     // MARK: - State
 

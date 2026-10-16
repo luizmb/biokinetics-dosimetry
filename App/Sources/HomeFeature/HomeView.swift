@@ -6,31 +6,22 @@ import UniformTypeIdentifiers
 
 // MARK: - HomeView (container — thin SwiftRex wrapper)
 
-@BoundTo(HomeFeature.self, strategy: .observationSimple)
+@BoundTo(HomeFeature.self)
 public struct HomeView: View {
     public var body: some View {
         HomeContent(
-            cards: viewStore.state.cards.loadedOrPrevious ?? [],
-            isLoading: viewStore.state.cards.is(.loading),
+            cards: viewStore.state.cards.value.loadedOrPrevious ?? [],
+            isLoading: viewStore.state.cards.value.is(.loading),
             importErrorMessage: viewStore.state.importErrorMessage,
-            isFilePickerPresented: viewStore.binding(
-                .state(\.isFilePickerOpen),
-                dispatch: .action(review: { $0 ? .openFilePicker : .filePickerDismissed })
-            ),
-            isCreationSheetPresented: viewStore.binding(
-                .state(\.isCreationSheetOpen),
-                dispatch: .action(review: { $0 ? .openCreationSheet : .dismissCreationSheet })
-            ),
-            draftField: viewStore.binding(.state(\.draftField), dispatch: .action(\.setDraftField)),
-            draftName:  viewStore.binding(.state(\.draftName),  dispatch: .action(\.setDraftName)),
+            isFilePickerPresented: viewStore.binding(.state(\.isFilePickerOpen).action(review: { (open: Bool) in open ? .openFilePicker : .filePickerDismissed })),
+            isCreationSheetPresented: viewStore.binding(.state(\.isCreationSheetOpen).action(review: { (open: Bool) in open ? .openCreationSheet : .dismissCreationSheet })),
+            draftField: viewStore.binding(.state(\.draftField).action(\.setDraftField)),
+            draftName:  viewStore.binding(.state(\.draftName).action(\.setDraftName)),
             onOpenFilePicker:   { viewStore.dispatch(.openFilePicker) },
-            isCreditsSheetPresented: viewStore.binding(
-                .state(\.isCreditsSheetOpen),
-                dispatch: .action(review: { $0 ? .openCredits : .closeCredits })
-            ),
+            isCreditsSheetPresented: viewStore.binding(.state(\.isCreditsSheetOpen).action(review: { (open: Bool) in open ? .openCredits : .closeCredits })),
             onOpenCredits: { viewStore.dispatch(.openCredits) },
             onOpenCreationSheet: { viewStore.dispatch(.openCreationSheet) },
-            onConfirmNewDocument: { viewStore.dispatch(.newDocument(field: viewStore.state.draftField, name: viewStore.state.draftName)) },
+            onConfirmNewDocument: { viewStore.dispatch(.newDocument(field: viewStore.state.draftField.value, name: viewStore.state.draftName)) },
             onCancelNewDocument: { viewStore.dispatch(.dismissCreationSheet) },
             onEdit:              { viewStore.dispatch(.editDocument($0)) },
             onCalculate:         { viewStore.dispatch(.calculateDocument($0)) },

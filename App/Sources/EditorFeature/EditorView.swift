@@ -6,44 +6,44 @@ import UIComponents
 
 // MARK: - EditorView (container)
 
-@BoundTo(EditorFeature.self, strategy: .observationSimple)
+@BoundTo(EditorFeature.self)
 public struct EditorView: View {
     public var body: some View {
         // All bidirectional field bindings are created here, once, in the container.
         // Each binding's `get` re-reads from the viewModel so it always returns the latest value.
 
         let inspectorTabBinding = Binding(
-            get: { viewStore.state.inspectorTab },
+            get: { viewStore.state.inspectorTab.value },
             set: { viewStore.dispatch(.setInspectorTab($0)) }
         )
 
         // Compartment field bindings — nil when no compartment is selected.
         let compBindings: CompartmentFieldBindings? = viewStore.state.selectedCompartmentId.flatMap { id in
-            guard viewStore.state.compartments.contains(where: { $0.id == id }) else { return nil }
-            let isMultiNuclide = viewStore.state.nuclides.count > 1
+            guard viewStore.state.compartments.value.contains(where: { $0.id == id }) else { return nil }
+            let isMultiNuclide = viewStore.state.nuclides.value.count > 1
             return CompartmentFieldBindings(  // isMultiNuclide used to guard dispatch below
                 name: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.name ?? "" },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.name ?? "" },
                     set: { viewStore.dispatch(.updateCompartmentName(id: id, name: $0)) }
                 ),
                 follow: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.follow ?? false },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.follow ?? false },
                     set: { viewStore.dispatch(.updateCompartmentFollow(id: id, value: $0)) }
                 ),
                 dispose: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.dispose ?? false },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.dispose ?? false },
                     set: { viewStore.dispatch(.updateCompartmentDispose(id: id, value: $0)) }
                 ),
                 intake: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.intake ?? false },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.intake ?? false },
                     set: { viewStore.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
                 fraction: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.fraction ?? 0 },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.fraction ?? 0 },
                     set: { viewStore.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
                 ),
                 nuclideId: Binding(
-                    get: { viewStore.state.compartments.first { $0.id == id }?.nuclideId ?? "" },
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.nuclideId ?? "" },
                     set: { if isMultiNuclide { viewStore.dispatch(.setCompartmentNuclide(compartmentId: id, nuclideId: $0)) } }
                 )
             )
@@ -51,10 +51,10 @@ public struct EditorView: View {
 
         // Link field bindings — nil when no link is selected.
         let linkBindings: LinkFieldBindings? = viewStore.state.selectedLinkIndex.flatMap { idx in
-            guard viewStore.state.links.contains(where: { $0.id == idx }) else { return nil }
+            guard viewStore.state.links.value.contains(where: { $0.id == idx }) else { return nil }
             return LinkFieldBindings(
                 rate: Binding(
-                    get: { viewStore.state.links.first { $0.id == idx }?.rate ?? 0 },
+                    get: { viewStore.state.links.value.first { $0.id == idx }?.rate ?? 0 },
                     set: { viewStore.dispatch(.updateLinkRate(index: idx, rate: $0)) }
                 )
             )
@@ -71,20 +71,20 @@ public struct EditorView: View {
         )
 
         let fieldBinding = Binding(
-            get: { viewStore.state.field },
+            get: { viewStore.state.field.value },
             set: { viewStore.dispatch(.updateField($0)) }
         )
 
         // Nuclide field bindings — one entry per nuclide in the document.
-        let nuclideBindings: [NuclideEditBinding] = viewStore.state.nuclides.map { n in
+        let nuclideBindings: [NuclideEditBinding] = viewStore.state.nuclides.value.map { n in
             NuclideEditBinding(
                 id: n.id,
                 name: Binding(
-                    get: { viewStore.state.nuclides.first { $0.id == n.id }?.name ?? "" },
+                    get: { viewStore.state.nuclides.value.first { $0.id == n.id }?.name ?? "" },
                     set: { viewStore.dispatch(.updateNuclideName(id: n.id, name: $0)) }
                 ),
                 halfLife: Binding(
-                    get: { viewStore.state.nuclides.first { $0.id == n.id }?.halfLife ?? 0 },
+                    get: { viewStore.state.nuclides.value.first { $0.id == n.id }?.halfLife ?? 0 },
                     set: { viewStore.dispatch(.updateNuclideHalfLife(id: n.id, halfLife: $0)) }
                 ),
                 canDelete: n.canDelete,
@@ -96,11 +96,11 @@ public struct EditorView: View {
             documentName:        documentNameBinding,
             documentDescription: documentDescriptionBinding,
             field:               fieldBinding,
-            lingo:               viewStore.state.lingo,
+            lingo:               viewStore.state.lingo.value,
             halfLife:           viewStore.state.halfLife,
-            nuclides:           viewStore.state.nuclides,
-            compartments:       viewStore.state.compartments,
-            links:              viewStore.state.links,
+            nuclides:           viewStore.state.nuclides.value,
+            compartments:       viewStore.state.compartments.value,
+            links:              viewStore.state.links.value,
             selectedCompartmentId: viewStore.state.selectedCompartmentId,
             selectedLinkIndex:  viewStore.state.selectedLinkIndex,
             inspectorTab:       inspectorTabBinding,
@@ -112,7 +112,7 @@ public struct EditorView: View {
             showKValues:         viewStore.state.showKValues,
             linkingBannerText:   viewStore.state.linkingBannerText,
             selectionFooterLabel: viewStore.state.selectionFooterLabel,
-            validationIssues:    viewStore.state.validationIssues,
+            validationIssues:    viewStore.state.validationIssues.value,
             canvasOffsetX:      viewStore.state.canvasOffsetX,
             canvasOffsetY:      viewStore.state.canvasOffsetY,
             canvasScale:        viewStore.state.canvasScale,
@@ -122,10 +122,10 @@ public struct EditorView: View {
             canvasPanOriginX:        viewStore.state.canvasPanOriginX,
             canvasPanOriginY:        viewStore.state.canvasPanOriginY,
             canvasPinchOriginScale:  viewStore.state.canvasPinchOriginScale,
-            variants:                viewStore.state.variants,
+            variants:                viewStore.state.variants.value,
             editingVariant:          viewStore.state.editingVariant,
             renamingVariant:         viewStore.state.renamingVariant,
-            variantRenameDraft:      viewStore.binding(.state(\.variantRenameDraft), dispatch: .action(\.setVariantRenameDraft)),
+            variantRenameDraft:      viewStore.binding(.state(\.variantRenameDraft).action(\.setVariantRenameDraft)),
             onSelectCompartment: { viewStore.dispatch(.selectCompartment($0)) },
             onSelectLink:        { viewStore.dispatch(.selectLink($0)) },
             onToggleLeftPanel:   { viewStore.dispatch(.toggleLeftPanel) },
@@ -145,8 +145,8 @@ public struct EditorView: View {
             onBeginCanvasPinch:      { viewStore.dispatch(.beginCanvasPinch(originScale: $0)) },
             onEndCanvasPinch:        { viewStore.dispatch(.endCanvasPinch) },
             onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
-            inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen), dispatch: .action(\.setInspectorSheet)),
-            modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen), dispatch: .action(\.setModelListSheet)),
+            inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen).action(\.setInspectorSheet)),
+            modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen).action(\.setModelListSheet)),
             onAddNuclide:            { viewStore.dispatch(.addNuclide) },
             onDeleteNuclide:         { viewStore.dispatch(.deleteNuclide(id: $0)) },
             onAddVariant:            { viewStore.dispatch(.addVariant(name: $0)) },
