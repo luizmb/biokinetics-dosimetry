@@ -26,18 +26,13 @@ struct CompartmentCanvasView: View {
     let compartmentDragOriginId: String?
     let compartmentDragOriginX:  Double
     let compartmentDragOriginY:  Double
-    let canvasPanOriginX:       Double?
-    let canvasPanOriginY:       Double?
-    let canvasPinchOriginScale: Double?
     var onSelectCompartment: (String?) -> Void
     var onSelectLink:         (Int?) -> Void
     var onMoveCompartment:    (String, Double, Double) -> Void
     var onBeginCompartmentDrag: (String, Double, Double) -> Void
     var onEndCompartmentDrag:   () -> Void
-    var onBeginCanvasPan:       (Double, Double) -> Void
-    var onEndCanvasPan:         () -> Void
-    var onBeginCanvasPinch:     (Double) -> Void
-    var onEndCanvasPinch:       () -> Void
+    var onCanvasGesture:        (EditorFeature.CanvasGesture) -> Void
+    var onEndCanvasGesture:     () -> Void
     var onSetCanvasTransform:   (Double, Double, Double) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -214,44 +209,38 @@ struct CompartmentCanvasView: View {
             // Gestures live on the same ZStack that contains the nodes so child
             // drag gestures (node move) correctly suppress the pan gesture.
             // Pan and pinch as one gesture: separate ones made the pinch wait for the pan to give
-            // up (~200 ms, then a jump). The point between the fingers stays put while zooming,
-            // and moving both fingers pans at the same time.
+            // up. The view only reports what the fingers did; the reducer turns it into the
+            // transform from its own state.
             .gesture(
                 SimultaneousGesture(DragGesture(minimumDistance: 4), MagnifyGesture())
-                    .onChanged { value in
-                        if canvasPanOriginX == nil { onBeginCanvasPan(canvasOffsetX, canvasOffsetY) }
-                        if canvasPinchOriginScale == nil { onBeginCanvasPinch(canvasScale) }
-                        let startOffset = CGPoint(x: canvasPanOriginX ?? canvasOffsetX, y: canvasPanOriginY ?? canvasOffsetY)
-                        let startScale = canvasPinchOriginScale ?? canvasScale
-                        let scale = max(0.2, min(5.0, startScale * (value.second.map { Double($0.magnification) } ?? 1)))
-                        let zoom = CGFloat(scale / startScale)
-                        // The drag follows one finger, which also spreads out as the pinch grows:
-                        // take that spread off to get how far the pair itself moved.
-                        let finger = value.first?.translation ?? .zero
-                        let spread: CGSize = if let pinch = value.second, let drag = value.first {
-                            CGSize(
-                                width: (drag.startLocation.x - pinch.startLocation.x) * (zoom - 1),
-                                height: (drag.startLocation.y - pinch.startLocation.y) * (zoom - 1)
-                            )
-                        } else { .zero }
-                        let anchor = value.second?.startLocation ?? CGPoint(x: hw, y: hh)
-                        onSetCanvasTransform(
-                            Double(anchor.x - hw - (anchor.x - hw - startOffset.x) * zoom + finger.width - spread.width),
-                            Double(anchor.y - hh - (anchor.y - hh - startOffset.y) * zoom + finger.height - spread.height),
-                            scale
-                        )
-                    }
-                    .onEnded { _ in
-                        onEndCanvasPan()
-                        onEndCanvasPinch()
-                    }
+                    .onChanged { value in onCanvasGesture(canvasGesture(value, viewCenter: CGPoint(x: hw, y: hh))) }
+                    .onEnded { _ in onEndCanvasGesture() }
             )
-            .onTapGesture(count: 2) { onSetCanvasTransform(0, 0, 1) }
+            // Simultaneous, so the pinch never waits for a double tap to fail.
+            .simultaneousGesture(TapGesture(count: 2).onEnded { onSetCanvasTransform(0, 0, 1) })
         }
         .clipped()
     }
 
     // MARK: - Helpers
+
+    /// What the fingers did, as the store's value.
+    private func canvasGesture(
+        _ value: SimultaneousGesture<DragGesture, MagnifyGesture>.Value,
+        viewCenter: CGPoint
+    ) -> EditorFeature.CanvasGesture {
+        let point = { (p: CGPoint) in EditorFeature.CanvasPoint(x: Double(p.x), y: Double(p.y)) }
+        let fingerOffset: CGPoint = if let drag = value.first, let pinch = value.second {
+            CGPoint(x: drag.startLocation.x - pinch.startLocation.x, y: drag.startLocation.y - pinch.startLocation.y)
+        } else { .zero }
+        return EditorFeature.CanvasGesture(
+            translation: point(CGPoint(x: value.first?.translation.width ?? 0, y: value.first?.translation.height ?? 0)),
+            magnification: Double(value.second?.magnification ?? 1),
+            anchor: value.second.map { point($0.startLocation) },
+            fingerOffsetFromAnchor: point(fingerOffset),
+            viewCenter: point(viewCenter)
+        )
+    }
 
     private static let canvasSpace = "compartmentCanvas"
 

@@ -119,9 +119,6 @@ public struct EditorView: View {
             compartmentDragOriginId: viewStore.state.compartmentDragOriginId,
             compartmentDragOriginX:  viewStore.state.compartmentDragOriginX,
             compartmentDragOriginY:  viewStore.state.compartmentDragOriginY,
-            canvasPanOriginX:        viewStore.state.canvasPanOriginX,
-            canvasPanOriginY:        viewStore.state.canvasPanOriginY,
-            canvasPinchOriginScale:  viewStore.state.canvasPinchOriginScale,
             variants:                viewStore.state.variants.value,
             editingVariant:          viewStore.state.editingVariant,
             renamingVariant:         viewStore.state.renamingVariant,
@@ -140,10 +137,8 @@ public struct EditorView: View {
             onMoveCompartment:       { viewStore.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
             onBeginCompartmentDrag:  { viewStore.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
             onEndCompartmentDrag:    { viewStore.dispatch(.endCompartmentDrag) },
-            onBeginCanvasPan:        { viewStore.dispatch(.beginCanvasPan(originX: $0, originY: $1)) },
-            onEndCanvasPan:          { viewStore.dispatch(.endCanvasPan) },
-            onBeginCanvasPinch:      { viewStore.dispatch(.beginCanvasPinch(originScale: $0)) },
-            onEndCanvasPinch:        { viewStore.dispatch(.endCanvasPinch) },
+            onCanvasGesture:         { viewStore.dispatch(.canvasGestureChanged($0)) },
+            onEndCanvasGesture:      { viewStore.dispatch(.canvasGestureEnded) },
             onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
             inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen).action(\.setInspectorSheet)),
             modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen).action(\.setModelListSheet)),
@@ -194,9 +189,6 @@ struct EditorContent: View {
     let compartmentDragOriginId: String?
     let compartmentDragOriginX: Double
     let compartmentDragOriginY: Double
-    let canvasPanOriginX: Double?
-    let canvasPanOriginY: Double?
-    let canvasPinchOriginScale: Double?
     let variants: [String]
     let editingVariant: String?
     let renamingVariant: String?
@@ -217,10 +209,8 @@ struct EditorContent: View {
     var onMoveCompartment: (String, Double, Double) -> Void
     var onBeginCompartmentDrag: (String, Double, Double) -> Void
     var onEndCompartmentDrag: () -> Void
-    var onBeginCanvasPan: (Double, Double) -> Void
-    var onEndCanvasPan: () -> Void
-    var onBeginCanvasPinch: (Double) -> Void
-    var onEndCanvasPinch: () -> Void
+    var onCanvasGesture: (EditorFeature.CanvasGesture) -> Void
+    var onEndCanvasGesture: () -> Void
     var onSetCanvasTransform: (Double, Double, Double) -> Void
     var inspectorSheet: Binding<Bool>
     var modelListSheet: Binding<Bool>
@@ -369,9 +359,6 @@ struct EditorContent: View {
             compartmentDragOriginId: compartmentDragOriginId,
             compartmentDragOriginX: compartmentDragOriginX,
             compartmentDragOriginY: compartmentDragOriginY,
-            canvasPanOriginX: canvasPanOriginX,
-            canvasPanOriginY: canvasPanOriginY,
-            canvasPinchOriginScale: canvasPinchOriginScale,
             onSelectCompartment: { id in
                 if linkingBannerText != nil { if let id { onLinkStep(id) } }
                 else {
@@ -386,10 +373,8 @@ struct EditorContent: View {
             onMoveCompartment: onMoveCompartment,
             onBeginCompartmentDrag: onBeginCompartmentDrag,
             onEndCompartmentDrag: onEndCompartmentDrag,
-            onBeginCanvasPan: onBeginCanvasPan,
-            onEndCanvasPan: onEndCanvasPan,
-            onBeginCanvasPinch: onBeginCanvasPinch,
-            onEndCanvasPinch: onEndCanvasPinch,
+            onCanvasGesture: onCanvasGesture,
+            onEndCanvasGesture: onEndCanvasGesture,
             onSetCanvasTransform: onSetCanvasTransform
         )
     }

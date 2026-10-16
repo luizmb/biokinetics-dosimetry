@@ -32,9 +32,9 @@ public enum EditorFeature {
         /// Origin captured when a compartment drag begins; nil when no drag is in progress.
         public var compartmentDragOrigin: CompartmentDragOrigin? = nil
         /// Canvas-pan origin (nil when no pan is in progress).
-        public var canvasPanOrigin: CanvasPoint? = nil
+        /// The transform when the pan or pinch in progress started; `nil` between gestures.
+        public var canvasGestureStart: CanvasTransform? = nil
         /// Canvas scale at pinch-gesture start (nil when no pinch is in progress).
-        public var canvasPinchOriginScale: Double? = nil
         /// iPhone sheet presentation flags.
         public var isInspectorSheetOpen: Bool = false
         public var isModelListSheetOpen: Bool = false
@@ -102,6 +102,33 @@ public enum EditorFeature {
         public init(x: Double, y: Double) { self.x = x; self.y = y }
     }
 
+    /// Where the canvas sits: `offset` in view points, `scale` its zoom.
+    public struct CanvasTransform: Sendable, Equatable {
+        public var offset: CanvasPoint
+        public var scale: Double
+        public init(offset: CanvasPoint, scale: Double) { self.offset = offset; self.scale = scale }
+    }
+
+    /// A pan-and-pinch in progress, as the gesture reports it, in the canvas view's points.
+    public struct CanvasGesture: Sendable, Equatable {
+        /// How far the tracked finger moved.
+        public var translation: CanvasPoint
+        public var magnification: Double
+        /// Where the pinch started; `nil` while only panning.
+        public var anchor: CanvasPoint?
+        /// Where the tracked finger started, relative to `anchor`.
+        public var fingerOffsetFromAnchor: CanvasPoint
+        /// The middle of the canvas view: the transform's origin.
+        public var viewCenter: CanvasPoint
+        public init(translation: CanvasPoint, magnification: Double, anchor: CanvasPoint?, fingerOffsetFromAnchor: CanvasPoint, viewCenter: CanvasPoint) {
+            self.translation = translation
+            self.magnification = magnification
+            self.anchor = anchor
+            self.fingerOffsetFromAnchor = fingerOffsetFromAnchor
+            self.viewCenter = viewCenter
+        }
+    }
+
     public struct CompartmentDragOrigin: Sendable, Equatable {
         public var id: String
         public var x: Double
@@ -148,10 +175,8 @@ public enum EditorFeature {
         case deleteLink(index: Int)
         // Canvas
         case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
-        case beginCanvasPan(originX: Double, originY: Double)
-        case endCanvasPan
-        case beginCanvasPinch(originScale: Double)
-        case endCanvasPinch
+        case canvasGestureChanged(CanvasGesture)
+        case canvasGestureEnded
         // Variants
         case addVariant(name: String)
         case deleteVariant(name: String)
@@ -243,10 +268,7 @@ public enum EditorFeature {
             public var compartmentDragOriginX: Double = 0
             public var compartmentDragOriginY: Double = 0
             /// Non-nil while a canvas pan is in progress; holds the offset at gesture start.
-            public var canvasPanOriginX: Double? = nil
-            public var canvasPanOriginY: Double? = nil
             /// Non-nil while a pinch is in progress; holds the scale at gesture start.
-            public var canvasPinchOriginScale: Double? = nil
             /// iPhone sheet flags.
             public var isInspectorSheetOpen: Bool = false
             public var isModelListSheetOpen: Bool = false
@@ -299,10 +321,8 @@ public enum EditorFeature {
             case updateLinkRate(index: Int, rate: Double)
             case deleteLink(index: Int)
             case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
-            case beginCanvasPan(originX: Double, originY: Double)
-            case endCanvasPan
-            case beginCanvasPinch(originScale: Double)
-            case endCanvasPinch
+            case canvasGestureChanged(CanvasGesture)
+            case canvasGestureEnded
             case toggleLeftPanel
             case toggleRightPanel
             case toggleKValues
@@ -318,6 +338,27 @@ public enum EditorFeature {
             case commitVariantRename
             case cancelVariantRename
         }
+
+    // MARK: - Pan and pinch
+
+    /// `start` with a pan-and-pinch applied: the point the pinch started on stays under the fingers
+    /// while the scale changes, and the pair's own movement pans. The tracked finger also spreads out
+    /// as the pinch grows, so that spread is taken off its translation.
+    public static func canvasTransform(from start: CanvasTransform, by gesture: CanvasGesture) -> CanvasTransform {
+        let scale = max(0.2, min(5.0, start.scale * gesture.magnification))
+        let zoom = scale / start.scale
+        let anchor = gesture.anchor ?? gesture.viewCenter
+        let center = gesture.viewCenter
+        let panX = gesture.translation.x - gesture.fingerOffsetFromAnchor.x * (zoom - 1)
+        let panY = gesture.translation.y - gesture.fingerOffsetFromAnchor.y * (zoom - 1)
+        return CanvasTransform(
+            offset: CanvasPoint(
+                x: anchor.x - center.x - (anchor.x - center.x - start.offset.x) * zoom + panX,
+                y: anchor.y - center.y - (anchor.y - center.y - start.offset.y) * zoom + panY
+            ),
+            scale: scale
+        )
+    }
 
     // MARK: - Mappings
 
@@ -402,9 +443,6 @@ public enum EditorFeature {
             compartmentDragOriginId: state.compartmentDragOrigin?.id,
             compartmentDragOriginX:  state.compartmentDragOrigin?.x ?? 0,
             compartmentDragOriginY:  state.compartmentDragOrigin?.y ?? 0,
-            canvasPanOriginX:        state.canvasPanOrigin?.x,
-            canvasPanOriginY:        state.canvasPanOrigin?.y,
-            canvasPinchOriginScale:  state.canvasPinchOriginScale,
             isInspectorSheetOpen:    state.isInspectorSheetOpen,
             isModelListSheetOpen:    state.isModelListSheetOpen,
             variants:                doc.variants.keys.sorted(),
@@ -451,10 +489,8 @@ public enum EditorFeature {
         case .updateLinkRate(let idx, let r):                      .updateLinkRate(index: idx, rate: r)
         case .deleteLink(let idx):                                 .deleteLink(index: idx)
         case .setCanvasTransform(let ox, let oy, let s):           .setCanvasTransform(offsetX: ox, offsetY: oy, scale: s)
-        case .beginCanvasPan(let ox, let oy):                     .beginCanvasPan(originX: ox, originY: oy)
-        case .endCanvasPan:                                        .endCanvasPan
-        case .beginCanvasPinch(let s):                            .beginCanvasPinch(originScale: s)
-        case .endCanvasPinch:                                      .endCanvasPinch
+        case .canvasGestureChanged(let g):                       .canvasGestureChanged(g)
+        case .canvasGestureEnded:                                  .canvasGestureEnded
         case .toggleLeftPanel:                                     .toggleLeftPanel
         case .toggleRightPanel:                                    .toggleRightPanel
         case .toggleKValues:                                       .toggleKValues
@@ -716,17 +752,19 @@ public enum EditorFeature {
                     state.canvasScale = max(0.2, min(5.0, scale))
                 }
 
-            case .beginCanvasPan(let ox, let oy):
-                .reduce { $0.canvasPanOrigin = CanvasPoint(x: ox, y: oy) }
+            case .canvasGestureChanged(let gesture):
+                // The transform is computed here from the reducer's own state, not in the view: a
+                // view reading its last-rendered state is an update behind while the gesture runs.
+                .reduce { state in
+                    let start = state.canvasGestureStart ?? CanvasTransform(offset: state.canvasOffset, scale: state.canvasScale)
+                    state.canvasGestureStart = start
+                    let transform = Self.canvasTransform(from: start, by: gesture)
+                    state.canvasOffset = transform.offset
+                    state.canvasScale = transform.scale
+                }
 
-            case .endCanvasPan:
-                .reduce { $0.canvasPanOrigin = nil }
-
-            case .beginCanvasPinch(let s):
-                .reduce { $0.canvasPinchOriginScale = s }
-
-            case .endCanvasPinch:
-                .reduce { $0.canvasPinchOriginScale = nil }
+            case .canvasGestureEnded:
+                .reduce { $0.canvasGestureStart = nil }
 
             case .setInspectorSheet(let v):
                 .reduce { $0.isInspectorSheetOpen = v }
