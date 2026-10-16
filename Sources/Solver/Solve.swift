@@ -89,14 +89,16 @@ private func rungeKutta4(
     stepCount: Int,
     h: Double
 ) -> [[Double]] {
-    let trajectory = RungeKutta4.trajectory(
-        from: x0.asAcceleratedVector,
-        derivative: { _, y in A.apply(to: y) },
-        step: h,
-        through: Double(stepCount + 1) * step
-    )
+    // Folds straight to the output rows: `RungeKutta4.trajectory` would keep every RK4 state
+    // (`step / h` per row) only for all but one per row to be dropped.
+    let delta = RungeKutta4.rk4 { (_: Double, y: AcceleratedVector) in A.apply(to: y) }
     let stepsPerOutput = Int((step / h).rounded())
-    return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state.storage }
+    let advance = { (y: AcceleratedVector) in
+        (0 ..< stepsPerOutput).reduce(y) { y, _ in y + delta(0, y, h) }
+    }
+    return (0 ... stepCount).reduce(into: [x0.asAcceleratedVector]) { rows, _ in
+        rows.append(advance(rows[rows.count - 1]))
+    }.map(\.storage)
 }
 
 private func rungeKutta45(
