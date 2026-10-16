@@ -229,29 +229,51 @@ struct ReportContent: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ScrollView([.horizontal, .vertical]) {
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        headerCell("Time (\(lingo.timeUnit.label))")
-                        ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
-                    }
-                    .background(Color.platformTertiaryGroupedBackground)
-                    GlassDivider()
-                    ForEach(reportRows) { row in
-                        HStack(spacing: 0) {
-                            dataCell(row.day.formatted(.number.precision(.fractionLength(0))))
-                            ForEach(Array(row.values.enumerated()), id: \.0) { _, val in
-                                dataCell(String(format: "%.9e", val))
+            // A table, not one block scrolled both ways: rows scroll vertically under a pinned
+            // header and are built as they come into view; the columns that don't fit scroll
+            // sideways, header and rows together.
+            ScrollView(.horizontal) {
+                ScrollView(.vertical) {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            ForEach(reportRows) { row in
+                                HStack(spacing: 0) {
+                                    timeCell(row.day.formatted(.number.precision(.fractionLength(0))))
+                                    ForEach(Array(row.values.enumerated()), id: \.0) { _, val in
+                                        dataCell(String(format: "%.9e", val))
+                                    }
+                                }
+                                GlassDivider()
                             }
+                        } header: {
+                            VStack(spacing: 0) {
+                                HStack(spacing: 0) {
+                                    timeHeaderCell("Time (\(lingo.timeUnit.label))")
+                                    ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
+                                }
+                                GlassDivider()
+                            }
+                            .background(.bar)
                         }
-                        GlassDivider()
                     }
+                    .padding(.bottom, 90)
                 }
             }
+            .scrollIndicators(.hidden, axes: .horizontal)
             .font(.system(size: 11, design: .monospaced))
         }
     }
 
+    private func timeHeaderCell(_ text: String) -> some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+            .frame(width: 64, alignment: .trailing)
+            .padding(.horizontal, 8).padding(.vertical, 6)
+    }
+    private func timeCell(_ text: String) -> some View {
+        Text(text)
+            .frame(width: 64, alignment: .trailing)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+    }
     private func headerCell(_ text: String) -> some View {
         Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
             .frame(width: 120, alignment: .trailing)

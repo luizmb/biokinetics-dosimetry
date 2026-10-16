@@ -242,6 +242,8 @@ struct CalculatorContent: View {
                 }
             }
             .padding(.horizontal, 12)
+            // Clear of the floating tab bar.
+            .padding(.bottom, 16)
             .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
             .tag(CalculatorFeature.CalcView.chart)
 
@@ -253,9 +255,8 @@ struct CalculatorContent: View {
             .tabItem { Label("Report", systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
 
-            // Parameters tab
-            VStack(spacing: 0) {
-                ParameterContent(
+            // Parameters tab: the list scrolls under the Calculate button, which floats on it.
+            ParameterContent(
                     paramBindings: paramBindings,
                     lingo: lingo,
                     variants: variants, solver: solver,
@@ -269,6 +270,8 @@ struct CalculatorContent: View {
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
+            .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
                 if let msg = durationWarningMessage {
                     GBanner(
                         tone: bannerTone(durationWarning),
@@ -289,8 +292,9 @@ struct CalculatorContent: View {
                     }
                 )
                 .padding(.horizontal, 16)
-                .padding(.bottom, 30)
+                .padding(.bottom, 12)
                 .padding(.top, 10)
+            }
             }
             .tabItem { Label("Parameters", systemImage: "slider.horizontal.3") }
             .tag(CalculatorFeature.CalcView.parameters)
