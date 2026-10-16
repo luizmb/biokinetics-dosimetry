@@ -13,13 +13,17 @@ public struct CSVExportInput: Transferable, Sendable, Equatable {
     public let lingo: FieldLingo
     public let compartmentNames: [String]
     public let rows: [(day: Double, values: [Double])]
+    /// Set when the run stopped early ("Partial run: stopped at day 41.3 of 200"); the file name
+    /// says so, since a note line would break CSV readers.
+    public let note: String?
 
     public init(documentName: String, lingo: FieldLingo,
-                compartmentNames: [String], rows: [(day: Double, values: [Double])]) {
+                compartmentNames: [String], rows: [(day: Double, values: [Double])], note: String? = nil) {
         self.documentName     = documentName
         self.lingo            = lingo
         self.compartmentNames = compartmentNames
         self.rows             = rows
+        self.note             = note
     }
 
     public static var transferRepresentation: some TransferRepresentation {
@@ -39,13 +43,14 @@ public struct CSVExportInput: Transferable, Sendable, Equatable {
             }
             return data
         }
-        .suggestedFileName { $0.documentName + ".csv" }
+        .suggestedFileName { $0.documentName + ($0.note == nil ? "" : " (partial)") + ".csv" }
     }
 
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.documentName == rhs.documentName &&
         lhs.compartmentNames == rhs.compartmentNames &&
-        lhs.rows.count == rhs.rows.count
+        lhs.rows.count == rhs.rows.count &&
+        lhs.note == rhs.note
     }
 }
 
@@ -55,26 +60,30 @@ public struct PDFExportInput: Transferable, Sendable, Equatable {
     public let lingo: FieldLingo
     public let compartmentNames: [String]
     public let rows: [(day: Double, values: [Double])]
+    /// Set when the run stopped early; printed under the title.
+    public let note: String?
 
     public init(documentName: String, lingo: FieldLingo,
-                compartmentNames: [String], rows: [(day: Double, values: [Double])]) {
+                compartmentNames: [String], rows: [(day: Double, values: [Double])], note: String? = nil) {
         self.documentName     = documentName
         self.lingo            = lingo
         self.compartmentNames = compartmentNames
         self.rows             = rows
+        self.note             = note
     }
 
     public static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(exportedContentType: .pdf) { input in
             try input.generatePDF()
         }
-        .suggestedFileName { $0.documentName + ".pdf" }
+        .suggestedFileName { $0.documentName + ($0.note == nil ? "" : " (partial)") + ".pdf" }
     }
 
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.documentName == rhs.documentName &&
         lhs.compartmentNames == rhs.compartmentNames &&
-        lhs.rows.count == rhs.rows.count
+        lhs.rows.count == rhs.rows.count &&
+        lhs.note == rhs.note
     }
 }
 

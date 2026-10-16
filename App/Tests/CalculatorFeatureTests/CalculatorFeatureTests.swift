@@ -2,6 +2,7 @@ import AppDomain
 import CalculatorFeature
 import Domain
 import SnapshotTesting
+import Solver
 import SwiftRex
 import SwiftRexTesting
 import Testing
@@ -192,18 +193,45 @@ struct CalculatorFeatureBehaviorTests {
         initial.document = doc
         initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
         let s = store(initial: initial)
-        s.dispatch(.solveFailed(.stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000))) {
-            $0.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000)
+        s.dispatch(.solveFailed(.stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000, partial: []))) {
+            $0.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000, partial: [])
         }
         let vs = CalculatorFeature.mapState(env)(s.state)
         #expect(vs.remedies == [.useAutomaticBudget, .useBirchall])
         #expect(vs.error?.hasPrefix("RK45 stopped at day") == true)
     }
 
+    /// What ran before the stop becomes the results, marked as partial: the chart, the report
+    /// and both exports stop at the day it reached.
+    @Test func aStoppedRunKeepsWhatItComputed() {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.document = doc
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        let partial = Array(mockResults.prefix(2))
+        let failure = SolveError.stepBudgetExhausted(reachedDay: 1.5, finalDay: 200, steps: 3_000, partial: partial)
+        let s = store(initial: initial)
+        s.dispatch(.solveFailed(failure)) {
+            $0.solveFailure = failure
+            $0.results = partial
+        }
+        let vs = CalculatorFeature.mapState(env)(s.state)
+        #expect(vs.stoppedAtDay == 1.5)
+        #expect(vs.stoppedLabel != nil)
+        #expect(vs.reportRows.count == 2)
+        #expect(vs.csvExportInput?.note?.hasPrefix("Partial run: stopped at") == true)
+        #expect(vs.pdfExportInput?.note == vs.csvExportInput?.note)
+        #expect(vs.error?.contains("the results cover the days it reached") == true)
+    }
+
+    @Test func aStopWithNothingComputedHasNoResults() {
+        let failure = SolveError.stepUnderflow(day: 0, partial: [])
+        store().dispatch(.solveFailed(failure)) { $0.solveFailure = failure }
+    }
+
     @Test func aRemedyChangesTheSettingsAndRunsAgain() async {
         var initial = CalculatorFeature.initialState(with: ())
         initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
-        initial.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000)
+        initial.solveFailure = .stepBudgetExhausted(reachedDay: 40, finalDay: 200, steps: 3_000, partial: [])
         let s = store(initial: initial)
         s.dispatch(.applyRemedy(.useAutomaticBudget)) { $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic) }
         await s.runEffects()
@@ -260,7 +288,7 @@ struct CalculatorFeatureBehaviorTests {
         let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
         #expect(CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format)
             == "An RK4 step of 1.0000 d is unstable for this model. Use a step below 0.063 d, or Birchall.")
-        #expect(CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 10_000), format: format)
+        #expect(CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 10_000, partial: []), format: format)
             == "RK45 stopped at day 835.9 of 1001 after 10000 steps. Raise the step budget, or use Birchall.")
     }
 
@@ -601,6 +629,25 @@ struct CalculatorFeatureSnapshotTests {
         await snapBoth(feature, named: "error-state")
     }
 
+    /// A run that stopped at day 41 of 200: its valid part, a marker where it stopped, the rest
+    /// greyed out, and the reason and fixes above the chart.
+    @Test func snapshotPartialResults() async throws {
+        let rows = try await Solver.solve(
+            plan: BiokineticsSimulationPlan(step: 1, final: 200, solver: .birchall(composition: .perTime)),
+            model: ModelDocument.validation.model
+        ).run().get()
+        let partial = Array(rows.prefix(42))
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.document = .validation
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
+        initial.manualStepsText = "5"
+        initial.activeView = .chart
+        initial.results = partial
+        initial.solveFailure = .stepBudgetExhausted(reachedDay: 41.3, finalDay: 200, steps: 3_000, partial: partial)
+        let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
+        await snapBoth(feature, named: "partial-results")
+    }
+
     /// A run that stopped: the reason, worded as advice, and the fixes as buttons.
     @Test func snapshotSolveFailure() async {
         var initial = CalculatorFeature.initialState(with: ())
@@ -608,7 +655,7 @@ struct CalculatorFeatureSnapshotTests {
         initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 5))
         initial.manualStepsText = "5"
         initial.activeView = .chart
-        initial.solveFailure = .stepBudgetExhausted(reachedDay: 41.3, finalDay: 200, steps: 3_000)
+        initial.solveFailure = .stepBudgetExhausted(reachedDay: 41.3, finalDay: 200, steps: 3_000, partial: [])
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "solve-failure")
     }

@@ -100,6 +100,8 @@ public struct CalculatorView: View {
                 automaticStepsPerDay: viewStore.state.automaticStepsPerDay
             ),
             remedies: viewStore.state.remedies.value,
+            stoppedAtDay: viewStore.state.stoppedAtDay,
+            stoppedLabel: viewStore.state.stoppedLabel,
             csvExportInput:       viewStore.state.csvExportInput.value,
             pdfExportInput:       viewStore.state.pdfExportInput.value,
             activeView:           activeViewBinding,
@@ -141,6 +143,8 @@ struct CalculatorContent: View {
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let hints: SolverHints
     let remedies: [CalculatorFeature.Remedy]
+    let stoppedAtDay: Double?
+    let stoppedLabel: String?
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
 
@@ -216,7 +220,7 @@ struct CalculatorContent: View {
                         ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
                         : Color.white.opacity(0.40)) {
                 VStack(spacing: 0) {
-                    if !series.isEmpty && !isCalculating && error == nil {
+                    if !series.isEmpty && !isCalculating {
                         HStack(spacing: 7) {
                             Spacer()
                             logPill(logXLabel, binding: logX)
@@ -230,6 +234,8 @@ struct CalculatorContent: View {
                         finalDay: paramBindings.finalDay.wrappedValue,
                         lingo: lingo, validationIssues: validationIssues,
                         remedies: remedies,
+                        stoppedAtDay: stoppedAtDay,
+                        stoppedLabel: stoppedLabel,
                         onToggleSeries: onToggleSeries,
                         onRemedy: onRemedy
                     )
@@ -306,7 +312,7 @@ struct CalculatorContent: View {
                         ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
                         : Color.white.opacity(0.40)) {
                 VStack(spacing: 0) {
-                    if !series.isEmpty && !isCalculating && error == nil {
+                    if !series.isEmpty && !isCalculating {
                         HStack(spacing: 7) {
                             Spacer()
                             logPill(logXLabel, binding: logX)
@@ -321,6 +327,8 @@ struct CalculatorContent: View {
                         lingo: lingo,
                         validationIssues: validationIssues,
                         remedies: remedies,
+                        stoppedAtDay: stoppedAtDay,
+                        stoppedLabel: stoppedLabel,
                         onToggleSeries: onToggleSeries,
                         onRemedy: onRemedy
                     )
