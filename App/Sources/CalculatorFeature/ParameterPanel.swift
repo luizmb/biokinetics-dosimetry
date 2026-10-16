@@ -66,8 +66,7 @@ struct ParameterContent: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
+        ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     GLabel("Parameters")
                         .padding(.top, 18)
@@ -159,7 +158,10 @@ struct ParameterContent: View {
                 }
                 .padding(.bottom, 8)
             }
-
+        // Calculate floats on the list as a bar, the list scrolling under it with a soft fade:
+        // below the scroll view it was a solid strip of the panel's background.
+        .overlay { if showCalculateButton { EdgeFade(.bottom) } }
+        .safeAreaBar(edge: .bottom) {
             if showCalculateButton {
                 VStack(spacing: 10) {
                     if let msg = durationWarningMessage {
