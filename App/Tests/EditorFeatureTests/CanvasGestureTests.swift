@@ -73,4 +73,41 @@ struct CanvasGestureTests {
         }
         store.dispatch(.canvasTouchesEnded) { $0.canvasTouchSession = nil }
     }
+
+    /// Two fingers preview the zoom without moving the committed layout; lifting commits it, and
+    /// the view's one scale-and-offset puts every point where the preview transform would.
+    @Test func aPinchPreviewsThenCommits() {
+        var initial = EditorFeature.State()
+        initial.canvasOffset = Point(x: 10, y: -20)
+        let store = TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: .init(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))
+        let down = [1: Point(x: 150, y: 400), 2: Point(x: 250, y: 400)]
+        let apart = [1: Point(x: 100, y: 420), 2: Point(x: 300, y: 420)]
+        store.dispatch(.canvasTouchesChanged(touches(down))) {
+            $0.canvasTouchSession = .init(start: .init(offset: Point(x: 10, y: -20), scale: 1), touches: down)
+        }
+        let session = EditorFeature.CanvasTouchSession(start: .init(offset: Point(x: 10, y: -20), scale: 1), touches: down)
+        let preview = EditorFeature.canvasTransform(session, touches(apart))
+        store.dispatch(.canvasTouchesChanged(touches(apart))) { $0.canvasPinchPreview = preview }
+        #expect(store.state.canvasOffset == Point(x: 10, y: -20))
+
+        // The committed layout, scaled about the view's centre and moved, lands where the preview puts it.
+        let view = EditorFeature.mapState.runReader(.init(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))(store.state)
+        let committed = EditorFeature.CanvasTransform(offset: store.state.canvasOffset, scale: store.state.canvasScale)
+        for c in [Point(x: 450, y: 310), Point(x: 0, y: 0), Point(x: 900, y: 600)] {
+            let base = screen(c, committed)
+            let shown = Point(
+                x: (base.x - center.x) * view.pinchScale + center.x + view.pinchOffset.x,
+                y: (base.y - center.y) * view.pinchScale + center.y + view.pinchOffset.y
+            )
+            let target = screen(c, preview)
+            #expect(abs(shown.x - target.x) < 1e-9 && abs(shown.y - target.y) < 1e-9)
+        }
+
+        store.dispatch(.canvasTouchesEnded) {
+            $0.canvasTouchSession = nil
+            $0.canvasPinchPreview = nil
+            $0.canvasOffset = preview.offset
+            $0.canvasScale = preview.scale
+        }
+    }
 }

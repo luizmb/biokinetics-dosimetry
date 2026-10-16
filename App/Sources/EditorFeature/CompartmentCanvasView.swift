@@ -23,7 +23,8 @@ struct CompartmentCanvasView: View {
     let canvasOffsetX: Double
     let canvasOffsetY: Double
     let canvasScale:   Double
-    let isPinching:    Bool
+    let pinchScale:    Double
+    let pinchOffset:   EditorFeature.CanvasPoint
     let compartmentDragOriginId: String?
     let compartmentDragOriginX:  Double
     let compartmentDragOriginY:  Double
@@ -53,6 +54,7 @@ struct CompartmentCanvasView: View {
                                   width: Double(geo.size.width)  / canvasScale,
                                   height: Double(geo.size.height) / canvasScale)
 
+            ZStack {
             ZStack {
                 // ── Graph paper and soft colour fields for the glass to bend ───
                 GlassBackdrop(origin: screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy), scale: s)
@@ -165,7 +167,7 @@ struct CompartmentCanvasView: View {
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
                     CompartmentNode(
                         comp: comp, isLinkingTarget: isLinking, size: sz, scale: s,
-                        isPinching: isPinching, isDragging: compartmentDragOriginId == comp.id
+                        isDragging: compartmentDragOriginId == comp.id
                     )
                         // The node's own rounded shape is its touch area. Attached after
                         // `.position` (which fills the whole canvas) every node competed for every
@@ -206,6 +208,11 @@ struct CompartmentCanvasView: View {
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
                 }
+            }
+            // A pinch in progress moves the whole committed layout as one image, about the view's
+            // centre: the glass keeps its geometry, so nothing is rebuilt until the fingers lift.
+            .scaleEffect(pinchScale)
+            .offset(x: pinchOffset.x, y: pinchOffset.y)
             }
             .contentShape(Rectangle())
             .coordinateSpace(.named(Self.canvasSpace))
@@ -318,9 +325,6 @@ private struct CompartmentNode: View {
     /// In canvas units.
     let size: CGSize
     let scale: CGFloat
-    /// While two fingers zoom, every node changes size each frame and rebuilding the glass at each
-    /// size stalls the pinch; the nodes are plain cards until the fingers lift, then settle back.
-    let isPinching: Bool
     /// The node being dragged brightens. From the store, so only that node does: the glass's own
     /// `.interactive()` lit every glass shape under the finger.
     let isDragging: Bool
@@ -338,18 +342,16 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        .background { if isPinching { shape.fill(.regularMaterial) } }
-        .glassEffect(isPinching ? .identity : .clear.tint(isDragging ? Color.white.opacity(dark ? 0.25 : 0.55) : glassTint), in: shape)
+        .glassEffect(.clear.tint(isDragging ? Color.white.opacity(dark ? 0.25 : 0.55) : glassTint), in: shape)
         .glassEffectTransition(.identity)
-        .animation(.easeOut(duration: 0.2), value: isPinching)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
     private var label: some View {
         VStack(spacing: 4) {
             Text(comp.name.trimmingCharacters(in: .whitespacesAndNewlines))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.primary.opacity(0.72))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
             HStack(spacing: 4) {
@@ -368,6 +370,6 @@ private struct CompartmentNode: View {
     }
 
     private func dot(_ c: Color) -> some View {
-        Circle().fill(c.opacity(0.8)).frame(width: 6, height: 6)
+        Circle().fill(c.opacity(0.7)).frame(width: 5, height: 5)
     }
 }

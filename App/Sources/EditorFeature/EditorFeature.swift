@@ -35,6 +35,10 @@ public enum EditorFeature {
         /// The pan or pinch in progress: the transform and touches it measures from; `nil` between
         /// gestures.
         public var canvasTouchSession: CanvasTouchSession? = nil
+        /// While two fingers zoom, where the canvas will land; committed to `canvasOffset` /
+        /// `canvasScale` when they lift. Until then the view shows the committed layout scaled to
+        /// it as one image, so nothing (the glass above all) is rebuilt per frame.
+        public var canvasPinchPreview: CanvasTransform? = nil
         /// Canvas scale at pinch-gesture start (nil when no pinch is in progress).
         /// iPhone sheet presentation flags.
         public var isInspectorSheetOpen: Bool = false
@@ -267,8 +271,10 @@ public enum EditorFeature {
             public var canvasOffsetX: Double = 0
             public var canvasOffsetY: Double = 0
             public var canvasScale: Double = 1
-            /// Two fingers on the canvas: the nodes drop their glass until they lift.
-            public var isPinching: Bool = false
+            /// A pinch in progress, relative to the committed layout: scale it by `pinchScale` about
+            /// the view's centre, then move it by `pinchOffset`. Identity between pinches.
+            public var pinchScale: Double = 1
+            public var pinchOffset: CanvasPoint = CanvasPoint(x: 0, y: 0)
             /// Non-nil while a compartment drag is active; holds the canvas position at drag start.
             public var compartmentDragOriginId: String? = nil
             public var compartmentDragOriginX: Double = 0
@@ -370,6 +376,13 @@ public enum EditorFeature {
         )
     }
 
+    static func commitPinchPreview(_ state: inout State) {
+        guard let preview = state.canvasPinchPreview else { return }
+        state.canvasOffset = preview.offset
+        state.canvasScale = preview.scale
+        state.canvasPinchPreview = nil
+    }
+
     private static func centroid(_ points: [CanvasPoint]) -> CanvasPoint {
         let n = Double(points.count)
         return CanvasPoint(x: points.reduce(0) { $0 + $1.x } / n, y: points.reduce(0) { $0 + $1.y } / n)
@@ -459,7 +472,13 @@ public enum EditorFeature {
             canvasOffsetX: state.canvasOffset.x,
             canvasOffsetY: state.canvasOffset.y,
             canvasScale: state.canvasScale,
-            isPinching: (state.canvasTouchSession?.touches.count ?? 0) >= 2,
+            pinchScale: state.canvasPinchPreview.map { $0.scale / state.canvasScale } ?? 1,
+            pinchOffset: state.canvasPinchPreview.map {
+                CanvasPoint(
+                    x: $0.offset.x - state.canvasOffset.x * $0.scale / state.canvasScale,
+                    y: $0.offset.y - state.canvasOffset.y * $0.scale / state.canvasScale
+                )
+            } ?? CanvasPoint(x: 0, y: 0),
             compartmentDragOriginId: state.compartmentDragOrigin?.id,
             compartmentDragOriginX:  state.compartmentDragOrigin?.x ?? 0,
             compartmentDragOriginY:  state.compartmentDragOrigin?.y ?? 0,
@@ -774,20 +793,28 @@ public enum EditorFeature {
 
             case .canvasTouchesChanged(let now):
                 // From the reducer's own state, not the view's last render. A finger added or
-                // lifted starts a new session from where the canvas is, so the change never jumps.
+                // lifted commits any preview and starts a new session from there: no jump.
                 .reduce { state in
-                    let current = CanvasTransform(offset: state.canvasOffset, scale: state.canvasScale)
                     guard let session = state.canvasTouchSession, Set(session.touches.keys) == Set(now.touches.keys) else {
-                        state.canvasTouchSession = now.touches.isEmpty ? nil : CanvasTouchSession(start: current, touches: now.touches)
+                        Self.commitPinchPreview(&state)
+                        let start = CanvasTransform(offset: state.canvasOffset, scale: state.canvasScale)
+                        state.canvasTouchSession = now.touches.isEmpty ? nil : CanvasTouchSession(start: start, touches: now.touches)
                         return
                     }
                     let transform = Self.canvasTransform(session, now)
-                    state.canvasOffset = transform.offset
-                    state.canvasScale = transform.scale
+                    if session.touches.count >= 2 {
+                        state.canvasPinchPreview = transform
+                    } else {
+                        state.canvasOffset = transform.offset
+                        state.canvasScale = transform.scale
+                    }
                 }
 
             case .canvasTouchesEnded:
-                .reduce { $0.canvasTouchSession = nil }
+                .reduce { state in
+                    Self.commitPinchPreview(&state)
+                    state.canvasTouchSession = nil
+                }
 
             case .setInspectorSheet(let v):
                 .reduce { $0.isInspectorSheetOpen = v }

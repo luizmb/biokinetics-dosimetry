@@ -116,7 +116,8 @@ public struct EditorView: View {
             canvasOffsetX:      viewStore.state.canvasOffsetX,
             canvasOffsetY:      viewStore.state.canvasOffsetY,
             canvasScale:        viewStore.state.canvasScale,
-            isPinching:              viewStore.state.isPinching,
+            pinchScale:              viewStore.state.pinchScale,
+            pinchOffset:              viewStore.state.pinchOffset.value,
             compartmentDragOriginId: viewStore.state.compartmentDragOriginId,
             compartmentDragOriginX:  viewStore.state.compartmentDragOriginX,
             compartmentDragOriginY:  viewStore.state.compartmentDragOriginY,
@@ -187,7 +188,8 @@ struct EditorContent: View {
     let canvasOffsetX: Double
     let canvasOffsetY: Double
     let canvasScale: Double
-    let isPinching: Bool
+    let pinchScale: Double
+    let pinchOffset: EditorFeature.CanvasPoint
     let compartmentDragOriginId: String?
     let compartmentDragOriginX: Double
     let compartmentDragOriginY: Double
@@ -358,7 +360,8 @@ struct EditorContent: View {
             isLinking: linkingBannerText != nil,
             canvasOffsetX: canvasOffsetX, canvasOffsetY: canvasOffsetY,
             canvasScale: canvasScale,
-            isPinching: isPinching,
+            pinchScale: pinchScale,
+            pinchOffset: pinchOffset,
             compartmentDragOriginId: compartmentDragOriginId,
             compartmentDragOriginX: compartmentDragOriginX,
             compartmentDragOriginY: compartmentDragOriginY,
