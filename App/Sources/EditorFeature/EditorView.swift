@@ -263,12 +263,8 @@ struct EditorContent: View {
                 )
                 .frame(width: 264)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .leading, action: onToggleLeftPanel)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                GlassVDivider()
             }
-
-            GlassVDivider()
 
             ZStack(alignment: .top) {
                 canvas
@@ -293,9 +289,8 @@ struct EditorContent: View {
                 }
             }
 
-            GlassVDivider()
-
             if isRightPanelVisible {
+                GlassVDivider()
                 EditorInspectorPanel(
                     documentName: documentName,
                     documentDescription: documentDescription,
@@ -333,9 +328,6 @@ struct EditorContent: View {
                 )
                 .frame(width: 326)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .trailing, action: onToggleRightPanel)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isLeftPanelVisible)

@@ -194,11 +194,8 @@ struct CalculatorContent: View {
                 )
                 .frame(width: 300)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .leading, action: onToggleParamPanel)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                GlassVDivider()
             }
-            GlassVDivider()
             contentTabView.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isParamPanelVisible)

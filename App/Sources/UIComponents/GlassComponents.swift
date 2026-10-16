@@ -581,31 +581,6 @@ public struct SwatchCluster: View {
     }
 }
 
-// MARK: - GlassPanelRevealStrip (Xcode-style collapsed panel strip)
-
-public struct GlassPanelRevealStrip: View {
-    @Environment(\.glassTokens) private var g
-    private let edge: HorizontalEdge
-    private let action: () -> Void
-
-    public init(edge: HorizontalEdge, action: @escaping () -> Void) {
-        self.edge = edge
-        self.action = action
-    }
-
-    public var body: some View {
-        Button(action: action) {
-            Image(systemName: edge == .leading ? "chevron.right" : "chevron.left")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(g.accent)
-                .frame(maxHeight: .infinity)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .frame(width: 26)
-        .background(g.isDark ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
-    }
-}
-
 // MARK: - Linking flow banner
 
 public struct GlassLinkingBanner: View {
