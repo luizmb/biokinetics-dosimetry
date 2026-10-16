@@ -280,7 +280,7 @@ public enum CalculatorFeature {
         } else { nil }
         let stoppedAtDay: Double? = (state.results?.isEmpty == false) ? state.solveFailure?.stoppedAtDay : nil
         let partialNote: String? = stoppedAtDay.map {
-            "Partial run: stopped at \(unit) \(env.formatDouble($0, 1)) of \(state.finalDay)"
+            "Partial run: stopped at \(env.formatDouble($0, 1)) of \(state.finalDay) \(unit)"
         }
         let neededSteps = Int(limits.rk45StepsPerDay.rounded(.up))
         let stepBudgetHint: String? = if case .rungeKutta45 = state.solver {
