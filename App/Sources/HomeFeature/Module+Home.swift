@@ -56,6 +56,9 @@ public enum HomeModule {
         case newDocumentReady(ModelDocument)
         case insertDocument(ModelDocument)
         case seedsReady([ModelDocument])
+        /// Re-add the sample models that were deleted; edited ones are left as they are.
+        case restoreSampleModels
+        case sampleModelsRestored([ModelDocument])
         case importXML(Data)
         case importJSON(Data)
         case importCSV(Data)

@@ -23,6 +23,8 @@ public struct HomeView: View {
             onOpenCreationSheet: { viewStore.dispatch(.openCreationSheet) },
             onConfirmNewDocument: { viewStore.dispatch(.newDocument(field: viewStore.state.draftField.value, name: viewStore.state.draftName)) },
             onCancelNewDocument: { viewStore.dispatch(.dismissCreationSheet) },
+            restorableSampleCount: viewStore.state.restorableSampleCount,
+            onRestoreSampleModels: { viewStore.dispatch(.restoreSampleModels) },
             onEdit:              { viewStore.dispatch(.editDocument($0)) },
             onCalculate:         { viewStore.dispatch(.calculateDocument($0)) },
             onDuplicate:         { viewStore.dispatch(.duplicateDocument($0)) },
@@ -55,6 +57,8 @@ struct HomeContent: View {
     var onOpenCreationSheet:  () -> Void
     var onConfirmNewDocument: () -> Void
     var onCancelNewDocument: () -> Void
+    let restorableSampleCount: Int
+    var onRestoreSampleModels: () -> Void
     var onEdit:              (ModelDocument) -> Void
     var onCalculate:         (ModelDocument) -> Void
     var onDuplicate:         (ModelDocument.ID) -> Void
@@ -90,7 +94,9 @@ struct HomeContent: View {
                 field: $draftField,
                 name: $draftName,
                 onConfirm: onConfirmNewDocument,
-                onCancel: onCancelNewDocument
+                onCancel: onCancelNewDocument,
+                restorableSampleCount: restorableSampleCount,
+                onRestoreSampleModels: onRestoreSampleModels
             )
         }
         .fileImporter(
