@@ -120,8 +120,10 @@ private func rungeKutta45(
     .map { $0.map(\.storage) }
     .mapError { failure in
         switch failure {
-        case let .stepLimit(reached, steps): .stepBudgetExhausted(reachedDay: reached, finalDay: finalDay, steps: steps)
-        case let .stepUnderflow(at, _): .stepUnderflow(day: at)
+        case let .stepLimit(reached, steps, partial):
+            .stepBudgetExhausted(reachedDay: reached, finalDay: finalDay, steps: steps, partial: partial.map(\.storage))
+        case let .stepUnderflow(at, _, partial):
+            .stepUnderflow(day: at, partial: partial.map(\.storage))
         }
     }
 }

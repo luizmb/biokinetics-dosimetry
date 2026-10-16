@@ -3,7 +3,7 @@
 Biokinetics/dosimetry compartmental modelling. Integrates `dx/dt = A·x` (see
 `Sources/Solver/CoefficientMatrix.swift`, `LinearSystem.swift`, `Solve.swift`,
 `Birchall.swift`) using **SwiftCalx**'s `RungeKutta` solvers over `Math`'s vector
-types. Depends on the published packages `FP` (`from: "3.0.0"`) and `SwiftCalx` (`from: "1.1.0"`).
+types. Depends on the published packages `FP` (`from: "3.0.0"`) and `SwiftCalx` (`from: "1.1.1"`).
 
 ## Performance — read before any perf work
 
