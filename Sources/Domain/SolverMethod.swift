@@ -1,10 +1,26 @@
 public enum SolverMethod: Equatable, Hashable, Sendable {
     case birchall(composition: BirchallComposition)
+    /// Classical fixed-step RK4 with integration step `stepSize` (days), independent of the output
+    /// step. It has to stay inside the model's stability limit; the solver refuses a larger one.
     case rungeKutta4(stepSize: Double)
-    case rungeKutta45(tolerance: Double)
+    /// Adaptive Dormand–Prince 5(4): `tolerance` bounds each step's absolute error estimate,
+    /// `budget` how many steps it may take before reporting that it couldn't finish.
+    case rungeKutta45(tolerance: Double, budget: StepBudget)
 }
 
 extension SolverMethod {
     /// Convenience: Birchall with the default `.perTime` composition.
     public static var birchall: SolverMethod { .birchall(composition: .perTime) }
+}
+
+/// How many steps RK45 may take. On a stiff model an explicit method is held near its stability
+/// limit whatever the tolerance asks for, so the steps it needs grow with the simulated days times
+/// the model's fastest rate.
+public enum StepBudget: String, CaseIterable, Equatable, Hashable, Sendable {
+    /// Sized from the model: four times the steps its fastest rate implies over the horizon.
+    case automatic
+    /// 50 steps per simulated day: smooth models with slow rates.
+    case loose
+    /// 5,000 steps per simulated day: rates up to ~4,000/day.
+    case stiff
 }

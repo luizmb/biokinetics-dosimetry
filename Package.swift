@@ -13,7 +13,7 @@ let package = Package(
         .package(url: "https://github.com/luizmb/FP.git", from: "3.0.0"),
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
-        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "1.0.0"),
+        .package(url: "https://github.com/luizmb/SwiftCalx.git", from: "1.1.0"),
         .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "2.0.0"),
     ],
     targets: [

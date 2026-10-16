@@ -15,7 +15,7 @@ final class CrossSolverTests: XCTestCase {
 
     // MARK: - Two-compartment cascade vs closed form
 
-    func testTwoCompartmentAllSolversAgreeWithClosedForm() async {
+    func testTwoCompartmentAllSolversAgreeWithClosedForm() async throws {
         let k = 0.1
         let model = CompartmentalModel(
             nuclides: [],
@@ -25,10 +25,10 @@ final class CrossSolverTests: XCTestCase {
             ],
             connections: [CompartmentConnection(from: "a", to: "b", rate: k)]
         )
-        let perTime  = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
-        let rk4       = await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45      = await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = try await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
+        let semigroup = try await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
+        let rk4       = try await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = try await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance, budget: .automatic))
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -42,7 +42,7 @@ final class CrossSolverTests: XCTestCase {
 
     // MARK: - Bateman 3-compartment vs closed form
 
-    func testBatemanThreeCompartmentAllSolversAgreeWithClosedForm() async {
+    func testBatemanThreeCompartmentAllSolversAgreeWithClosedForm() async throws {
         let k1 = 0.1
         let k2 = 0.05
         let model = CompartmentalModel(
@@ -57,10 +57,10 @@ final class CrossSolverTests: XCTestCase {
                 CompartmentConnection(from: "b", to: "c", rate: k2)
             ]
         )
-        let perTime  = await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .semigroup))
-        let rk4       = await solve(model: model, step: 1, final: 100, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45      = await solve(model: model, step: 1, final: 100, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = try await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .perTime))
+        let semigroup = try await solve(model: model, step: 1, final: 100, solver: .birchall(composition: .semigroup))
+        let rk4       = try await solve(model: model, step: 1, final: 100, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = try await solve(model: model, step: 1, final: 100, solver: .rungeKutta45(tolerance: rk45Tolerance, budget: .automatic))
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -76,7 +76,7 @@ final class CrossSolverTests: XCTestCase {
 
     // MARK: - Radioactive decay vs closed form
 
-    func testRadioactiveDecayAllSolversAgreeWithClosedForm() async {
+    func testRadioactiveDecayAllSolversAgreeWithClosedForm() async throws {
         let halfLife = 10.0
         let lambda = log(2) / halfLife
         let nuclide = Nuclide(id: "n0", name: "Test", halfLife: halfLife)
@@ -87,10 +87,10 @@ final class CrossSolverTests: XCTestCase {
             ],
             connections: []
         )
-        let perTime  = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
-        let rk4       = await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
-        let rk45      = await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = try await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .perTime))
+        let semigroup = try await solve(model: model, step: 1, final: 50, solver: .birchall(composition: .semigroup))
+        let rk4       = try await solve(model: model, step: 1, final: 50, solver: .rungeKutta4(stepSize: rkStep))
+        let rk45      = try await solve(model: model, step: 1, final: 50, solver: .rungeKutta45(tolerance: rk45Tolerance, budget: .automatic))
 
         for t in [0, 1, 5, 10, 20, 50] {
             let expected = exp(-lambda * Double(t))
@@ -116,10 +116,10 @@ final class CrossSolverTests: XCTestCase {
         let model = withHalfLife(halfLife, in: loaded)
             .updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
-        let perTime  = await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .perTime))
-        let semigroup = await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .semigroup))
-        let rk4       = await solve(model: model, step: 1, final: 5, solver: .rungeKutta4(stepSize: 0.001))
-        let rk45      = await solve(model: model, step: 1, final: 5, solver: .rungeKutta45(tolerance: rk45Tolerance))
+        let perTime  = try await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .perTime))
+        let semigroup = try await solve(model: model, step: 1, final: 5, solver: .birchall(composition: .semigroup))
+        let rk4       = try await solve(model: model, step: 1, final: 5, solver: .rungeKutta4(stepSize: 0.001))
+        let rk45      = try await solve(model: model, step: 1, final: 5, solver: .rungeKutta45(tolerance: rk45Tolerance, budget: .automatic))
 
         XCTAssertEqual(perTime.count, semigroup.count, "perTime vs semigroup row count mismatch")
         XCTAssertEqual(perTime.count, rk4.count, "perTime vs RK4 row count mismatch")
@@ -152,11 +152,11 @@ final class CrossSolverTests: XCTestCase {
         step: Double,
         final: Int,
         solver: SolverMethod
-    ) async -> [[Double]] {
-        await Solver.solve(
+    ) async throws -> [[Double]] {
+        try await Solver.solve(
             plan: BiokineticsSimulationPlan(step: step, final: Double(final), solver: solver),
             model: model
-        ).run()
+        ).run().get()
     }
 
     /// Asserts that all four solver outputs agree with the analytic expectation

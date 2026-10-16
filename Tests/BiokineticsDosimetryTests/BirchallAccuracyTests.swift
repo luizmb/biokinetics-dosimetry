@@ -15,7 +15,8 @@ import XMLCoder
 /// 4.1e-12 (normwise, worst day). The bound leaves headroom for summation-order changes (BLAS,
 /// another platform) and fails on anything that actually costs precision: rounding the exponential
 /// to `Float` gives 2.9e-7 and fails. (Cutting the Taylor series short does not move it on this
-/// model: the scaled matrix is tiny, and truncation only touches modes that decay at ~1e4/day.)
+/// model: the scaled matrix is tiny, and truncation only touches the fast modes (rates up to
+/// ~35/day), which have decayed away within days.)
 @Suite("Birchall accuracy (Float80 reference)")
 struct BirchallAccuracyTests {
     struct Reference: Codable {
@@ -33,7 +34,7 @@ struct BirchallAccuracyTests {
         let reference = try JSONDecoder().decode(Reference.self, from: Data(contentsOf: url))
         let model = try uraniumModel()
         let plan = BiokineticsSimulationPlan(step: reference.step, final: reference.final, solver: .birchall(composition: composition))
-        let rows = await solve(plan: plan, model: model).run()
+        let rows = try await solve(plan: plan, model: model).run().get()
 
         for (time, expected) in zip(reference.times, reference.rows) {
             let scale = expected.map(abs).max() ?? 0
@@ -65,7 +66,7 @@ struct BirchallAccuracyTests {
     #endif
 }
 
-private func uraniumModel() throws -> CompartmentalModel {
+func uraniumModel() throws -> CompartmentalModel {
     let url = try #require(Bundle.module.url(forResource: "Uranium", withExtension: "xml"))
     let loaded = try loadIpenXml(using: XMLDecoder())(Data(contentsOf: url)).map { $0.toCompartmentalModel() }.get()
     let halfLife = 1_642_500_000_000.0

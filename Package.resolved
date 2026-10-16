@@ -1,5 +1,5 @@
 {
-  "originHash" : "e32042cb821550f4a24487d19f0575292520a9872c04944cd8bf921d4ddd0920",
+  "originHash" : "1eae88546539123740aed95c46e6d5f790c553a305961c05501bd2aa52ac76ff",
   "pins" : [
     {
       "identity" : "fp",
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/SwiftCalx.git",
       "state" : {
-        "revision" : "bb88f62f3f1cbc20e696364f28f016548e988591",
-        "version" : "1.0.0"
+        "revision" : "67b464f42639120199b69e158ecff1432c9e5295",
+        "version" : "1.1.0"
       }
     },
     {

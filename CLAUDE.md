@@ -3,7 +3,7 @@
 Biokinetics/dosimetry compartmental modelling. Integrates `dx/dt = A·x` (see
 `Sources/Solver/CoefficientMatrix.swift`, `LinearSystem.swift`, `Solve.swift`,
 `Birchall.swift`) using **SwiftCalx**'s `RungeKutta` solvers over `Math`'s vector
-types. Depends on the published packages `FP` (`from: "3.0.0"`) and `SwiftCalx` (`from: "1.0.0"`).
+types. Depends on the published packages `FP` (`from: "3.0.0"`) and `SwiftCalx` (`from: "1.1.0"`).
 
 ## Performance — read before any perf work
 
@@ -18,7 +18,7 @@ scenario where a missing-specialization problem bites:
   `@inlinable` annotations gave ~14× there.)
 - SwiftCalx 1.0.0 ships `@inlinable` solver hot paths, so they specialize here. Moving from
   SwiftCalx 0.6 / FP 2.2 to 1.0 / 3.0 measured (Uranium model, p50): Birchall perTime 100 days
-  524 ms → 1 ms, semigroup 1000 days 125 ms → 0.33 ms, RK4 (h=0.01) 100 days 1.18 s → 25 ms from the bump, then 69 µs evaluated as its propagator (`Solve.swift`),
+  524 ms → 1 ms, semigroup 1000 days 125 ms → 0.33 ms, RK4 (h=0.01) 100 days 1.18 s → 25 ms from the bump, then 69 µs through SwiftCalx 1.1's linear RK4 propagator,
   RK45 100 days 16 ms → 4.7 ms. See `../SwiftCalx/docs/PERFORMANCE.md` for the analysis.
 
 Local hot paths worth auditing the same way:
