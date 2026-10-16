@@ -23,6 +23,7 @@ struct CompartmentCanvasView: View {
     let canvasOffsetX: Double
     let canvasOffsetY: Double
     let canvasScale:   Double
+    let isPinching:    Bool
     let compartmentDragOriginId: String?
     let compartmentDragOriginX:  Double
     let compartmentDragOriginY:  Double
@@ -31,8 +32,8 @@ struct CompartmentCanvasView: View {
     var onMoveCompartment:    (String, Double, Double) -> Void
     var onBeginCompartmentDrag: (String, Double, Double) -> Void
     var onEndCompartmentDrag:   () -> Void
-    var onCanvasGesture:        (EditorFeature.CanvasGesture) -> Void
-    var onEndCanvasGesture:     () -> Void
+    var onCanvasTouches:        (EditorFeature.CanvasTouches) -> Void
+    var onEndCanvasTouches:     () -> Void
     var onSetCanvasTransform:   (Double, Double, Double) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -162,7 +163,7 @@ struct CompartmentCanvasView: View {
                 ForEach(compartments) { comp in
                     let sz = nodeSize(comp.id)
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
-                    CompartmentNode(comp: comp, isLinkingTarget: isLinking, size: sz, scale: s)
+                    CompartmentNode(comp: comp, isLinkingTarget: isLinking, size: sz, scale: s, isPinching: isPinching)
                         // The node's own rounded shape is its touch area. Attached after
                         // `.position` (which fills the whole canvas) every node competed for every
                         // touch: overlapping nodes moved together and drags fought the pan.
@@ -208,13 +209,20 @@ struct CompartmentCanvasView: View {
             .coordinateSpace(.named(Self.canvasSpace))
             // Gestures live on the same ZStack that contains the nodes so child
             // drag gestures (node move) correctly suppress the pan gesture.
-            // Pan and pinch as one gesture: separate ones made the pinch wait for the pan to give
-            // up. The view only reports what the fingers did; the reducer turns it into the
-            // transform from its own state.
+            // Every finger's position, as it moves: SwiftUI's pinch reports neither where the
+            // fingers are now nor lets a drag keep reporting under it, so the pair couldn't pan.
+            // The view only forwards the points; the reducer pans by their centre and zooms by
+            // their spread. Fires on first contact, with no recognition threshold to wait for.
             .gesture(
-                SimultaneousGesture(DragGesture(minimumDistance: 4), MagnifyGesture())
-                    .onChanged { value in onCanvasGesture(canvasGesture(value, viewCenter: CGPoint(x: hw, y: hh))) }
-                    .onEnded { _ in onEndCanvasGesture() }
+                SpatialEventGesture()
+                    .onChanged { events in
+                        let touches = Dictionary(
+                            events.filter { $0.phase == .active }.map { ($0.id.hashValue, EditorFeature.CanvasPoint(x: Double($0.location.x), y: Double($0.location.y))) },
+                            uniquingKeysWith: { first, _ in first }
+                        )
+                        onCanvasTouches(EditorFeature.CanvasTouches(touches: touches, viewCenter: EditorFeature.CanvasPoint(x: Double(hw), y: Double(hh))))
+                    }
+                    .onEnded { _ in onEndCanvasTouches() }
             )
             // Simultaneous, so the pinch never waits for a double tap to fail.
             .simultaneousGesture(TapGesture(count: 2).onEnded { onSetCanvasTransform(0, 0, 1) })
@@ -223,24 +231,6 @@ struct CompartmentCanvasView: View {
     }
 
     // MARK: - Helpers
-
-    /// What the fingers did, as the store's value.
-    private func canvasGesture(
-        _ value: SimultaneousGesture<DragGesture, MagnifyGesture>.Value,
-        viewCenter: CGPoint
-    ) -> EditorFeature.CanvasGesture {
-        let point = { (p: CGPoint) in EditorFeature.CanvasPoint(x: Double(p.x), y: Double(p.y)) }
-        let fingerOffset: CGPoint = if let drag = value.first, let pinch = value.second {
-            CGPoint(x: drag.startLocation.x - pinch.startLocation.x, y: drag.startLocation.y - pinch.startLocation.y)
-        } else { .zero }
-        return EditorFeature.CanvasGesture(
-            translation: point(CGPoint(x: value.first?.translation.width ?? 0, y: value.first?.translation.height ?? 0)),
-            magnification: Double(value.second?.magnification ?? 1),
-            anchor: value.second.map { point($0.startLocation) },
-            fingerOffsetFromAnchor: point(fingerOffset),
-            viewCenter: point(viewCenter)
-        )
-    }
 
     private static let canvasSpace = "compartmentCanvas"
 
@@ -326,6 +316,9 @@ private struct CompartmentNode: View {
     /// In canvas units.
     let size: CGSize
     let scale: CGFloat
+    /// While two fingers zoom, every node changes size each frame and rebuilding the glass at each
+    /// size stalls the pinch; the nodes are plain cards until the fingers lift, then settle back.
+    let isPinching: Bool
     @Environment(\.colorScheme) private var colorScheme
     private var dark: Bool { colorScheme == .dark }
 
@@ -340,7 +333,9 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        .glassEffect(.clear.tint(glassTint).interactive(), in: shape)
+        .background { if isPinching { shape.fill(.regularMaterial) } }
+        .glassEffect(isPinching ? .identity : .clear.tint(glassTint).interactive(), in: shape)
+        .animation(.easeOut(duration: 0.2), value: isPinching)
     }
 
     private var label: some View {
