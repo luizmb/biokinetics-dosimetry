@@ -229,7 +229,11 @@ struct EditorContent: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
-    private var isCompact: Bool { hSize == .compact }
+    @Environment(\.verticalSizeClass) private var vSize
+    /// The phone layout whenever either dimension is compact: a landscape iPhone has regular width
+    /// but not the height for three columns. A real iPad (or an unfolded foldable) is regular both
+    /// ways and gets the panels.
+    private var isCompact: Bool { hSize == .compact || vSize == .compact }
 
     var body: some View {
         ZStack {
@@ -269,6 +273,7 @@ struct EditorContent: View {
             ZStack(alignment: .top) {
                 canvas
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea(edges: .vertical)
 
                 if let text = linkingBannerText {
                     GlassLinkingBanner(message: text, onCancel: onCancelLinking)
@@ -276,7 +281,16 @@ struct EditorContent: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                VStack { Spacer(); canvasToolbar.padding(.bottom, 16) }
+                // Labels where they fit, icons where they don't: never a wrapped "Co m…".
+                VStack {
+                    Spacer()
+                    ViewThatFits(in: .horizontal) {
+                        canvasToolbar.labelStyle(.titleAndIcon)
+                        canvasToolbar.labelStyle(.iconOnly)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 16)
+                }
             }
 
             GlassVDivider()
@@ -539,6 +553,8 @@ struct EditorContent: View {
                     Label("Compartment", systemImage: "plus.square")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
                 }
             }
@@ -549,6 +565,8 @@ struct EditorContent: View {
                     Label("Link", systemImage: "arrow.triangle.branch")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
                 }
                 .buttonStyle(PlainButtonStyle())
