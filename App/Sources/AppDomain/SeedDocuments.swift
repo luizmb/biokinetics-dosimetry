@@ -6,6 +6,25 @@ import Foundation
 /// Written to the documents directory on first launch when no user documents exist.
 /// After seeding they behave as regular user documents — editable and deletable.
 public enum SeedDocuments {
+    /// Every sample model, in the order Home first shows them: what first launch writes, and what
+    /// "Restore sample models" matches against. Their ids are fixed per sample (`idFor`), so a
+    /// sample can be found again whatever its user did to it.
+    public static func samples(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
+        all(idFor: idFor)
+            + icrpModels(idFor: idFor)
+            + nuclearChainModels(idFor: idFor)
+            + extendedNuclearModels(idFor: idFor)
+            + pharmacologyModels(idFor: idFor)
+            + toxicologyModels(idFor: idFor)
+    }
+
+    /// The samples whose ids aren't among `documents`: the deleted ones. A sample that was edited
+    /// keeps its id, so it isn't missing.
+    public static func missing(from documents: [ModelDocument], idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
+        let present = Set(documents.map(\.id))
+        return samples(idFor: idFor).filter { !present.contains($0.id) }
+    }
+
     public static func all(idFor: @Sendable (String) -> UUID) -> [ModelDocument] {
         [
             twoCompartmentPK(idFor: idFor),

@@ -56,6 +56,8 @@ public enum HomeFeature {
             public var isCreationSheetOpen: Bool = false
             public var draftField: ModelField = .generic
             public var draftName: String = ""
+            /// Deleted sample models that "Restore sample models" would bring back; 0 hides it.
+            public var restorableSampleCount: Int = 0
         }
 
         public enum ViewAction: Sendable {
@@ -76,11 +78,12 @@ public enum HomeFeature {
             case deleteDocument(ModelDocument.ID)
             case duplicateDocument(ModelDocument.ID)
             case saveDocument(ModelDocument)
+            case restoreSampleModels
         }
 
     // MARK: - Mappings
 
-    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { _ in { state in
+    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { env in { state in
         let importError: String? = state.documents.failed.map { $0.0.localizedDescription }
         return ViewState(
             filePicker: state.filePicker,
@@ -106,7 +109,8 @@ public enum HomeFeature {
             isCreditsSheetOpen: state.isCreditsSheetOpen,
             isCreationSheetOpen: state.isCreationSheetOpen,
             draftField: state.draftField,
-            draftName: state.draftName
+            draftName: state.draftName,
+            restorableSampleCount: state.documents.loaded.map { SeedDocuments.missing(from: $0, idFor: env.seedId).count } ?? 0
         )
     } }
 
@@ -129,6 +133,7 @@ public enum HomeFeature {
         case .deleteDocument(let id):     .deleteDocument(id)
         case .duplicateDocument(let id):  .duplicateDocument(id)
         case .saveDocument(let doc):      .saveDocument(doc)
+        case .restoreSampleModels:        .restoreSampleModels
         }
     } }
 
@@ -172,14 +177,7 @@ public enum HomeFeature {
                 if case .success(let docs) = result, docs.isEmpty {
                     // First launch: build seeds using injected seedId, then dispatch seedsReady.
                     return .produce { ctx in
-                        let sid = ctx.environment.seedId
-                        let seeds = SeedDocuments.all(idFor: sid)
-                                  + SeedDocuments.icrpModels(idFor: sid)
-                                  + SeedDocuments.nuclearChainModels(idFor: sid)
-                                  + SeedDocuments.extendedNuclearModels(idFor: sid)
-                                  + SeedDocuments.pharmacologyModels(idFor: sid)
-                                  + SeedDocuments.toxicologyModels(idFor: sid)
-                        return .just(.seedsReady(seeds))
+                        .just(.seedsReady(SeedDocuments.samples(idFor: ctx.environment.seedId)))
                     }
                 }
                 return .reduce { state in
@@ -300,6 +298,25 @@ public enum HomeFeature {
                         seeds.forEach { _ = ctx.environment.saveDocument($0) }
                         return .empty
                     }
+
+            case .restoreSampleModels:
+                // Which samples are missing is decided against the documents as they are when the
+                // restore runs, in `.sampleModelsRestored`.
+                return .produce { ctx in
+                    .just(.sampleModelsRestored(SeedDocuments.samples(idFor: ctx.environment.seedId)))
+                }
+
+            case .sampleModelsRestored(let samples):
+                let present = Set((context.stateBefore?.documents.loadedOrPrevious ?? []).map(\.id))
+                let missing = samples.filter { !present.contains($0.id) }
+                return .reduce { state in
+                    state.documents = .loaded((state.documents.loadedOrPrevious ?? []) + missing)
+                    state.isCreationSheetOpen = false
+                }
+                .produce { ctx in
+                    missing.forEach { _ = ctx.environment.saveDocument($0) }
+                    return .empty
+                }
 
             case .edit, .calculate:
                 return .doNothing

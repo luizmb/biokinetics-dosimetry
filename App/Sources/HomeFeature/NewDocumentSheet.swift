@@ -7,6 +7,9 @@ struct NewDocumentSheet: View {
     @Binding var name: String
     var onConfirm: () -> Void
     var onCancel: () -> Void
+    /// Deleted sample models that can come back; the button is hidden at 0.
+    let restorableSampleCount: Int
+    var onRestoreSampleModels: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.glassTokens) private var g
@@ -57,6 +60,24 @@ struct NewDocumentSheet: View {
                             .font(.caption)
                             .foregroundStyle(g.faint)
                             .padding(.horizontal, 4)
+
+                        if restorableSampleCount > 0 {
+                            GLabel("Sample models")
+                                .padding(.top, 28)
+                            GButton(
+                                restorableSampleCount == 1 ? "Restore 1 sample model" : "Restore \(restorableSampleCount) sample models",
+                                icon: Image(systemName: "arrow.counterclockwise"),
+                                tone: .neutral,
+                                size: .md,
+                                fullWidth: true,
+                                action: onRestoreSampleModels
+                            )
+                            Text("Brings back the sample models you deleted. Samples you edited stay as they are.")
+                                .font(.caption)
+                                .foregroundStyle(g.faint)
+                                .padding(.horizontal, 4)
+                                .padding(.top, 8)
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
