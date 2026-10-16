@@ -3,7 +3,7 @@
 Biokinetics/dosimetry compartmental modelling. Integrates `dx/dt = A·x` (see
 `Sources/Solver/CoefficientMatrix.swift`, `LinearSystem.swift`, `Solve.swift`,
 `Birchall.swift`) using **SwiftCalx**'s `RungeKutta` solvers over `Math`'s vector
-types. Depends on the published packages `FP` and `SwiftCalx` (`from: "0.3.0"`).
+types. Depends on the published packages `FP` (`from: "3.0.0"`) and `SwiftCalx` (`from: "1.0.0"`).
 
 ## Performance — read before any perf work
 
@@ -16,14 +16,10 @@ scenario where a missing-specialization problem bites:
   protocol-witness calls and the optimizer can't eliminate per-stage `[Double]`
   allocations. (Full story: FP's `IdentifiedArray` work, PR #73 — a handful of
   `@inlinable` annotations gave ~14× there.)
-- SwiftCalx currently has **no `@inlinable`/`@_specialize`** on its solver hot
-  paths. See `SwiftCalx/docs/PERFORMANCE.md` (sibling repo at
-  `../SwiftCalx/docs/PERFORMANCE.md`) for the analysis and the fix.
-- **Caveat for this repo:** Biokinetics pins SwiftCalx by published version
-  (`from: "0.3.0"`), so the solver-specialization win only reaches here once
-  SwiftCalx ships a release with it. Until then, a local `@_specialize` or an
-  `@inlinable` wrapper around the integration call in this package can recover some
-  of it for the concrete state type used here.
+- SwiftCalx 1.0.0 ships `@inlinable` solver hot paths, so they specialize here. Moving from
+  SwiftCalx 0.6 / FP 2.2 to 1.0 / 3.0 measured (Uranium model, p50): Birchall perTime 100 days
+  524 ms → 1 ms, semigroup 1000 days 125 ms → 0.33 ms, RK4 (h=0.01) 100 days 1.18 s → 25 ms,
+  RK45 100 days 16 ms → 4.7 ms. See `../SwiftCalx/docs/PERFORMANCE.md` for the analysis.
 
 Local hot paths worth auditing the same way:
 - `Sources/Solver/Solve.swift` — the integration driver loop.
