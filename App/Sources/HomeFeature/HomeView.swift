@@ -183,8 +183,11 @@ struct HomeContent: View {
     // MARK: - Regular (iPad 3-column grid)
 
     private var regularGrid: some View {
+        // Adaptive, top-aligned: two columns on a landscape phone, three on a landscape iPad, and
+        // cards of different heights start level.
         LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 3),
+            columns: [GridItem(.adaptive(minimum: 320), spacing: 20, alignment: .top)],
+            alignment: .leading,
             spacing: 20
         ) {
             newModelBox(big: false)
@@ -348,7 +351,7 @@ private struct HomeListRow: View {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
                     .font(.system(size: 14, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)) }
+                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
                              ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
@@ -411,6 +414,7 @@ private struct HomeModelCard: View {
                         Text(card.description)
                             .font(.system(size: 14.5))
                             .foregroundStyle(g.muted)
+                            .lineLimit(4)
                     }
                     HStack(spacing: 16) {
                         Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
@@ -450,7 +454,11 @@ private struct HomeModelCard: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage).font(.system(size: 13, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 14.5, weight: .semibold)) }
+                if !label.isEmpty {
+                    Text(label).font(.system(size: 14.5, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
             }
             .foregroundStyle(danger
                              ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
