@@ -280,16 +280,29 @@ struct DecayChartContent: View {
         logX ? (day > 0 ? log10(day) : log10(0.1)) : day
     }
 
-    /// Below this a value is within the solvers' own error (Birchall ~1e-11 per entry): on a log
-    /// axis it isn't drawn. Drawing zero and rounding noise at a fixed floor made a long run's tail
-    /// jump up to that floor and back.
+    /// Below this a value is within the solvers' own error (Birchall ~1e-11 per entry).
     private static let logFloor = 1e-10
 
+    /// On a log axis, a curve that hasn't risen yet climbs from the floor (nothing there yet, drawn
+    /// at the bottom), and once it has been above the floor, values that fall below it end the line:
+    /// that tail is rounding noise around zero, which drawn at a floor made a long run jump about.
     private func transformedPoints(_ raw: [CalculatorFeature.SeriesPoint]) -> [ChartPoint] {
-        raw.compactMap { pt in
+        var hasRisen = false
+        return raw.compactMap { pt in
             let x: Double = logX ? (pt.day > 0 ? log10(pt.day) : log10(0.1)) : pt.day
-            guard !logY || pt.value >= Self.logFloor else { return nil }
-            let y: Double = logY ? log10(pt.value) : pt.value
+            let y: Double
+            if logY {
+                if pt.value >= Self.logFloor {
+                    hasRisen = true
+                    y = log10(pt.value)
+                } else if hasRisen {
+                    return nil
+                } else {
+                    y = log10(Self.logFloor)
+                }
+            } else {
+                y = pt.value
+            }
             guard x.isFinite && y.isFinite else { return nil }
             return ChartPoint(x: x, y: y)
         }
