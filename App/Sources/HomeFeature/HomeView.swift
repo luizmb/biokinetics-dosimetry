@@ -134,8 +134,9 @@ struct HomeContent: View {
             }
             ToolbarSpacer(.fixed, placement: .barTrailing)
             ToolbarItem(placement: .barTrailing) {
+                // The main action: prominent glass, the rest regular.
                 Button(action: onOpenCreationSheet) { Label("New", systemImage: "plus") }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.glassProminent)
                     .tint(.accentColor)
             }
         }
