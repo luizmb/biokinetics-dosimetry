@@ -16,6 +16,9 @@ struct DecayChartContent: View {
     let lingo: FieldLingo
     let validationIssues: [CompartmentalModel.ValidationIssue]
     var remedies: [CalculatorFeature.Remedy] = []
+    /// Set when `series` is a stopped run's: the chart greys out what comes after.
+    var stoppedAtDay: Double? = nil
+    var stoppedLabel: String? = nil
     var onToggleSeries: (String) -> Void
     var onRemedy: (CalculatorFeature.Remedy) -> Void = { _ in }
 
@@ -38,20 +41,13 @@ struct DecayChartContent: View {
                     Text("Calculating…").font(.callout).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let err = error {
+            } else if let err = error, series.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.title).foregroundStyle(.orange)
                     Text(err).font(.callout).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    if !remedies.isEmpty {
-                        HStack(spacing: 10) {
-                            ForEach(remedies, id: \.self) { remedy in
-                                GButton(remedy.title, tone: remedy == remedies.first ? .accent : .neutral, size: .sm) { onRemedy(remedy) }
-                            }
-                        }
-                        .padding(.top, 6)
-                    }
+                    remedyButtons.padding(.top, 6)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity).padding()
             } else if series.isEmpty {
@@ -73,6 +69,14 @@ struct DecayChartContent: View {
                     if !nonErrorIssues.isEmpty {
                         validationWarningList(nonErrorIssues)
                             .padding(.horizontal, 8).padding(.top, 6)
+                    }
+                    // A stopped run: its valid part below, the reason and the fixes above it.
+                    if let err = error {
+                        VStack(alignment: .leading, spacing: 8) {
+                            GBanner(tone: .warn, systemImage: "exclamationmark.triangle", message: err)
+                            remedyButtons
+                        }
+                        .padding(.horizontal, 10).padding(.top, 8)
                     }
                     chartView
                     seriesLegend
@@ -141,12 +145,47 @@ struct DecayChartContent: View {
         }
     }
 
+    @ViewBuilder
+    private var remedyButtons: some View {
+        if !remedies.isEmpty {
+            // Side by side where they fit, stacked where they don't, never wrapping a title.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { remedyButtonList }
+                VStack(alignment: .leading, spacing: 8) { remedyButtonList }
+            }
+        }
+    }
+
+    private var remedyButtonList: some View {
+        ForEach(remedies, id: \.self) { remedy in
+            GButton(remedy.title, tone: remedy == remedies.first ? .accent : .neutral, size: .sm) { onRemedy(remedy) }
+                .fixedSize()
+        }
+    }
+
     // MARK: - Chart
 
     @ViewBuilder
     private var chartView: some View {
         let visible = series.filter(\.isVisible)
         Chart {
+            // Past the stop nothing was computed: grey it out to the end of the horizon, so the
+            // axis still spans the run that was asked for.
+            if let stop = stoppedAtDay {
+                RectangleMark(
+                    xStart: .value(lingo.timeUnit.displayName, xPosition(stop)),
+                    xEnd: .value(lingo.timeUnit.displayName, xPosition(Double(finalDay)))
+                )
+                .foregroundStyle(Color.secondary.opacity(0.12))
+                RuleMark(x: .value(lingo.timeUnit.displayName, xPosition(stop)))
+                    .foregroundStyle(Color.orange)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .annotation(position: .trailing, alignment: .top, spacing: 4) {
+                        if let stoppedLabel {
+                            Text(stoppedLabel).font(.caption2).foregroundStyle(.orange).fixedSize()
+                        }
+                    }
+            }
             ForEach(visible) { s in
                 let pts = transformedPoints(s.points)
                 ForEach(pts.indices, id: \.self) { idx in
@@ -236,6 +275,10 @@ struct DecayChartContent: View {
     // MARK: - Helpers
 
     private struct ChartPoint { let x, y: Double }
+
+    private func xPosition(_ day: Double) -> Double {
+        logX ? (day > 0 ? log10(day) : log10(0.1)) : day
+    }
 
     private func transformedPoints(_ raw: [CalculatorFeature.SeriesPoint]) -> [ChartPoint] {
         raw.compactMap { pt in

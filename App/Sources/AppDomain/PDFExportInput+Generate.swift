@@ -25,6 +25,10 @@ extension PDFExportInput {
         y += 4
         drawText("\(lingo.fieldName)  ·  \(compartmentNames.count) tracked compartments",
                  x: margin, y: &y, font: .systemFont(ofSize: 10), color: .secondaryLabel)
+        if let note {
+            y += 2
+            drawText(note, x: margin, y: &y, font: .systemFont(ofSize: 10, weight: .semibold), color: .systemOrange)
+        }
         y += 14
 
         // Column layout

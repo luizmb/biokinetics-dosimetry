@@ -57,11 +57,17 @@ struct SolverViabilityTests {
         )
         let plan = BiokineticsSimulationPlan(step: 1, final: 100, solver: .rungeKutta45(tolerance: 1e-10, budget: .manual(stepsPerDay: 50)))
         let result = await solve(plan: plan, model: model).run()
-        guard case let .failure(.stepBudgetExhausted(reached, final, _)) = result else {
+        guard case let .failure(.stepBudgetExhausted(reached, final, _, partial)) = result else {
             Issue.record("expected .stepBudgetExhausted, got \(result)")
             return
         }
         #expect(reached < final)
+        // One row per day up to the stop, and they're the finished run's rows.
+        #expect(partial.count == Int(reached) + 1)
+        let finished = try await solve(plan: BiokineticsSimulationPlan(step: 1, final: 100, solver: .birchall(composition: .perTime)), model: model).run().get()
+        for (row, expected) in zip(partial, finished) {
+            #expect(zip(row, expected).allSatisfy { abs($0 - $1) < 1e-8 })
+        }
     }
 
     /// Read off the matrix before running: Uranium's spectral bound is 44.4/day.

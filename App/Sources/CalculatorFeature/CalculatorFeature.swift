@@ -173,6 +173,10 @@ public enum CalculatorFeature {
             public var automaticStepsPerDay: Int = 0
             /// Fixes offered with a failed run.
             public var remedies: [Remedy] = []
+            /// Set when the results are a stopped run's: where the chart's valid part ends.
+            public var stoppedAtDay: Double? = nil
+            /// "Stopped at day 41.3", for the marker on the chart.
+            public var stoppedLabel: String? = nil
             public var series: [Series] = []
             public var reportRows: [ReportRow] = []
             public var isCalculating: Bool = false
@@ -274,6 +278,10 @@ public enum CalculatorFeature {
         let integrationStepHint: String? = if case .rungeKutta4 = state.solver {
             "Stable below \(env.formatDouble(limits.rk4StableStep, 3)) \(unit) for this model"
         } else { nil }
+        let stoppedAtDay: Double? = (state.results?.isEmpty == false) ? state.solveFailure?.stoppedAtDay : nil
+        let partialNote: String? = stoppedAtDay.map {
+            "Partial run: stopped at \(env.formatDouble($0, 1)) of \(state.finalDay) \(unit)"
+        }
         let neededSteps = Int(limits.rk45StepsPerDay.rounded(.up))
         let stepBudgetHint: String? = if case .rungeKutta45 = state.solver {
             "This model needs about \(env.formatDouble(Double(neededSteps), 0)) \(neededSteps == 1 ? "step" : "steps") per \(unit)"
@@ -331,6 +339,8 @@ public enum CalculatorFeature {
             stepBudgetWarning: stepBudgetWarning,
             automaticStepsPerDay: limits.automaticStepsPerDay,
             remedies: state.solveFailure.map { Remedy.for($0, solver: state.solver) } ?? [],
+            stoppedAtDay: stoppedAtDay,
+            stoppedLabel: stoppedAtDay.map { "Stopped at \(env.formatDouble($0, 1)) \(unit)" },
             series: series,
             reportRows: reportRows,
             isCalculating: state.isCalculating,
@@ -353,12 +363,14 @@ public enum CalculatorFeature {
             csvExportInput: reportRows.isEmpty ? nil : CSVExportInput(
                 documentName: doc.name, lingo: doc.field.lingo,
                 compartmentNames: compartments.map(\.name),
-                rows: reportRows.map { ($0.day, $0.values) }
+                rows: reportRows.map { ($0.day, $0.values) },
+                note: partialNote
             ),
             pdfExportInput: reportRows.isEmpty ? nil : PDFExportInput(
                 documentName: doc.name, lingo: doc.field.lingo,
                 compartmentNames: compartments.map(\.name),
-                rows: reportRows.map { ($0.day, $0.values) }
+                rows: reportRows.map { ($0.day, $0.values) },
+                note: partialNote
             )
         )
     } }
@@ -423,7 +435,12 @@ public enum CalculatorFeature {
             case .resultsFailed(let msg):
                 .reduce { $0.error = msg; $0.isCalculating = false }
             case .solveFailed(let failure):
-                .reduce { $0.solveFailure = failure; $0.results = nil; $0.isCalculating = false }
+                // What ran before the stop is valid: keep it as the results, marked by the failure.
+                .reduce { state in
+                    state.solveFailure = failure
+                    state.results = failure.partial.isEmpty ? nil : failure.partial
+                    state.isCalculating = false
+                }
             case .applyRemedy(let remedy):
                 .reduce { state in
                     switch remedy {
@@ -573,10 +590,10 @@ public enum CalculatorFeature {
         switch error {
         case let .unstableStep(step, limit):
             "An RK4 step of \(format(step, 4)) d is unstable for this model. Use a step below \(format(limit, 3)) d, or Birchall."
-        case let .stepBudgetExhausted(reached, final, steps):
-            "RK45 stopped at day \(format(reached, 1)) of \(format(final, 0)) after \(steps) steps. Raise the step budget, or use Birchall."
-        case let .stepUnderflow(day):
-            "RK45 could not take a step at day \(format(day, 1)). Use Birchall for this model."
+        case let .stepBudgetExhausted(reached, final, steps, partial):
+            "RK45 stopped at day \(format(reached, 1)) of \(format(final, 0)) after \(steps) steps\(partial.isEmpty ? "" : "; the results cover the days it reached"). Raise the step budget, or use Birchall."
+        case let .stepUnderflow(day, partial):
+            "RK45 could not take a step at day \(format(day, 1))\(partial.isEmpty ? "" : "; the results cover the days before it"). Use Birchall for this model."
         }
     }
 
