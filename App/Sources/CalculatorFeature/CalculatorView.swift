@@ -255,7 +255,8 @@ struct CalculatorContent: View {
             .tabItem { Label("Report", systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
 
-            // Parameters tab: the list scrolls under the Calculate button, which floats on it.
+            // Parameters tab: the list scrolls under the Calculate button, which floats on it as
+            // a registered bar, so the scroll view gives it the system's edge effect.
             ParameterContent(
                     paramBindings: paramBindings,
                     lingo: lingo,
@@ -270,7 +271,7 @@ struct CalculatorContent: View {
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
-            .safeAreaInset(edge: .bottom) {
+            .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0) {
                 if let msg = durationWarningMessage {
                     GBanner(
