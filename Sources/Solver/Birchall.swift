@@ -73,9 +73,9 @@ public enum Birchall {
         tolerance: Double = 1e-10,
         maxIterations: Int = 10_000
     ) -> Matrix<Double> {
-        let minDiagonal = (0 ..< A.rows).map { A[$0, $0] }.min() ?? 0
+        let minDiagonal = Matrix<Double>.diagonal.reduce(A, into: Double?.none) { m, d in m = Swift.min(m ?? d, d) } ?? 0
         let k = scalingPower(forMinDiagonal: minDiagonal)
-        let scaled = (1 / exp(log(2) * Double(k))) * A
+        let scaled = powerOfTwo(-k) * A
         let exponentiated = Taylor.exponential(of: scaled, tolerance: tolerance, maxIterations: maxIterations)
         return exponentiated.squared(times: k)
     }
@@ -90,6 +90,11 @@ public enum Birchall {
         forMinDiagonal minDiagonal: Double,
         threshold: Double = 0.2
     ) -> Int {
-        (0 ... 1000).first { -minDiagonal / exp(log(2) * Double($0)) < threshold } ?? 1000
+        (0 ... 1000).first { -minDiagonal / powerOfTwo($0) < threshold } ?? 1000
+    }
+
+    /// `2^n`, exact: `exp(log(2) * n)` rounds, so dividing by it isn't the exact rescale.
+    static func powerOfTwo(_ n: Int) -> Double {
+        Double(sign: .plus, exponent: n, significand: 1)
     }
 }

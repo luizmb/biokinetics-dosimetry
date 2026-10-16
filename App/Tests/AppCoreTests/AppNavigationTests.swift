@@ -200,11 +200,11 @@ struct AppNavigationTests {
     /// it. `withObservationTracking` is precisely the mechanism SwiftUI uses to decide.
     @Test func theRootPathIsObservableSoAPushActuallyRerendersTheStack() async {
         let store = Store(initial: AppState(), behavior: navigationBehavior(), environment: World.matrixFakeAll)
-        let viewStore = ViewStore(store)
+        let viewStore = store.viewStore()
 
         let invalidated = Flag()
         withObservationTracking {
-            _ = viewStore.state.routes
+            _ = viewStore.state.routes.value
         } onChange: {
             invalidated.set()
         }
@@ -213,6 +213,6 @@ struct AppNavigationTests {
         await Task.yield()
 
         #expect(invalidated.isSet, "SwiftUI would never re-render the NavigationStack, so no push would appear")
-        #expect(viewStore.state.routes == [AppRoute.editor])
+        #expect(viewStore.state.routes.value == [AppRoute.editor])
     }
 }

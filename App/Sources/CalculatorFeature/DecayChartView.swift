@@ -15,7 +15,9 @@ struct DecayChartContent: View {
     let finalDay: Int
     let lingo: FieldLingo
     let validationIssues: [CompartmentalModel.ValidationIssue]
+    var remedies: [CalculatorFeature.Remedy] = []
     var onToggleSeries: (String) -> Void
+    var onRemedy: (CalculatorFeature.Remedy) -> Void = { _ in }
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -42,6 +44,14 @@ struct DecayChartContent: View {
                         .font(.title).foregroundStyle(.orange)
                     Text(err).font(.callout).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                    if !remedies.isEmpty {
+                        HStack(spacing: 10) {
+                            ForEach(remedies, id: \.self) { remedy in
+                                GButton(remedy.title, tone: remedy == remedies.first ? .accent : .neutral, size: .sm) { onRemedy(remedy) }
+                            }
+                        }
+                        .padding(.top, 6)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity).padding()
             } else if series.isEmpty {

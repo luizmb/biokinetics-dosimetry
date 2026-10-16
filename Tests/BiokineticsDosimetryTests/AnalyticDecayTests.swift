@@ -6,7 +6,7 @@ import Solver
 final class AnalyticDecayTests: XCTestCase {
     private let tolerance = 1e-9
 
-    func testTwoCompartmentTransferNoDecay() async {
+    func testTwoCompartmentTransferNoDecay() async throws {
         let k = 0.1
         let model = CompartmentalModel(
             nuclides: [],
@@ -19,7 +19,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run()
+        let result = try await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run().get()
 
         for t in [0, 1, 5, 10, 25, 50] {
             let aExpected = exp(-k * Double(t))
@@ -29,7 +29,7 @@ final class AnalyticDecayTests: XCTestCase {
         }
     }
 
-    func testThreeCompartmentBatemanChain() async {
+    func testThreeCompartmentBatemanChain() async throws {
         let k1 = 0.1
         let k2 = 0.05
         let model = CompartmentalModel(
@@ -45,7 +45,7 @@ final class AnalyticDecayTests: XCTestCase {
             ]
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 100), model: model).run()
+        let result = try await solve(plan: BiokineticsSimulationPlan(step: 1, final: 100), model: model).run().get()
 
         for t in [0, 1, 5, 10, 25, 50, 100] {
             let tD = Double(t)
@@ -58,7 +58,7 @@ final class AnalyticDecayTests: XCTestCase {
         }
     }
 
-    func testSingleCompartmentRadioactiveDecay() async {
+    func testSingleCompartmentRadioactiveDecay() async throws {
         let halfLife = 10.0
         let nuclide = Nuclide(id: "n0", name: "Test", halfLife: halfLife)
         let model = CompartmentalModel(
@@ -69,7 +69,7 @@ final class AnalyticDecayTests: XCTestCase {
             connections: []
         )
 
-        let result = await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run()
+        let result = try await solve(plan: BiokineticsSimulationPlan(step: 1, final: 50), model: model).run().get()
 
         let lambda = log(2) / halfLife
         for t in [0, 1, 5, 10, 20, 50] {

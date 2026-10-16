@@ -47,7 +47,7 @@ public extension CalculatorFeature.Environment {
                 plan: BiokineticsSimulationPlan(step: plan.step, final: plan.final,
                                                solver: .birchall(composition: .perTime)),
                 model: model
-            ).map(Result.success).eraseToThrowingPublisher()
+            ).map { $0.mapError { $0 as Error } }.eraseToThrowingPublisher()
         })
     }
 }

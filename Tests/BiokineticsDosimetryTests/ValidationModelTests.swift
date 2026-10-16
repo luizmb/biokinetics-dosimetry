@@ -37,19 +37,19 @@ final class ValidationModelTests: XCTestCase {
         )
     }
 
-    private func run(halfLife: Double) async -> [[Double]] {
-        await solve(
+    private func run(halfLife: Double) async throws -> [[Double]] {
+        try await solve(
             plan: BiokineticsSimulationPlan(step: 1, final: 50, solver: .birchall(composition: .perTime)),
             model: makeModel(halfLife: halfLife)
-        ).run()
+        ).run().get()
     }
 
     // MARK: - half-life = 0 (stable substance)
 
     /// Key rows from the ipen-validator with --half-life 0.
     /// Index order is [A, B, C] == compartment order in the model.
-    func testHalfLifeZero() async {
-        let rows = await run(halfLife: 0)
+    func testHalfLifeZero() async throws {
+        let rows = try await run(halfLife: 0)
         let eps = 1e-5
 
         // t=0
@@ -91,8 +91,8 @@ final class ValidationModelTests: XCTestCase {
 
     // MARK: - half-life = 5 days
 
-    func testHalfLifeFiveDays() async {
-        let rows = await run(halfLife: 5)
+    func testHalfLifeFiveDays() async throws {
+        let rows = try await run(halfLife: 5)
         let eps = 1e-5
 
         // t=0

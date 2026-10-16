@@ -14,7 +14,7 @@ import SwiftRexArchitecture
 /// AppState flat and avoids a cross-feature routing layer: the `.editDocument`
 /// and `.calculateDocument` view actions are mapped directly to `.push(route)`,
 /// which both updates the path and carries the document snapshot into the route.
-@Feature(strategy: .observationSimple)
+@Feature
 public enum HomeFeature {
 
     // MARK: - State

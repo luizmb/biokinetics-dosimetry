@@ -47,7 +47,7 @@ final class CompartmentalModelLoaderTests: XCTestCase {
         let model = modelWithHL.updatingCompartment(id: "4") { $0.with(intake: true, fraction: 1.0) }
 
         let calculator = BiokineticsSimulationPlan(step: 1, final: 10)
-        let result = await solve(plan: calculator, model: model).run()
+        let result = try await solve(plan: calculator, model: model).run().get()
 
         XCTAssertEqual(result.count, 12, "stepCount+2 rows expected")
         XCTAssertEqual(result[0].count, 19, "n compartments")

@@ -22,8 +22,9 @@ import RungeKutta
 public func solve(
     plan: BiokineticsSimulationPlan,
     model: CompartmentalModel
-) -> DeferredTask<[[Double]]> {
+) -> DeferredTask<Result<[[Double]], SolveError>> {
     let system = model.linearSystem()
+    let limits = model.solverLimits
     let step = plan.step
     let stepCount = plan.stepCount
     let solver = plan.solver
@@ -31,13 +32,13 @@ public func solve(
     return DeferredTask {
         switch solver {
         case .birchall(.perTime):
-            await birchallPerTime(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount)
+            .success(await birchallPerTime(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount))
         case .birchall(.semigroup):
-            birchallSemigroup(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount)
+            .success(birchallSemigroup(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount))
         case .rungeKutta4(let h):
             rungeKutta4(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, h: h)
-        case .rungeKutta45(let tolerance):
-            rungeKutta45(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, tolerance: tolerance)
+        case let .rungeKutta45(tolerance, budget):
+            rungeKutta45(A: system.matrix, x0: system.initialConditions, step: step, stepCount: stepCount, tolerance: tolerance, budget: budget, limits: limits)
         }
     }
 }
@@ -79,38 +80,48 @@ private func birchallSemigroup(
 
 // MARK: - Runge-Kutta paths
 
-// Both RK solvers route through `AcceleratedVector` so every per-stage
-// `+` / scalar `*` goes through vDSP on Apple platforms.
-
+/// RK4 on `dx/dt = A·x` through SwiftCalx's linear propagator: `P^(step/h)` once, then one
+/// matrix-vector product per output row. Refuses a step past the stability limit, where RK4's
+/// result grows without bound (h = 1 d on a model with rates of 35/day reaches 1e146 by day 30).
 private func rungeKutta4(
     A: Matrix<Double>,
     x0: [Double],
     step: Double,
     stepCount: Int,
     h: Double
-) -> [[Double]] {
-    let trajectory = RungeKutta4.trajectory(
-        from: x0.asAcceleratedVector,
-        derivative: { _, y in A.apply(to: y) },
-        step: h,
-        through: Double(stepCount + 1) * step
-    )
-    let stepsPerOutput = Int((step / h).rounded())
-    return (0 ... stepCount + 1).map { i in trajectory[i * stepsPerOutput].state.storage }
+) -> Result<[[Double]], SolveError> {
+    let stableLimit = rk4StabilityInterval / spectralBound(A)
+    guard h > 0, h < stableLimit else { return .failure(.unstableStep(step: h, stableLimit: stableLimit)) }
+    let stepsPerSample = max(1, Int((step / h).rounded()))
+    return .success(RungeKutta4.linearTrajectory(of: A, from: x0, step: h, stepsPerSample: stepsPerSample, count: stepCount + 1))
 }
+
+// RK45 routes through `AcceleratedVector` so every per-stage `+` / scalar `*` goes through vDSP on
+// Apple platforms.
 
 private func rungeKutta45(
     A: Matrix<Double>,
     x0: [Double],
     step: Double,
     stepCount: Int,
-    tolerance: Double
-) -> [[Double]] {
+    tolerance: Double,
+    budget: StepBudget,
+    limits: SolverLimits
+) -> Result<[[Double]], SolveError> {
     let outputTimes = (0 ... stepCount + 1).map { Double($0) * step }
+    let finalDay = outputTimes.last ?? 0
     return RungeKutta45.trajectory(
         at: outputTimes,
         from: x0.asAcceleratedVector,
         derivative: { _, y in A.apply(to: y) },
-        tolerance: tolerance
-    ).map(\.storage)
+        tolerance: tolerance,
+        maxIterations: budget.steps(limits: limits, days: finalDay)
+    )
+    .map { $0.map(\.storage) }
+    .mapError { failure in
+        switch failure {
+        case let .stepLimit(reached, steps): .stepBudgetExhausted(reachedDay: reached, finalDay: finalDay, steps: steps)
+        case let .stepUnderflow(at, _): .stepUnderflow(day: at)
+        }
+    }
 }

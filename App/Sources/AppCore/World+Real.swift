@@ -21,7 +21,7 @@ extension World {
             seedId:       liveSeedId,
             formatDouble: liveFormatDouble,
             parseDouble:  liveParseDouble,
-            solver:       { plan, model in Solver.solve(plan: plan, model: model).map(Result.success).eraseToThrowingPublisher() },
+            solver:       { plan, model in Solver.solve(plan: plan, model: model).map { $0.mapError { $0 as Error } }.eraseToThrowingPublisher() },
             saveDocument: { doc in
                 Result {
                     let dir = try biokineticsDocs()

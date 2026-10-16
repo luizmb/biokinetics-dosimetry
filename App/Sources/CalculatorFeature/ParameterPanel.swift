@@ -14,11 +14,25 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 struct ParameterBindings {
     var finalDay:             Binding<Int>
-    var stepSizeText:         Binding<String>
+    var stepSizeText:         Binding<String>             // days between reported rows
+    var integrationStepText:  Binding<String>             // RK4's h
     var toleranceText:        Binding<String>
+    var stepBudget:           Binding<StepBudget>?        // non-nil only when RK45 is selected
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
+    var manualStepsText:      Binding<String>
 }
+
+/// What the model allows the explicit solvers, worded for the fields they sit under.
+struct SolverHints: Equatable {
+    var integrationStepHint: String?
+    var integrationStepIsUnstable = false
+    var stepBudgetHint: String?
+    var stepBudgetWarning: String?
+    var automaticStepsPerDay = 0
+}
+
+private enum BudgetMode: Hashable, Sendable { case automatic, manual }
 
 // MARK: - ParameterContent (pure)
 
@@ -35,6 +49,7 @@ struct ParameterContent: View {
     let calculateButtonTitle: String
     let durationWarningMessage: String?
     let durationWarningTone: GBannerTone
+    var hints = SolverHints()
     var showCalculateButton: Bool = true
 
     // One-way callbacks for actions that involve more than a simple value swap.
@@ -45,8 +60,8 @@ struct ParameterContent: View {
 
     private let algorithms: [(name: String, method: SolverMethod)] = [
         ("Birchall",       .birchall(composition: .perTime)),
-        ("Runge-Kutta 4",  .rungeKutta4(stepSize: 1.0)),
-        ("Runge-Kutta 45", .rungeKutta45(tolerance: 1e-6)),
+        ("Runge-Kutta 4",  .rungeKutta4(stepSize: 0.01)),
+        ("Runge-Kutta 45", .rungeKutta45(tolerance: 1e-13, budget: .automatic)),
     ]
 
     var body: some View {
@@ -98,35 +113,20 @@ struct ParameterContent: View {
                     }
 
                     GLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    HStack {
-                        Text(paramBindings.finalDay.wrappedValue.formatted())
-                            .font(.system(size: 20, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(g.ink)
-                        Spacer()
-                        HStack(spacing: 6) {
-                            GStepper(
-                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 20) },
-                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 20 },
-                                label: "20"
-                            )
-                            GStepper(
-                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 1) },
-                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 1 },
-                                label: "1"
-                            )
-                        }
-                    }
+                    GJumpStepper(value: paramBindings.finalDay, unit: lingo.timeUnit.label)
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
-                    switch solver {
-                    case .rungeKutta4, .rungeKutta45:
-                        GLabel("Step size (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        GField(paramBindings.stepSizeText)
+                    GLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    GField(paramBindings.stepSizeText)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 18)
+
+                    if case .rungeKutta4 = solver {
+                        GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                        GField(paramBindings.integrationStepText)
                             .padding(.horizontal, 18)
-                            .padding(.bottom, 18)
-                    default:
-                        EmptyView()
+                        fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
@@ -134,6 +134,26 @@ struct ParameterContent: View {
                         GField(paramBindings.toleranceText)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
+                    }
+
+                    if let budget = paramBindings.stepBudget {
+                        GLabel("Step budget").padding(.horizontal, 18)
+                        GSegmented(
+                            selection: Binding(
+                                get: { if case .manual = budget.wrappedValue { BudgetMode.manual } else { .automatic } },
+                                set: { mode in
+                                    budget.wrappedValue = mode == .manual ? .manual(stepsPerDay: hints.automaticStepsPerDay) : .automatic
+                                }
+                            ),
+                            options: [(label: "Automatic", value: BudgetMode.automatic), (label: "Manual", value: .manual)]
+                        )
+                        .padding(.horizontal, 18)
+                        if case .manual = budget.wrappedValue {
+                            GLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
+                            GField(paramBindings.manualStepsText)
+                                .padding(.horizontal, 18)
+                        }
+                        fieldNote(hints.stepBudgetWarning ?? hints.stepBudgetHint, tone: hints.stepBudgetWarning == nil ? nil : .orange)
                     }
                 }
                 .padding(.bottom, 8)
@@ -151,7 +171,7 @@ struct ParameterContent: View {
                     GButton(
                         calculateButtonTitle,
                         icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors,
+                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
                         action: onCalculate
                     )
                 }
@@ -163,6 +183,21 @@ struct ParameterContent: View {
     }
 
     // MARK: - Helpers
+
+    /// A line under a field: what the model allows, or a warning in `tone`.
+    @ViewBuilder
+    private func fieldNote(_ text: String?, tone: Color?) -> some View {
+        if let text {
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(tone ?? g.muted)
+                .padding(.horizontal, 22)
+                .padding(.top, 6)
+                .padding(.bottom, 18)
+        } else {
+            Color.clear.frame(height: 18)
+        }
+    }
 
     private func solverKey(for method: SolverMethod) -> String {
         switch method {

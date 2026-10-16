@@ -19,45 +19,45 @@ extension BiokineticsSimulationPlan {
     /// | RK45 (tol=1e-10)          | 0.36 s  |
     ///
     /// **Accuracy:** ±50 % for semigroup and RK4 (analytic formula).
-    /// RK45 is conservatively over-estimated because its adaptive step count
-    /// depends on system stiffness, which varies by model.
+    /// RK45 assumes Uranium's stiffness: its step count follows the model's fastest rate.
     ///
     /// - Parameter compartmentCount: Total number of compartments in the model.
     /// - Returns: Estimated `TimeInterval` in seconds.
-    public func estimatedDuration(compartmentCount: Int) -> TimeInterval {
+    /// - Parameter rk45StepsPerDay: the steps per day RK45 is expected to need on this model (its
+    ///   `SolverLimits`); Uranium's ~12.5 when unknown.
+    public func estimatedDuration(compartmentCount: Int, rk45StepsPerDay: Double = 12.5) -> TimeInterval {
         let n = Double(compartmentCount)
         let steps = Double(stepCount + 2)   // matches actual row count produced
 
+        // Calibrated 2026-10-16 (FP 3, SwiftCalx 1.1, 16-core Intel, release) on Uranium, n = 19.
         switch solver {
         case .birchall(let composition):
             switch composition {
             case .semigroup:
-                // One matrix exponential O(n³·taylorIter), then cheap O(n²·steps) applies.
-                // The exp dominates for any realistic stepCount.
-                // Calibrated: n=19 → 0.30 s  →  C ≈ 43.8 µs·n⁻³
-                return 4.38e-5 * n * n * n
+                // One matrix exponential, then cheap mat-vecs: the exponential dominates.
+                // n=19, 1000 days → 0.33 ms  →  C ≈ 4.8e-8·n³
+                return 4.8e-8 * n * n * n
 
             case .perTime:
-                // One independent matrix exponential per output step, parallelised.
-                // Calibrated: n=19, steps=1002 → 11.84 s (≈8 cores)
-                // C ≈ 13.8 µs·cores·n⁻³·steps⁻¹
+                // One matrix exponential per output row, spread over the cores.
+                // n=19, 102 rows, 16 cores → 0.98 ms  →  C ≈ 2.2e-8·n³ per row per core
                 let cores = Double(max(1, processorCount))
-                return 1.38e-5 * n * n * n * steps / cores
+                return 2.2e-8 * n * n * n * steps / cores
             }
 
         case .rungeKutta4(let h):
-            // Fixed-step: strictly O(n² × final/h).
-            // Calibrated: n=19, h=0.01, final=1000 → 167.61 s
-            // C ≈ 4.64 µs·n⁻²·innerStep⁻¹
-            let innerSteps = final / h
-            return 4.64e-6 * n * n * innerSteps
+            // The propagator: ~4 + 2·log₂(step/h) matrix products, then one mat-vec per row.
+            // n=19, h=0.01, 102 rows → 69 µs.
+            let stepsPerRow = max(1, (step / h).rounded())
+            return 4.4e-10 * n * n * n * (4 + 2 * log2(stepsPerRow)) + 1e-9 * n * n * steps
 
-        case .rungeKutta45:
-            // Adaptive step count depends on system stiffness — cannot be predicted
-            // analytically.  For biokinetic models RK45 was ~0.36 s (n=19, final=1000),
-            // but conservatively assume up to 3× the semigroup estimate so the UI
-            // never under-warns.
-            return 3.0 * 4.38e-5 * n * n * n
+        case let .rungeKutta45(_, budget):
+            // ~3.1 µs a step at n=19 (≈ 8.6e-9·n²); a manual cap stops it sooner.
+            let perDay = switch budget {
+            case .automatic: rk45StepsPerDay
+            case let .manual(cap): min(rk45StepsPerDay, Double(cap))
+            }
+            return 8.6e-9 * n * n * perDay * final
         }
     }
 
@@ -76,8 +76,8 @@ extension BiokineticsSimulationPlan {
     }
 
     /// Categorises the estimated duration into a UI warning level.
-    public func durationWarning(compartmentCount: Int) -> DurationWarning {
-        switch estimatedDuration(compartmentCount: compartmentCount) {
+    public func durationWarning(compartmentCount: Int, rk45StepsPerDay: Double = 12.5) -> DurationWarning {
+        switch estimatedDuration(compartmentCount: compartmentCount, rk45StepsPerDay: rk45StepsPerDay) {
         case ..<3:     .none
         case 3..<15:   .brief
         case 15..<60:  .slow

@@ -10,11 +10,11 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 // MARK: - CalculatorView (container)
 
-@BoundTo(CalculatorFeature.self, strategy: .observationSimple)
+@BoundTo(CalculatorFeature.self)
 public struct CalculatorView: View {
     public var body: some View {
         let activeViewBinding = Binding(
-            get: { viewStore.state.activeView },
+            get: { viewStore.state.activeView.value },
             set: { viewStore.dispatch(.setActiveView($0)) }
         )
         let logXBinding = Binding(
@@ -27,14 +27,20 @@ public struct CalculatorView: View {
         )
         // Birchall composition binding — only created when Birchall is the active solver.
         let birchallBinding: Binding<BirchallComposition>? = {
-            guard case .birchall = viewStore.state.solver else { return nil }
+            guard case .birchall = viewStore.state.solver.value else { return nil }
             return Binding(
                 get: {
-                    if case .birchall(let c) = viewStore.state.solver { return c }
+                    if case .birchall(let c) = viewStore.state.solver.value { return c }
                     return .perTime
                 },
                 set: { viewStore.dispatch(.setSolver(.birchall(composition: $0))) }
             )
+        }()
+
+        // Step-budget binding — only created when RK45 is the active solver.
+        let stepBudgetBinding: Binding<StepBudget>? = {
+            guard case let .rungeKutta45(_, budget) = viewStore.state.solver.value else { return nil }
+            return Binding(get: { budget }, set: { viewStore.dispatch(.setStepBudget($0)) })
         }()
 
         let paramBindings = ParameterBindings(
@@ -46,39 +52,56 @@ public struct CalculatorView: View {
                 get: { viewStore.state.stepSizeText },
                 set: { viewStore.dispatch(.setStepSizeText($0)) }
             ),
+            integrationStepText: Binding(
+                get: { viewStore.state.integrationStepText },
+                set: { viewStore.dispatch(.setIntegrationStepText($0)) }
+            ),
             toleranceText: Binding(
                 get: { viewStore.state.toleranceText },
                 set: { viewStore.dispatch(.setToleranceText($0)) }
             ),
+            stepBudget: stepBudgetBinding,
             selectedVariant: Binding(
                 get: { viewStore.state.selectedVariant },
                 set: { viewStore.dispatch(.selectVariant($0)) }
             ),
-            birchallComposition: birchallBinding
+            birchallComposition: birchallBinding,
+            manualStepsText: Binding(
+                get: { viewStore.state.manualStepsText },
+                set: { viewStore.dispatch(.setManualStepsText($0)) }
+            )
         )
 
         return CalculatorContent(
             documentName:         viewStore.state.documentName,
-            lingo:                viewStore.state.lingo,
+            lingo:                viewStore.state.lingo.value,
             halfLife:             viewStore.state.halfLife,
-            variants:             viewStore.state.variants,
-            solver:               viewStore.state.solver,
-            series:               viewStore.state.series,
-            reportRows:           viewStore.state.reportRows,
-            compartmentNames:     viewStore.state.compartmentNames,
+            variants:             viewStore.state.variants.value,
+            solver:               viewStore.state.solver.value,
+            series:               viewStore.state.series.value,
+            reportRows:           viewStore.state.reportRows.value,
+            compartmentNames:     viewStore.state.compartmentNames.value,
             isCalculating:        viewStore.state.isCalculating,
             error:                viewStore.state.error,
             isParamPanelVisible:  viewStore.state.isParamPanelVisible,
-            durationWarning:      viewStore.state.durationWarning,
+            durationWarning:      viewStore.state.durationWarning.value,
             estimatedDurationLabel: viewStore.state.estimatedDurationLabel,
             solverShortName:      viewStore.state.solverShortName,
             calculateButtonTitle: viewStore.state.calculateButtonTitle,
             logXLabel:            viewStore.state.logXLabel,
             logYLabel:            viewStore.state.logYLabel,
             durationWarningMessage: viewStore.state.durationWarningMessage,
-            validationIssues:     viewStore.state.validationIssues,
-            csvExportInput:       viewStore.state.csvExportInput,
-            pdfExportInput:       viewStore.state.pdfExportInput,
+            validationIssues:     viewStore.state.validationIssues.value,
+            hints: SolverHints(
+                integrationStepHint: viewStore.state.integrationStepHint,
+                integrationStepIsUnstable: viewStore.state.integrationStepIsUnstable,
+                stepBudgetHint: viewStore.state.stepBudgetHint,
+                stepBudgetWarning: viewStore.state.stepBudgetWarning,
+                automaticStepsPerDay: viewStore.state.automaticStepsPerDay
+            ),
+            remedies: viewStore.state.remedies.value,
+            csvExportInput:       viewStore.state.csvExportInput.value,
+            pdfExportInput:       viewStore.state.pdfExportInput.value,
             activeView:           activeViewBinding,
             logX:                 logXBinding,
             logY:                 logYBinding,
@@ -87,6 +110,7 @@ public struct CalculatorView: View {
             onSetSolver:          { viewStore.dispatch(.setSolver($0)) },
             onToggleSeries:       { viewStore.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewStore.dispatch(.toggleParamPanel) },
+            onRemedy:             { viewStore.dispatch(.applyRemedy($0)) },
         )
         .inlineNavigationTitle()
     }
@@ -115,6 +139,8 @@ struct CalculatorContent: View {
     let logYLabel: String
     let durationWarningMessage: String?
     let validationIssues: [CompartmentalModel.ValidationIssue]
+    let hints: SolverHints
+    let remedies: [CalculatorFeature.Remedy]
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
 
@@ -129,6 +155,7 @@ struct CalculatorContent: View {
     var onSetSolver: (SolverMethod) -> Void
     var onToggleSeries: (String) -> Void
     var onToggleParamPanel: () -> Void
+    var onRemedy: (CalculatorFeature.Remedy) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
@@ -157,6 +184,7 @@ struct CalculatorContent: View {
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
                     durationWarningTone: bannerTone(durationWarning),
+                    hints: hints,
                     onSetSolver: onSetSolver,
                     onCalculate: onCalculate
                 )
@@ -201,7 +229,9 @@ struct CalculatorContent: View {
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
                         finalDay: paramBindings.finalDay.wrappedValue,
                         lingo: lingo, validationIssues: validationIssues,
-                        onToggleSeries: onToggleSeries
+                        remedies: remedies,
+                        onToggleSeries: onToggleSeries,
+                        onRemedy: onRemedy
                     )
                 }
             }
@@ -228,15 +258,25 @@ struct CalculatorContent: View {
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
                     durationWarningTone: bannerTone(durationWarning),
+                    hints: hints,
                     showCalculateButton: false,
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
+                if let msg = durationWarningMessage {
+                    GBanner(
+                        tone: bannerTone(durationWarning),
+                        systemImage: bannerTone(durationWarning) == .neutral ? "clock" : "exclamationmark.triangle",
+                        message: msg
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                }
                 GButton(
                     isCalculating ? "Calculating…" : "Calculate",
                     icon: isCalculating ? nil : Image(systemName: "play.fill"),
                     size: .lg, fullWidth: true,
-                    disabled: isCalculating || validationIssues.hasErrors,
+                    disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
                     action: {
                         onCalculate()
                         activeView.wrappedValue = .chart
@@ -280,7 +320,9 @@ struct CalculatorContent: View {
                         finalDay: paramBindings.finalDay.wrappedValue,
                         lingo: lingo,
                         validationIssues: validationIssues,
-                        onToggleSeries: onToggleSeries
+                        remedies: remedies,
+                        onToggleSeries: onToggleSeries,
+                        onRemedy: onRemedy
                     )
                 }
             }

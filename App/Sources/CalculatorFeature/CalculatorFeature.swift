@@ -11,7 +11,7 @@ import SwiftRexReactiveConcurrency
 
 // MARK: - CalculatorFeature
 
-@Feature(strategy: .observationSimple)
+@Feature
 public enum CalculatorFeature {
     // MARK: - State
 
@@ -21,13 +21,19 @@ public enum CalculatorFeature {
         public var selectedVariant: String? = nil
         public var solver: SolverMethod = .birchall(composition: .perTime)
         public var finalDay: Int = 200
+        /// Days between reported rows. Independent of the solver: RK4's integration step lives in
+        /// `solver`, and RK45 picks its own.
         public var stepSize:     Double = 1.0
-        public var tolerance:    Double = 1e-6
         public var stepSizeText: String = "1"
-        public var toleranceText: String = "0.000001"
+        /// Text of the RK4 integration-step and RK45 tolerance fields; the values are in `solver`.
+        public var integrationStepText: String = "0.01"
+        public var toleranceText: String = "1e-13"
+        public var manualStepsText: String = ""
         public var results: [[Double]]?
         public var isCalculating: Bool = false
         public var error: String?
+        /// Set when the solver couldn't finish: drives the message and the one-tap fixes.
+        public var solveFailure: SolveError?
         public var logX: Bool = true
         public var logY: Bool = true
         public var visibleSeriesIds: Set<String> = []
@@ -52,6 +58,28 @@ public enum CalculatorFeature {
         case chart, report, parameters
     }
 
+    /// A one-tap way out of a failed run: changes the settings and runs again.
+    public enum Remedy: Sendable, Equatable, Hashable {
+        case useAutomaticBudget
+        case useBirchall
+
+        public var title: String {
+            switch self {
+            case .useAutomaticBudget: "Use automatic budget"
+            case .useBirchall: "Switch to Birchall"
+            }
+        }
+
+        static func `for`(_ failure: SolveError, solver: SolverMethod) -> [Remedy] {
+            switch failure {
+            case .stepBudgetExhausted:
+                if case .rungeKutta45(_, .manual) = solver { [.useAutomaticBudget, .useBirchall] } else { [.useBirchall] }
+            case .unstableStep, .stepUnderflow:
+                [.useBirchall]
+            }
+        }
+    }
+
     // MARK: - Action
 
     public enum Action: Sendable {
@@ -60,14 +88,20 @@ public enum CalculatorFeature {
         case selectVariant(String?)
         case resultsReady([[Double]])
         case resultsFailed(String)
+        case solveFailed(SolveError)
+        case applyRemedy(Remedy)
         case setSolver(SolverMethod)
         case setFinalDay(Int)
         case setStepSize(Double)
         case setStepSizeText(String)
         case setTolerance(Double)
         case setToleranceText(String)
+        case setIntegrationStepText(String)
+        case setStepBudget(StepBudget)
+        case setManualStepsText(String)
         case stepSizeResolved(Double, String)
         case toleranceResolved(Double, String)
+        case integrationStepResolved(Double, String)
         case setLogX(Bool)
         case setLogY(Bool)
         case toggleSeries(String)
@@ -124,7 +158,21 @@ public enum CalculatorFeature {
             public var solver: SolverMethod = .birchall(composition: .perTime)
             public var finalDay: Int = 200
             public var stepSizeText:  String = "1"
-            public var toleranceText: String = "0.000001"
+            public var integrationStepText: String = "0.01"
+            public var toleranceText: String = "1e-13"
+            public var manualStepsText: String = ""
+            /// Under the RK4 step field: the model's stability limit.
+            public var integrationStepHint: String? = nil
+            /// The RK4 step is at or past that limit: the field shows it and Calculate is off.
+            public var integrationStepIsUnstable: Bool = false
+            /// Under the RK45 budget: how many steps a day this model needs.
+            public var stepBudgetHint: String? = nil
+            /// A manual cap below that need: roughly where the run will stop.
+            public var stepBudgetWarning: String? = nil
+            /// The `.automatic` budget, per day: what Manual starts from.
+            public var automaticStepsPerDay: Int = 0
+            /// Fixes offered with a failed run.
+            public var remedies: [Remedy] = []
             public var series: [Series] = []
             public var reportRows: [ReportRow] = []
             public var isCalculating: Bool = false
@@ -167,6 +215,10 @@ public enum CalculatorFeature {
             case setStepSizeText(String)
             case setTolerance(Double)
             case setToleranceText(String)
+            case setIntegrationStepText(String)
+            case setStepBudget(StepBudget)
+            case setManualStepsText(String)
+            case applyRemedy(Remedy)
             case setLogX(Bool)
             case setLogY(Bool)
             case toggleSeries(String)
@@ -176,7 +228,7 @@ public enum CalculatorFeature {
 
     // MARK: - Mappings
 
-    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { _ in { state in
+    public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { env in { state in
         let doc = state.document
         let compartments = doc.model.compartments.filter { $0.follow }
 
@@ -213,8 +265,24 @@ public enum CalculatorFeature {
             solver: state.solver
         )
         let n = doc.model.compartments.count
-        let estimatedSeconds = plan.estimatedDuration(compartmentCount: n)
-        let durationWarning = plan.durationWarning(compartmentCount: n)
+        // Read off the model before anything runs: RK4's stable step, RK45's steps a day.
+        let limits = (state.selectedVariant.flatMap { doc.variants[$0] } ?? doc.model).solverLimits
+        let estimatedSeconds = plan.estimatedDuration(compartmentCount: n, rk45StepsPerDay: limits.rk45StepsPerDay)
+        let durationWarning = plan.durationWarning(compartmentCount: n, rk45StepsPerDay: limits.rk45StepsPerDay)
+        let unit = doc.field.lingo.timeUnit.label
+        let integrationStepIsUnstable: Bool = if case let .rungeKutta4(h) = state.solver { h >= limits.rk4StableStep } else { false }
+        let integrationStepHint: String? = if case .rungeKutta4 = state.solver {
+            "Stable below \(env.formatDouble(limits.rk4StableStep, 3)) \(unit) for this model"
+        } else { nil }
+        let neededSteps = Int(limits.rk45StepsPerDay.rounded(.up))
+        let stepBudgetHint: String? = if case .rungeKutta45 = state.solver {
+            "This model needs about \(env.formatDouble(Double(neededSteps), 0)) \(neededSteps == 1 ? "step" : "steps") per \(unit)"
+        } else { nil }
+        let stepBudgetWarning: String? = if case let .rungeKutta45(_, .manual(cap)) = state.solver {
+            limits.stoppingDay(stepsPerDay: cap, days: Double(state.finalDay)).map {
+                "At \(cap) per \(unit) it will stop around \(unit) \(env.formatDouble($0, 0))."
+            }
+        } else { nil }
         let estimatedDurationLabel = Self.formatDuration(estimatedSeconds)
 
         let solverShortName: String = {
@@ -229,12 +297,18 @@ public enum CalculatorFeature {
             : "Calculate · \(estimatedDurationLabel)"
         let logXLabel = state.logX ? "Log X" : "Lin X"
         let logYLabel = state.logY ? "Log Y" : "Lin Y"
+        // Long runs say what would be quicker: semigroup is one exponential whatever the horizon.
+        let fasterChoice: String = switch state.solver {
+        case .birchall(.semigroup): ""
+        case .birchall(.perTime): ". Semigroup is one exponential whatever the horizon."
+        case .rungeKutta4, .rungeKutta45: ". Birchall is exact for this model."
+        }
         let durationWarningMessage: String? = {
             switch durationWarning {
             case .none:    nil
             case .brief:   "Est. \(estimatedDurationLabel)"
-            case .slow:    "Est. \(estimatedDurationLabel) — may be slow"
-            case .veryLong:"Est. \(estimatedDurationLabel) — this will take a long time"
+            case .slow:    "Est. \(estimatedDurationLabel) — may be slow\(fasterChoice)"
+            case .veryLong:"Est. \(estimatedDurationLabel) — this will take a long time\(fasterChoice)"
             }
         }()
 
@@ -248,11 +322,19 @@ public enum CalculatorFeature {
             solver: state.solver,
             finalDay: state.finalDay,
             stepSizeText:  state.stepSizeText,
+            integrationStepText: state.integrationStepText,
             toleranceText: state.toleranceText,
+            manualStepsText: state.manualStepsText,
+            integrationStepHint: integrationStepHint,
+            integrationStepIsUnstable: integrationStepIsUnstable,
+            stepBudgetHint: stepBudgetHint,
+            stepBudgetWarning: stepBudgetWarning,
+            automaticStepsPerDay: limits.automaticStepsPerDay,
+            remedies: state.solveFailure.map { Remedy.for($0, solver: state.solver) } ?? [],
             series: series,
             reportRows: reportRows,
             isCalculating: state.isCalculating,
-            error: state.error,
+            error: state.solveFailure.map { message(for: $0, format: env.formatDouble) } ?? state.error,
             logX: state.logX,
             logY: state.logY,
             activeView: state.activeView,
@@ -303,6 +385,10 @@ public enum CalculatorFeature {
         case .setStepSizeText(let t):   .setStepSizeText(t)
         case .setTolerance(let t):      .setTolerance(t)
         case .setToleranceText(let t):  .setToleranceText(t)
+        case .setIntegrationStepText(let t): .setIntegrationStepText(t)
+        case .setStepBudget(let b):     .setStepBudget(b)
+        case .setManualStepsText(let t): .setManualStepsText(t)
+        case .applyRemedy(let r):       .applyRemedy(r)
         case .setLogX(let v):           .setLogX(v)
         case .setLogY(let v):           .setLogY(v)
         case .toggleSeries(let id):     .toggleSeries(id)
@@ -336,8 +422,30 @@ public enum CalculatorFeature {
                 .reduce { $0.results = data; $0.isCalculating = false }
             case .resultsFailed(let msg):
                 .reduce { $0.error = msg; $0.isCalculating = false }
+            case .solveFailed(let failure):
+                .reduce { $0.solveFailure = failure; $0.results = nil; $0.isCalculating = false }
+            case .applyRemedy(let remedy):
+                .reduce { state in
+                    switch remedy {
+                    case .useAutomaticBudget:
+                        if case let .rungeKutta45(tolerance, _) = state.solver {
+                            state.solver = .rungeKutta45(tolerance: tolerance, budget: .automatic)
+                        }
+                    case .useBirchall:
+                        state.solver = .birchall(composition: .perTime)
+                    }
+                }
+                .produce { _ in .just(.calculate) }
             case .setSolver(let s):
-                .reduce { $0.solver = s }
+                // Picking a method resets its parameters to the ones it carries, fields included.
+                .reduce { state in
+                    state.solver = s
+                    if case let .rungeKutta45(tolerance, _) = s { state.toleranceText = Self.scientific(tolerance) }
+                }
+                .produce { ctx in
+                    guard case let .rungeKutta4(h) = s else { return .empty }
+                    return .just(.integrationStepResolved(h, ctx.environment.formatDouble(h, 4)))
+                }
             case .setFinalDay(let d):
                 .reduce { $0.finalDay = max(1, d) }
             case .setStepSize(let s):
@@ -358,21 +466,55 @@ public enum CalculatorFeature {
                 .reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
 
             case .setTolerance(let t):
-                .produce { ctx in
+                .produce { _ in
                     let v = max(1e-14, min(1e-2, t))
-                    return .just(.toleranceResolved(v, ctx.environment.formatDouble(v, 10)))
+                    return .just(.toleranceResolved(v, Self.scientific(v)))
                 }
             case .setToleranceText(let text):
                 .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
-                    if let v = ctx.environment.parseDouble(t) {
+                    // `Double(_:)` reads exponent notation ("1e-13"), which the locale formatter doesn't.
+                    if let v = ctx.environment.parseDouble(t) ?? Double(t) {
                         let clamped = max(1e-14, min(1e-2, v))
-                        return .just(.toleranceResolved(clamped, ctx.environment.formatDouble(clamped, 10)))
+                        return .just(.toleranceResolved(clamped, clamped == v ? t : Self.scientific(clamped)))
                     }
                     return .just(.toleranceResolved(0, t))
                 }
             case .toleranceResolved(let v, let t):
-                .reduce { $0.tolerance = v > 0 ? v : $0.tolerance; $0.toleranceText = t }
+                .reduce { state in
+                    state.toleranceText = t
+                    if v > 0, case let .rungeKutta45(_, budget) = state.solver {
+                        state.solver = .rungeKutta45(tolerance: v, budget: budget)
+                    }
+                }
+            case .setIntegrationStepText(let text):
+                .produce { ctx in
+                    let t = text.trimmingCharacters(in: .whitespaces)
+                    if let v = ctx.environment.parseDouble(t) ?? Double(t), v > 0 {
+                        return .just(.integrationStepResolved(v, t))
+                    }
+                    return .just(.integrationStepResolved(0, t))
+                }
+            case .integrationStepResolved(let v, let t):
+                .reduce { state in
+                    state.integrationStepText = t
+                    if v > 0, case .rungeKutta4 = state.solver { state.solver = .rungeKutta4(stepSize: v) }
+                }
+            case .setStepBudget(let budget):
+                .reduce { state in
+                    if case let .rungeKutta45(tolerance, _) = state.solver {
+                        state.solver = .rungeKutta45(tolerance: tolerance, budget: budget)
+                    }
+                    if case let .manual(cap) = budget { state.manualStepsText = "\(cap)" }
+                }
+            case .setManualStepsText(let text):
+                .reduce { state in
+                    state.manualStepsText = text
+                    if let cap = Int(text.trimmingCharacters(in: .whitespaces)), cap > 0,
+                       case let .rungeKutta45(tolerance, .manual) = state.solver {
+                        state.solver = .rungeKutta45(tolerance: tolerance, budget: .manual(stepsPerDay: cap))
+                    }
+                }
             case .setLogX(let v):
                 .reduce { $0.logX = v }
             case .setLogY(let v):
@@ -409,15 +551,33 @@ public enum CalculatorFeature {
             final: Double(state.finalDay),
             solver: state.solver
         )
-        return .reduce { $0.isCalculating = true; $0.error = nil }
+        return .reduce { $0.isCalculating = true; $0.error = nil; $0.solveFailure = nil }
             .produce { ctx in
                 (ctx.environment.solve(plan, model)).asEffect { result in
                     switch result {
                     case .success(let data): return .resultsReady(data)
-                    case .failure(let e):    return .resultsFailed(e.localizedDescription)
+                    case .failure(let e):
+                        return (e as? SolveError).map(Action.solveFailed) ?? .resultsFailed(e.localizedDescription)
                     }
                 }
             }
+    }
+
+    /// "1e-13": tolerances span orders of magnitude, so they're shown by exponent.
+    static func scientific(_ value: Double) -> String {
+        String(format: "%.0e", value).replacingOccurrences(of: "e-0", with: "e-")
+    }
+
+    /// What a solver that couldn't finish tells the user, with numbers in their locale.
+    public static func message(for error: SolveError, format: (Double, Int) -> String) -> String {
+        switch error {
+        case let .unstableStep(step, limit):
+            "An RK4 step of \(format(step, 4)) d is unstable for this model. Use a step below \(format(limit, 3)) d, or Birchall."
+        case let .stepBudgetExhausted(reached, final, steps):
+            "RK45 stopped at day \(format(reached, 1)) of \(format(final, 0)) after \(steps) steps. Raise the step budget, or use Birchall."
+        case let .stepUnderflow(day):
+            "RK45 could not take a step at day \(format(day, 1)). Use Birchall for this model."
+        }
     }
 
     public typealias Content = CalculatorView

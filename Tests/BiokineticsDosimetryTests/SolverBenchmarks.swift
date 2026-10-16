@@ -27,13 +27,13 @@ final class SolverBenchmarks: XCTestCase {
             ("Birchall (perTime, concurrent) ", .birchall(composition: .perTime)),
             ("Birchall (semigroup)           ", .birchall(composition: .semigroup)),
             ("RK4      (stepSize=0.01)       ", .rungeKutta4(stepSize: 0.01)),
-            ("RK45     (tolerance=1e-10)     ", .rungeKutta45(tolerance: 1e-10))
+            ("RK45     (tolerance=1e-10)     ", .rungeKutta45(tolerance: 1e-10, budget: .automatic))
         ]
 
         for solver in solvers {
             let calculator = BiokineticsSimulationPlan(step: 1, final: 1000, solver: solver.method)
             let start = Date()
-            _ = await solve(plan: calculator, model: model).run()
+            _ = try await solve(plan: calculator, model: model).run().get()
             let elapsed = Date().timeIntervalSince(start)
             print(String(format: "%@  %8.2f s", solver.name, elapsed))
         }

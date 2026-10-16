@@ -310,47 +310,61 @@ public struct GRadioList<Value: Hashable & Sendable>: View {
     }
 }
 
-// MARK: - GStepper
+// MARK: - GJumpStepper
 
-public struct GStepper: View {
+/// `| « | ‹ | 5,000 | › | » |`: one capsule with the value in the middle, a fine step (‹ ›) and a
+/// coarse one (« ») either side, never below `minimum`.
+public struct GJumpStepper: View {
     @Environment(\.glassTokens) private var g
-    private let onDecrement: () -> Void
-    private let onIncrement: () -> Void
-    private let label: String?
+    @Binding private var value: Int
+    private let fine: Int
+    private let coarse: Int
+    private let minimum: Int
+    private let unit: String
 
-    public init(onDecrement: @escaping () -> Void, onIncrement: @escaping () -> Void, label: String? = nil) {
-        self.onDecrement = onDecrement
-        self.onIncrement = onIncrement
-        self.label = label
+    /// - Parameter unit: spoken with the steps ("days"), for VoiceOver.
+    public init(value: Binding<Int>, fine: Int = 1, coarse: Int = 20, minimum: Int = 1, unit: String = "") {
+        self._value = value
+        self.fine = fine
+        self.coarse = coarse
+        self.minimum = minimum
+        self.unit = unit
     }
 
     public var body: some View {
         HStack(spacing: 0) {
-            stepBtn(systemImage: "minus") { onDecrement() }
-            if let label {
-                GlassVDivider().frame(height: 18)
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(g.faint)
-                    .frame(minWidth: 20)
-                    .padding(.horizontal, 6)
-            }
+            jump(-coarse, systemImage: "chevron.left.2")
             GlassVDivider().frame(height: 18)
-            stepBtn(systemImage: "plus")  { onIncrement() }
+            jump(-fine, systemImage: "chevron.left")
+            GlassVDivider().frame(height: 18)
+            Text(value.formatted())
+                .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                .foregroundStyle(g.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 6)
+            GlassVDivider().frame(height: 18)
+            jump(fine, systemImage: "chevron.right")
+            GlassVDivider().frame(height: 18)
+            jump(coarse, systemImage: "chevron.right.2")
         }
-        .frame(height: 38)
+        .frame(height: 44)
         .glassBackground(cornerRadius: 999, intensity: 0.7)
+        .accessibilityElement(children: .contain)
     }
 
-    private func stepBtn(systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func jump(_ delta: Int, systemImage: String) -> some View {
+        Button { value = max(minimum, value + delta) } label: {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(g.ink)
-                .frame(width: 52, height: 36)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(delta < 0 && value <= minimum ? g.faint : g.ink)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
+        .disabled(delta < 0 && value <= minimum)
+        .accessibilityLabel("\(delta > 0 ? "Plus" : "Minus") \(abs(delta)) \(unit)")
     }
 }
 

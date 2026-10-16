@@ -7,7 +7,7 @@ import SwiftRexArchitecture
 
 // MARK: - EditorFeature
 
-@Feature(strategy: .observationSimple)
+@Feature
 public enum EditorFeature {
 
     // MARK: - State

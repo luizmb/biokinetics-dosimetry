@@ -37,7 +37,7 @@ final class UraniumGoldenTests: XCTestCase {
             $0.with(intake: true, fraction: golden.fraction)
         }
         let calculator = BiokineticsSimulationPlan(step: golden.step, final: golden.final)
-        let swiftRows = await solve(plan: calculator, model: model).run()
+        let swiftRows = try await solve(plan: calculator, model: model).run().get()
 
         XCTAssertEqual(swiftRows.count, golden.rows.count, "row count mismatch")
 
