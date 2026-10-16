@@ -74,15 +74,15 @@ struct ValidationChartSnapshotTests {
     ///
     /// Uses `.realBirchall` — results are verified to match the C# reference
     /// to within 1e-5 by `ValidationModelTests.testHalfLifeZero`.
-    @Test func snapshotValidationChartHalfLifeZero() async {
+    @Test func snapshotValidationChartHalfLifeZero() async throws {
         let doc = validationModel(halfLife: 0)
         var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         initial.finalDay = 50
-        initial.results = await Solver.solve(
+        initial.results = try await Solver.solve(
             plan: BiokineticsSimulationPlan(step: 1, final: 50, solver: .birchall(composition: .perTime)),
             model: doc.model
-        ).run()
+        ).run().get()
         initial.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: .alwaysFails)
         await snapBoth(feature, named: "validation-hl0")
@@ -93,15 +93,15 @@ struct ValidationChartSnapshotTests {
     ///
     /// Uses `.realBirchall` — results are verified to match the C# reference
     /// to within 1e-5 by `ValidationModelTests.testHalfLifeFiveDays`.
-    @Test func snapshotValidationChartHalfLifeFive() async {
+    @Test func snapshotValidationChartHalfLifeFive() async throws {
         let doc = validationModel(halfLife: 5)
         var initial = CalculatorFeature.initialState(with: ())
         initial.document = doc
         initial.finalDay = 50
-        initial.results = await Solver.solve(
+        initial.results = try await Solver.solve(
             plan: BiokineticsSimulationPlan(step: 1, final: 50, solver: .birchall(composition: .perTime)),
             model: doc.model
-        ).run()
+        ).run().get()
         initial.visibleSeriesIds = Set(doc.model.compartments.filter(\.follow).map(\.id))
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: .alwaysFails)
         await snapBoth(feature, named: "validation-hl5")

@@ -37,6 +37,12 @@ public struct CalculatorView: View {
             )
         }()
 
+        // Step-budget binding — only created when RK45 is the active solver.
+        let stepBudgetBinding: Binding<StepBudget>? = {
+            guard case let .rungeKutta45(_, budget) = viewStore.state.solver.value else { return nil }
+            return Binding(get: { budget }, set: { viewStore.dispatch(.setStepBudget($0)) })
+        }()
+
         let paramBindings = ParameterBindings(
             finalDay: Binding(
                 get: { viewStore.state.finalDay },
@@ -46,10 +52,15 @@ public struct CalculatorView: View {
                 get: { viewStore.state.stepSizeText },
                 set: { viewStore.dispatch(.setStepSizeText($0)) }
             ),
+            integrationStepText: Binding(
+                get: { viewStore.state.integrationStepText },
+                set: { viewStore.dispatch(.setIntegrationStepText($0)) }
+            ),
             toleranceText: Binding(
                 get: { viewStore.state.toleranceText },
                 set: { viewStore.dispatch(.setToleranceText($0)) }
             ),
+            stepBudget: stepBudgetBinding,
             selectedVariant: Binding(
                 get: { viewStore.state.selectedVariant },
                 set: { viewStore.dispatch(.selectVariant($0)) }

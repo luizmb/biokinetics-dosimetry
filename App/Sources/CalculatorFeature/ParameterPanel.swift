@@ -14,8 +14,10 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 
 struct ParameterBindings {
     var finalDay:             Binding<Int>
-    var stepSizeText:         Binding<String>
+    var stepSizeText:         Binding<String>             // days between reported rows
+    var integrationStepText:  Binding<String>             // RK4's h
     var toleranceText:        Binding<String>
+    var stepBudget:           Binding<StepBudget>?        // non-nil only when RK45 is selected
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
 }
@@ -45,8 +47,8 @@ struct ParameterContent: View {
 
     private let algorithms: [(name: String, method: SolverMethod)] = [
         ("Birchall",       .birchall(composition: .perTime)),
-        ("Runge-Kutta 4",  .rungeKutta4(stepSize: 1.0)),
-        ("Runge-Kutta 45", .rungeKutta45(tolerance: 1e-6)),
+        ("Runge-Kutta 4",  .rungeKutta4(stepSize: 0.01)),
+        ("Runge-Kutta 45", .rungeKutta45(tolerance: 1e-13, budget: .automatic)),
     ]
 
     var body: some View {
@@ -119,14 +121,16 @@ struct ParameterContent: View {
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
-                    switch solver {
-                    case .rungeKutta4, .rungeKutta45:
-                        GLabel("Step size (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        GField(paramBindings.stepSizeText)
+                    GLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    GField(paramBindings.stepSizeText)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 18)
+
+                    if case .rungeKutta4 = solver {
+                        GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                        GField(paramBindings.integrationStepText)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
-                    default:
-                        EmptyView()
                     }
 
                     if case .rungeKutta45 = solver {
@@ -134,6 +138,17 @@ struct ParameterContent: View {
                         GField(paramBindings.toleranceText)
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
+                    }
+
+                    if let budget = paramBindings.stepBudget {
+                        GLabel("Step budget").padding(.horizontal, 18)
+                        GSegmented(selection: budget, options: [
+                            (label: "Automatic", value: StepBudget.automatic),
+                            (label: "Loose", value: .loose),
+                            (label: "Stiff", value: .stiff)
+                        ])
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 18)
                     }
                 }
                 .padding(.bottom, 8)

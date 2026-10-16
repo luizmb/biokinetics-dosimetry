@@ -25,6 +25,11 @@ struct CalculatorFeatureBehaviorTests {
     private var env: CalculatorFeature.Environment {
         .succeeds(with: mockResults)
     }
+    private var rk45State: CalculatorFeature.State {
+        var state = CalculatorFeature.initialState(with: ())
+        state.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        return state
+    }
     private func store(
         initial: CalculatorFeature.State = CalculatorFeature.initialState(with: ())
     ) -> TestStore<CalculatorFeature.Action, CalculatorFeature.State, CalculatorFeature.Environment> {
@@ -132,16 +137,65 @@ struct CalculatorFeatureBehaviorTests {
         }
     }
 
-    @Test func setSolverToRungeKutta4() {
-        store().dispatch(.setSolver(.rungeKutta4(stepSize: 0.5))) {
-            $0.solver = .rungeKutta4(stepSize: 0.5)
+    @Test func setSolverToRungeKutta4() async {
+        let s = store()
+        s.dispatch(.setSolver(.rungeKutta4(stepSize: 0.5))) { $0.solver = .rungeKutta4(stepSize: 0.5) }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.integrationStepResolved) { pair, state in
+            state.integrationStepText = pair.1
         }
+        #expect(s.state.integrationStepText == env.formatDouble(0.5, 4))
     }
 
     @Test func setSolverToRungeKutta45() {
-        store().dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8))) {
-            $0.solver = .rungeKutta45(tolerance: 1e-8)
+        store().dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8, budget: .stiff))) {
+            $0.solver = .rungeKutta45(tolerance: 1e-8, budget: .stiff)
+            $0.toleranceText = "1e-8"
         }
+    }
+
+    // The reporting interval and the solver's own step are separate settings.
+
+    @Test func integrationStepTextSetsRK4StepNotTheReportingInterval() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.solver = .rungeKutta4(stepSize: 0.01)
+        let s = store(initial: initial)
+        s.dispatch(.setIntegrationStepText("0.005")) { _ in }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.integrationStepResolved) { _, state in
+            state.integrationStepText = "0.005"
+            state.solver = .rungeKutta4(stepSize: 0.005)
+        }
+        #expect(s.state.stepSize == 1.0)
+    }
+
+    @Test func setStepBudgetChangesOnlyRK45() {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        store(initial: initial).dispatch(.setStepBudget(.stiff)) {
+            $0.solver = .rungeKutta45(tolerance: 1e-13, budget: .stiff)
+        }
+        store().dispatch(.setStepBudget(.stiff)) { _ in }
+    }
+
+    @Test func toleranceTextReadsExponentNotation() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
+        let s = store(initial: initial)
+        s.dispatch(.setToleranceText("1e-11")) { _ in }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { _, state in
+            state.toleranceText = "1e-11"
+            state.solver = .rungeKutta45(tolerance: 1e-11, budget: .automatic)
+        }
+    }
+
+    @Test func solverFailuresReadAsAdvice() {
+        let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
+        #expect(CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format)
+            == "An RK4 step of 1.0000 d is unstable for this model. Use a step below 0.063 d, or Birchall.")
+        #expect(CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 10_000), format: format)
+            == "RK45 stopped at day 835.9 of 1001 after 10000 steps. Use the Stiff budget, or Birchall.")
     }
 
     @Test func setFinalDayWithValidValueUpdatesDirectly() {
@@ -184,36 +238,38 @@ struct CalculatorFeatureBehaviorTests {
     }
 
     @Test func setToleranceWithValidValue() async {
-        let s = store()
+        let s = store(initial: rk45State)
         s.dispatch(.setTolerance(1e-8)) { _ in }
         await s.runEffects()
         s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
-            state.tolerance = pair.0
+            state.solver = .rungeKutta45(tolerance: pair.0, budget: .automatic)
             state.toleranceText = pair.1
         }
-        #expect(s.state.tolerance == 1e-8)
+        #expect(s.state.solver == .rungeKutta45(tolerance: 1e-8, budget: .automatic))
+        #expect(s.state.toleranceText == "1e-8")
     }
 
     @Test func setToleranceBelowMinimumClampsTo1e_14() async {
-        let s = store()
+        let s = store(initial: rk45State)
         s.dispatch(.setTolerance(1e-20)) { _ in }
         await s.runEffects()
         s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
-            state.tolerance = pair.0
+            state.solver = .rungeKutta45(tolerance: pair.0, budget: .automatic)
             state.toleranceText = pair.1
         }
-        #expect(s.state.tolerance == 1e-14)
+        #expect(s.state.solver == .rungeKutta45(tolerance: 1e-14, budget: .automatic))
     }
 
     @Test func setToleranceAboveMaximumClampsTo1e_2() async {
-        let s = store()
+        let s = store(initial: rk45State)
         s.dispatch(.setTolerance(1.0)) { _ in }
         await s.runEffects()
         s.receive(CalculatorFeature.Action.prism.toleranceResolved) { pair, state in
-            state.tolerance = pair.0
+            state.solver = .rungeKutta45(tolerance: pair.0, budget: .automatic)
             state.toleranceText = pair.1
         }
-        #expect(s.state.tolerance == 1e-2)
+        #expect(s.state.solver == .rungeKutta45(tolerance: 1e-2, budget: .automatic))
+        #expect(s.state.toleranceText == "1e-2")
     }
 
     // MARK: - Log scale toggles
@@ -338,16 +394,16 @@ struct CalculatorFeatureMapStateTests {
 
     @Test func parametersForwardedToViewState() {
         var state = CalculatorFeature.initialState(with: ())
-        state.solver = .rungeKutta45(tolerance: 1e-8)
+        state.solver = .rungeKutta45(tolerance: 1e-8, budget: .automatic)
         state.finalDay = 365
         state.stepSize = 0.5;  state.stepSizeText  = "0.5"
-        state.tolerance = 1e-8; state.toleranceText = "1e-8"
+        state.toleranceText = "1e-8"
         state.logX = false
         state.logY = false
         state.activeView = .report
         state.isParamPanelVisible = false
         let vs = CalculatorFeature.mapState(.alwaysFails)(state)
-        #expect(vs.solver == .rungeKutta45(tolerance: 1e-8))
+        #expect(vs.solver == .rungeKutta45(tolerance: 1e-8, budget: .automatic))
         #expect(vs.finalDay == 365)
         #expect(vs.stepSizeText  == "0.5")
         #expect(vs.toleranceText == "1e-8")
@@ -492,7 +548,7 @@ struct CalculatorFeatureSnapshotTests {
     @Test func snapshotSolverRK45() async {
         var initial = CalculatorFeature.initialState(with: ())
         initial.document = .validation
-        initial.solver = .rungeKutta45(tolerance: 1e-8)
+        initial.solver = .rungeKutta45(tolerance: 1e-8, budget: .automatic)
         let feature = TestFeature<CalculatorFeature>(initial: initial, environment: env)
         await snapBoth(feature, named: "solver-rk45")
     }
