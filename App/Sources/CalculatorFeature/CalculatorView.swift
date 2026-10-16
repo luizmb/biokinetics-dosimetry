@@ -287,7 +287,7 @@ struct CalculatorContent: View {
                     .padding(.top, 10)
                 }
                 GButton(
-                    isCalculating ? "Calculating…" : "Calculate",
+                    calculateButtonTitle,
                     icon: isCalculating ? nil : Image(systemName: "play.fill"),
                     size: .lg, fullWidth: true,
                     disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
