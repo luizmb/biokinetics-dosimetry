@@ -337,6 +337,9 @@ struct EditorContent: View {
             // not bars over a flat background.
             canvas
                 .ignoresSafeArea()
+            // A soft fade where the canvas runs under the navigation bar and the buttons.
+            EdgeFade(.top, depth: 130)
+            EdgeFade(.bottom, depth: 120)
 
             if let text = linkingBannerText {
                 GlassLinkingBanner(message: text, onCancel: onCancelLinking)
