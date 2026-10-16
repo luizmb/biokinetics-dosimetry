@@ -115,10 +115,10 @@ struct CompartmentCanvasView: View {
                     let sel    = selectedLinkIndex == link.id
                     let col: Color = sel
                         ? link.fromTint.indicator(dark: isDark)
-                        : Color.primary.opacity(0.35)
+                        : Color.primary.opacity(0.5)
 
                     screenArrowLine(from: from, to: to, srcSize: srcSz, dstSize: dstSz, scale: s)
-                        .stroke(col, style: StrokeStyle(lineWidth: sel ? 1.8 : 1.2, lineCap: .round))
+                        .stroke(col, style: StrokeStyle(lineWidth: sel ? 2 : 1.4, lineCap: .round))
                         .allowsHitTesting(false)
 
                     screenArrowHead(from: from, to: to, dstSize: dstSz, scale: s)
@@ -167,14 +167,21 @@ struct CompartmentCanvasView: View {
                 ForEach(compartments) { comp in
                     let sz = nodeSize(comp.id)
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
-                    CompartmentNode(comp: comp, isLinkingTarget: isLinking, size: sz)
-                        .scaleEffect(s)
-                        .position(x: sp.x, y: sp.y)
-                        .highPriorityGesture(TapGesture().onEnded { onSelectCompartment(comp.id) })
-                        .gesture(
-                            DragGesture(minimumDistance: 4)
+                    CompartmentNode(comp: comp, isLinkingTarget: isLinking, size: sz, scale: s)
+                        // The node's own rounded shape is its touch area. Attached after
+                        // `.position` (which fills the whole canvas) every node competed for every
+                        // touch: overlapping nodes moved together and drags fought the pan.
+                        .contentShape(RoundedRectangle(cornerRadius: 14 * s, style: .continuous))
+                        // One gesture for tap and drag: a tap gesture beside the drag made every
+                        // drag wait for the tap to fail (~200 ms) before the node moved. A release
+                        // that never travelled 4 pt is the tap. High priority so a touch that
+                        // starts on a node drags it rather than panning; measured in the canvas'
+                        // space, which doesn't move with the node.
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.canvasSpace))
                                 .onChanged { val in
                                     let set = compartmentDragOriginId == comp.id
+                                    guard set || hypot(val.translation.width, val.translation.height) >= 4 else { return }
                                     let ox2 = set ? compartmentDragOriginX : comp.x
                                     let oy2 = set ? compartmentDragOriginY : comp.y
                                     if !set { onBeginCompartmentDrag(comp.id, comp.x, comp.y) }
@@ -185,40 +192,59 @@ struct CompartmentCanvasView: View {
                                         oy2 + Double(val.translation.height / s)
                                     )
                                 }
-                                .onEnded { _ in onEndCompartmentDrag() }
+                                .onEnded { val in
+                                    if hypot(val.translation.width, val.translation.height) < 4 {
+                                        onSelectCompartment(comp.id)
+                                    } else {
+                                        onEndCompartmentDrag()
+                                    }
+                                }
                         )
+                        .position(x: sp.x, y: sp.y)
+                        // The node being dragged, or the selected one, sits on top, so it's the one
+                        // a touch on overlapping nodes picks.
+                        .zIndex(compartmentDragOriginId == comp.id ? 2 : comp.isSelected ? 1 : 0)
                 }
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
             .contentShape(Rectangle())
+            .coordinateSpace(.named(Self.canvasSpace))
             // Gestures live on the same ZStack that contains the nodes so child
             // drag gestures (node move) correctly suppress the pan gesture.
+            // Pan and pinch as one gesture: separate ones made the pinch wait for the pan to give
+            // up (~200 ms, then a jump). The point between the fingers stays put while zooming,
+            // and moving both fingers pans at the same time.
             .gesture(
-                DragGesture(minimumDistance: 4)
-                    .onChanged { val in
-                        let panSet = canvasPanOriginX != nil
-                        let panOX = canvasPanOriginX ?? canvasOffsetX
-                        let panOY = canvasPanOriginY ?? canvasOffsetY
-                        if !panSet { onBeginCanvasPan(canvasOffsetX, canvasOffsetY) }
+                SimultaneousGesture(DragGesture(minimumDistance: 4), MagnifyGesture())
+                    .onChanged { value in
+                        if canvasPanOriginX == nil { onBeginCanvasPan(canvasOffsetX, canvasOffsetY) }
+                        if canvasPinchOriginScale == nil { onBeginCanvasPinch(canvasScale) }
+                        let startOffset = CGPoint(x: canvasPanOriginX ?? canvasOffsetX, y: canvasPanOriginY ?? canvasOffsetY)
+                        let startScale = canvasPinchOriginScale ?? canvasScale
+                        let scale = max(0.2, min(5.0, startScale * (value.second.map { Double($0.magnification) } ?? 1)))
+                        let zoom = CGFloat(scale / startScale)
+                        // The drag follows one finger, which also spreads out as the pinch grows:
+                        // take that spread off to get how far the pair itself moved.
+                        let finger = value.first?.translation ?? .zero
+                        let spread: CGSize = if let pinch = value.second, let drag = value.first {
+                            CGSize(
+                                width: (drag.startLocation.x - pinch.startLocation.x) * (zoom - 1),
+                                height: (drag.startLocation.y - pinch.startLocation.y) * (zoom - 1)
+                            )
+                        } else { .zero }
+                        let anchor = value.second?.startLocation ?? CGPoint(x: hw, y: hh)
                         onSetCanvasTransform(
-                            panOX + Double(val.translation.width),
-                            panOY + Double(val.translation.height),
-                            canvasScale)
+                            Double(anchor.x - hw - (anchor.x - hw - startOffset.x) * zoom + finger.width - spread.width),
+                            Double(anchor.y - hh - (anchor.y - hh - startOffset.y) * zoom + finger.height - spread.height),
+                            scale
+                        )
                     }
-                    .onEnded { _ in onEndCanvasPan() }
-            )
-            .gesture(
-                MagnificationGesture()
-                    .onChanged { val in
-                        let set = canvasPinchOriginScale != nil
-                        let os  = canvasPinchOriginScale ?? canvasScale
-                        if !set { onBeginCanvasPinch(canvasScale) }
-                        onSetCanvasTransform(canvasOffsetX, canvasOffsetY,
-                                             max(0.2, min(5.0, os * Double(val))))
+                    .onEnded { _ in
+                        onEndCanvasPan()
+                        onEndCanvasPinch()
                     }
-                    .onEnded { _ in onEndCanvasPinch() }
             )
             .onTapGesture(count: 2) { onSetCanvasTransform(0, 0, 1) }
         }
@@ -226,6 +252,8 @@ struct CompartmentCanvasView: View {
     }
 
     // MARK: - Helpers
+
+    private static let canvasSpace = "compartmentCanvas"
 
     /// Converts a canvas-space point to screen-space.
     private func screenPt(_ p: CGPoint, hw: CGFloat, hh: CGFloat,
@@ -306,49 +334,49 @@ struct CompartmentCanvasView: View {
 private struct CompartmentNode: View {
     let comp: EditorFeature.CompartmentRow
     let isLinkingTarget: Bool
+    /// In canvas units.
     let size: CGSize
+    let scale: CGFloat
     @Environment(\.colorScheme) private var colorScheme
     private var dark: Bool { colorScheme == .dark }
-    private let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
 
+    /// The glass is cut at the node's on-screen size and only the content inside is scaled: a
+    /// `scaleEffect` over the glass grew the glass while its content stayed drawn at 1×.
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
         ZStack {
-            // Intake compartments hold their dose: the level is the intake fraction.
-            if comp.intake, comp.fraction > 0 {
-                LiquidShape(level: comp.fraction * 0.55)
-                    .fill(LinearGradient(
-                        colors: [comp.tint.indicator(dark: dark).opacity(0.45), comp.tint.indicator(dark: dark).opacity(0.7)],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-            }
-            VStack(spacing: 3) {
-                Text(comp.name.trimmingCharacters(in: .whitespacesAndNewlines))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(comp.tint.foreground(dark: dark))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 4) {
-                    if comp.follow { dot(.blue) }
-                    if comp.dispose { dot(.orange) }
-                    if comp.intake { dot(.green) }
-                }
-            }
-            .padding(.horizontal, 8)
+            label
+                .frame(width: size.width, height: size.height)
+                .scaleEffect(scale)
         }
-        .frame(width: size.width, height: size.height)
+        .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        .glassEffect(.regular.tint(glassTint).interactive(), in: shape)
-        .scaleEffect(comp.isSelected ? 1.04 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: comp.isSelected)
+        .glassEffect(.clear.tint(glassTint).interactive(), in: shape)
+    }
+
+    private var label: some View {
+        VStack(spacing: 4) {
+            Text(comp.name.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 4) {
+                if comp.follow { dot(.blue) }
+                if comp.dispose { dot(.orange) }
+                if comp.intake { dot(.green) }
+            }
+        }
+        .padding(.horizontal, 8)
     }
 
     /// No border: the glass edge is the outline. Selection and linking show as a deeper tint.
     private var glassTint: Color {
-        if isLinkingTarget, !comp.isSelected { return Color.accentColor.opacity(0.28) }
-        return comp.tint.indicator(dark: dark).opacity(comp.isSelected ? 0.42 : 0.16)
+        if isLinkingTarget, !comp.isSelected { return Color.accentColor.opacity(0.25) }
+        return comp.tint.indicator(dark: dark).opacity(comp.isSelected ? 0.35 : 0.1)
     }
 
     private func dot(_ c: Color) -> some View {
-        Circle().fill(c.opacity(0.7)).frame(width: 5, height: 5)
+        Circle().fill(c.opacity(0.8)).frame(width: 6, height: 6)
     }
 }
