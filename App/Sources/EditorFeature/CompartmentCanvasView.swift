@@ -50,15 +50,29 @@ struct CompartmentCanvasView: View {
             // Visible canvas rect — used only for culling.
             let vpX = Double(-hw - ox) / canvasScale + 450
             let vpY = Double(-hh - oy) / canvasScale + 310
+            // While a pinch zooms out, the image it shrinks brings in what's around the screen:
+            // draw that too, grown by the zoom-out and the pinch's own pan.
+            let grow = max(1, 1 / pinchScale)
             let viewport = CGRect(x: vpX, y: vpY,
                                   width: Double(geo.size.width)  / canvasScale,
                                   height: Double(geo.size.height) / canvasScale)
+                .insetBy(
+                    dx: -(Double(geo.size.width) / canvasScale * (grow - 1) / 2 + abs(pinchOffset.x) / (canvasScale * pinchScale)),
+                    dy: -(Double(geo.size.height) / canvasScale * (grow - 1) / 2 + abs(pinchOffset.y) / (canvasScale * pinchScale))
+                )
 
             ZStack {
+            // ── Graph paper — outside the pinch image and drawn at the pinch in progress, so a
+            // zoom-out never shows past its edge (it's one cheap drawing, no glass) ──
+            GlassBackdrop(
+                origin: CGPoint(
+                    x: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).x - hw) * pinchScale + hw + pinchOffset.x,
+                    y: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).y - hh) * pinchScale + hh + pinchOffset.y
+                ),
+                scale: s * pinchScale
+            )
+            .allowsHitTesting(false)
             ZStack {
-                // ── Graph paper and soft colour fields for the glass to bend ───
-                GlassBackdrop(origin: screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy), scale: s)
-                    .allowsHitTesting(false)
 
                 // ── Intake arrows — bold arrows from above for intake compartments ──
                 ForEach(compartments.filter { $0.intake }) { comp in
