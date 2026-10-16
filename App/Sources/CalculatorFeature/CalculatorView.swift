@@ -271,6 +271,10 @@ struct CalculatorContent: View {
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
+            // The panel's own background sits between its scroll view and the bar, so the
+            // system's edge effect doesn't reach; our fade, sized from the safe area (which now
+            // holds the button), does the same job.
+            .overlay { EdgeFade(.bottom) }
             .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0) {
                 if let msg = durationWarningMessage {

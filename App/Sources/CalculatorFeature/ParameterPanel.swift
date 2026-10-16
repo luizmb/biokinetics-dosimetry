@@ -233,6 +233,9 @@ struct ReportContent: View {
             // header and are built as they come into view; the columns that don't fit scroll
             // sideways, header and rows together.
             ScrollView(.horizontal) {
+                // Nested rather than one two-way scroll view: each swipe moves one way. The inner
+                // view's indicator would sit at the content's edge, not the screen's (it floated
+                // mid-table once scrolled sideways), so it's hidden.
                 ScrollView(.vertical) {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
@@ -258,8 +261,11 @@ struct ReportContent: View {
                     }
                     .padding(.bottom, 90)
                 }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden, axes: .horizontal)
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .overlay { EdgeFade(.bottom) }
             .font(.system(size: 11, design: .monospaced))
         }
     }
