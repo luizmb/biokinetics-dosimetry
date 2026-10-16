@@ -31,10 +31,17 @@ public struct GPill<Content: View>: View {
         }
     }
 
+    /// Real Liquid Glass in a capsule (tappable pills react to touch). `intensity` at or above 1
+    /// marks an active pill: it takes a light accent tint.
     private var inner: some View {
         content
             .foregroundStyle(g.ink)
-            .glassBackground(cornerRadius: 999, intensity: intensity)
+            .glassEffect(glass, in: Capsule())
+    }
+
+    private var glass: Glass {
+        let base: Glass = intensity >= 1 ? .regular.tint(g.accent.opacity(0.18)) : .regular
+        return action == nil ? base : base.interactive()
     }
 }
 

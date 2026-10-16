@@ -333,8 +333,10 @@ struct EditorContent: View {
 
     private var compactLayout: some View {
         ZStack(alignment: .top) {
+            // Edge to edge: the navigation bar and the bottom buttons are glass over the canvas,
+            // not bars over a flat background.
             canvas
-                .padding(.bottom, 90)
+                .ignoresSafeArea()
 
             if let text = linkingBannerText {
                 GlassLinkingBanner(message: text, onCancel: onCancelLinking)
@@ -388,6 +390,7 @@ struct EditorContent: View {
     // MARK: - Compact bottom toolbar
 
     private var compactBottomToolbar: some View {
+        GlassEffectContainer(spacing: 9) {
         HStack(spacing: 9) {
             GPill(intensity: 0.8) {
                 Button { onAddCompartment(.steel) } label: {
@@ -419,7 +422,8 @@ struct EditorContent: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(.horizontal, 14).padding(.bottom, 30)
+        }
+        .padding(.horizontal, 14).padding(.bottom, 8)
     }
 
     // MARK: - Inspector sheet (iPhone)
