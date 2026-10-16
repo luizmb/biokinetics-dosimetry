@@ -113,24 +113,7 @@ struct ParameterContent: View {
                     }
 
                     GLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    HStack {
-                        Text(paramBindings.finalDay.wrappedValue.formatted())
-                            .font(.system(size: 20, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(g.ink)
-                        Spacer()
-                        HStack(spacing: 6) {
-                            GStepper(
-                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 20) },
-                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 20 },
-                                label: "20"
-                            )
-                            GStepper(
-                                onDecrement: { paramBindings.finalDay.wrappedValue = max(1, paramBindings.finalDay.wrappedValue - 1) },
-                                onIncrement: { paramBindings.finalDay.wrappedValue = paramBindings.finalDay.wrappedValue + 1 },
-                                label: "1"
-                            )
-                        }
-                    }
+                    GJumpStepper(value: paramBindings.finalDay, unit: lingo.timeUnit.label)
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
