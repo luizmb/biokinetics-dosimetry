@@ -240,16 +240,8 @@ struct CompartmentCanvasView: View {
         guard let comp = compartments.first(where: { $0.id == id }) else {
             return CGSize(width: 84, height: 48)
         }
-        let connCount = links.filter { $0.fromId == id || $0.toId == id }.count
-        let trimmed   = comp.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let textW     = CGFloat(trimmed.count) * 6.5 + 20
-        let baseW     = max(72.0, textW)
-        // sqrt-based factor so very connected nodes grow but don't become huge
-        let factor    = min(CGFloat(1.0 + max(0.0, sqrt(Double(max(0, connCount - 2))) * 0.12)), 1.8)
-        return CGSize(
-            width:  min(max(baseW, 84 * factor), 200),
-            height: max(38.0, min(48 * factor, 78))
-        )
+        let size = compartmentNodeSize(name: comp.name, linkCount: links.count { $0.fromId == id || $0.toId == id })
+        return CGSize(width: size.width, height: size.height)
     }
 
     private func isLinkVisible(_ link: EditorFeature.LinkRow, in vp: CGRect) -> Bool {

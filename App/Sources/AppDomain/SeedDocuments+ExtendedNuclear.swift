@@ -215,7 +215,7 @@ private func lead210polonium210(idFor: @Sendable (String) -> UUID) -> ModelDocum
         description: "Two-nuclide chain for Pb-210 (T½ = 22.3 y) and its daughter Po-210 (T½ = 138.4 d). Relevant for naturally occurring radioactivity (smoking, fish consumption, polonium poisoning). Pb-210 systemic model based on Rabinowitz et al. (1976). Po-210 distributes to blood, liver, and kidney with relatively rapid clearance.",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: withSampleLayout("icrp.pb210.po210", defaultVisuals(for: model))
     )
 }
 

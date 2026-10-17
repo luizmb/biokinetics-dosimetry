@@ -245,6 +245,6 @@ private func uranium238Chain(idFor: @Sendable (String) -> UUID) -> ModelDocument
         description: "Multi-nuclide model for U-238 inhalation (Type S) with full progeny tracking: U-238 → Th-234 → U-234 → Th-230 → Ra-226 → Pb-210 → Po-210. Pa-234m and short-lived Rn daughters are omitted (effectively instantaneous). 85% of Ra-226 decays to exhaled Rn-222; only 15% contributes to the Pb-210 burden. Daughter systemic models are simplified (5–7 compartments); U-238 uses the full ICRP 137 / Leggett lung+systemic model (Type S).",
         field: .nuclear,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: withSampleLayout("icrp.u238.chain", defaultVisuals(for: model))
     )
 }
