@@ -1,7 +1,8 @@
 import AppDomain
 import Domain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - Field binding groups
 // Created in the @BoundTo container; the pure inspector views just consume them.
@@ -68,7 +69,6 @@ struct EditorInspectorPanel: View {
     @Binding var variantRenameDraft: String
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.glassTokens) private var g
     private var dark: Bool { colorScheme == .dark }
 
     private var selectedComp: EditorFeature.CompartmentRow? {
@@ -81,28 +81,28 @@ struct EditorInspectorPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             if selectedComp != nil || selectedLink != nil {
-                GSegmented(
+                SegmentedControlGlass(
                     selection: $inspectorTab,
                     options: [
-                        ("Details",       EditorFeature.InspectorTab.details),
-                        ("Relationships", EditorFeature.InspectorTab.relationships),
+                        ChoiceOption(EditorFeature.InspectorTab.details, title: "Details"),
+                        ChoiceOption(EditorFeature.InspectorTab.relationships, title: "Relationships"),
                     ]
                 )
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                GlassDivider()
+                Hairline()
             } else {
                 HStack {
                     Text("INSPECTOR")
                         .font(.system(size: 11, weight: .semibold))
                         .kerning(0.5)
-                        .foregroundStyle(g.faint)
+                        .foregroundStyle(Color(.inkFaint))
                     Spacer()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 10)
-                GlassDivider()
+                Hairline()
             }
 
             ScrollView {
@@ -142,15 +142,15 @@ struct EditorInspectorPanel: View {
         _ comp: EditorFeature.CompartmentRow,
         bindings: CompartmentFieldBindings
     ) -> some View {
-        GLabel("Name")
-        GCard(cornerRadius: 12, intensity: 0.5) {
+        SectionLabel("Name")
+        Panel(cornerRadius: 12, padding: 0) {
             TextField("Name", text: bindings.name)
                 .padding(.horizontal, 14)
                 .frame(height: 44)
         }
         .padding(.bottom, 18)
 
-        GLabel("Color")
+        SectionLabel("Color")
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 8) {
             ForEach(CompartmentTint.allCases, id: \.self) { tint in
                 Circle()
@@ -164,18 +164,18 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 18)
 
-        GLabel("Flags")
-        GCard(cornerRadius: 16, intensity: 0.5) {
+        SectionLabel("Flags")
+        Panel(cornerRadius: 16, padding: 0) {
             VStack(spacing: 0) {
-                flagRow("Track",                  dot: Color(hex: 0x3B9BFF), isOn: bindings.follow)
-                GlassDivider()
-                flagRow(lingo.eliminationLabel,   dot: Color(hex: 0xF59E0B), isOn: bindings.dispose)
-                GlassDivider()
-                flagRow(lingo.intakeLabel,        dot: Color(hex: 0x34C759), isOn: bindings.intake)
+                flagRow("Track",                  dot: Color(.accent), isOn: bindings.follow)
+                Hairline()
+                flagRow(lingo.eliminationLabel,   dot: Color(.warning), isOn: bindings.dispose)
+                Hairline()
+                flagRow(lingo.intakeLabel,        dot: Color(.success), isOn: bindings.intake)
                 if bindings.intake.wrappedValue {
-                    GlassDivider()
+                    Hairline()
                     HStack(spacing: 10) {
-                        Circle().fill(Color(hex: 0x34C759).opacity(0.4)).frame(width: 9, height: 9)
+                        Circle().fill(Color(.success).opacity(0.4)).frame(width: 9, height: 9)
                         Text("Fraction (0–1)").font(.system(size: 16))
                         Spacer()
                         TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(6)))
@@ -191,17 +191,22 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 14)
 
-        GLabel(lingo.substanceName)
+        SectionLabel(LocalizedStringKey(lingo.substanceName))
         if nuclides.count > 1 {
-            GRadioList(
+            RadioList(
                 selection: bindings.nuclideId,
                 options: nuclides.map { n in
-                    GRadioOption(value: n.id, label: n.name,
-                                 detail: n.halfLife > 0 ? "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)" : nil)
+                    ChoiceOption(
+                        n.id,
+                        title: LocalizedStringKey(n.name),
+                        detail: n.halfLife > 0
+                            ? Text(verbatim: "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)")
+                            : nil
+                    )
                 }
             )
         } else if let n = nuclides.first(where: { $0.id == bindings.nuclideId.wrappedValue }) {
-            GCard(cornerRadius: 12, intensity: 0.5) {
+            Panel(cornerRadius: 12, padding: 0) {
                 HStack {
                     Text(n.name).font(.system(size: 15))
                     Spacer()
@@ -229,7 +234,7 @@ struct EditorInspectorPanel: View {
         } label: {
             Label("Add transfer", systemImage: "plus.circle")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(g.accent)
+                .foregroundStyle(Color(.accent))
         }
         .buttonStyle(PlainButtonStyle())
         .padding(.vertical, 4)
@@ -242,11 +247,11 @@ struct EditorInspectorPanel: View {
         direction: ArrowDirection
     ) -> some View {
         if !groupLinks.isEmpty {
-            GLabel(title)
-            GCard(cornerRadius: 16, intensity: 0.5) {
+            SectionLabel(LocalizedStringKey(title))
+            Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(groupLinks.enumerated()), id: \.1.id) { idx, link in
-                        if idx > 0 { GlassDivider() }
+                        if idx > 0 { Hairline() }
                         linkRelRow(link: link, direction: direction)
                     }
                 }
@@ -308,8 +313,8 @@ struct EditorInspectorPanel: View {
         _ link: EditorFeature.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
-        GLabel("Rate (\(lingo.rateUnit))")
-        GCard(cornerRadius: 12, intensity: 0.5) {
+        SectionLabel("Rate (\(lingo.rateUnit))")
+        Panel(cornerRadius: 12, padding: 0) {
             TextField("Rate", value: bindings.rate, format: .number)
                 .padding(.horizontal, 14)
                 .frame(height: 44)
@@ -318,13 +323,13 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 18)
 
-        GLabel("Endpoints")
-        GCard(cornerRadius: 16, intensity: 0.5) {
+        SectionLabel("Endpoints")
+        Panel(cornerRadius: 16, padding: 0) {
             VStack(spacing: 0) {
                 endpointRow(name: link.fromName, tint: link.fromTint, label: "From") {
                     onSelectCompartment(link.fromId)
                 }
-                GlassDivider()
+                Hairline()
                 endpointRow(name: link.toName, tint: link.toTint, label: "To") {
                     onSelectCompartment(link.toId)
                 }
@@ -336,18 +341,18 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func linkRelationships(_ link: EditorFeature.LinkRow) -> some View {
-        GLabel("Reverse transfer")
+        SectionLabel("Reverse transfer")
         let reverse = links.first { $0.fromId == link.toId && $0.toId == link.fromId }
         if let rev = reverse {
-            GCard(cornerRadius: 12, intensity: 0.5) {
+            Panel(cornerRadius: 12, padding: 0) {
                 HStack {
                     Text("K\(rev.id + 1) · \(rev.rate.scientificString)")
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(g.ink)
+                        .foregroundStyle(Color(.ink))
                     Spacer()
                     Button("Jump") { onSelectLink(rev.id) }
                         .font(.caption)
-                        .foregroundStyle(g.accent)
+                        .foregroundStyle(Color(.accent))
                         .buttonStyle(PlainButtonStyle())
                 }
                 .padding(.horizontal, 14)
@@ -359,7 +364,7 @@ struct EditorInspectorPanel: View {
             } label: {
                 Label("Add reverse transfer", systemImage: "plus.circle")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(g.accent)
+                    .foregroundStyle(Color(.accent))
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -378,16 +383,16 @@ struct EditorInspectorPanel: View {
             }
             .padding(.bottom, 16)
 
-            GLabel("Name")
-            GCard(cornerRadius: 12, intensity: 0.5) {
+            SectionLabel("Name")
+            Panel(cornerRadius: 12, padding: 0) {
                 TextField("Model name", text: $documentName)
                     .padding(.horizontal, 14)
                     .frame(height: 44)
             }
             .padding(.bottom, 14)
 
-            GLabel("Description")
-            GCard(cornerRadius: 12, intensity: 0.5) {
+            SectionLabel("Description")
+            Panel(cornerRadius: 12, padding: 0) {
                 TextField("Optional description", text: $documentDescription, axis: .vertical)
                     .lineLimit(3...5)
                     .padding(.horizontal, 14)
@@ -396,11 +401,11 @@ struct EditorInspectorPanel: View {
             .padding(.bottom, 18)
 
             if !validationIssues.isEmpty {
-                GLabel("Issues")
-                GCard(cornerRadius: 16, intensity: 0.5) {
+                SectionLabel("Issues")
+                Panel(cornerRadius: 16, padding: 0) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(validationIssues.indices, id: \.self) { i in
-                            if i > 0 { GlassDivider() }
+                            if i > 0 { Hairline() }
                             issueRow(validationIssues[i])
                         }
                     }
@@ -408,12 +413,12 @@ struct EditorInspectorPanel: View {
                 .padding(.bottom, 18)
             }
 
-            GLabel("Variants")
-            GCard(cornerRadius: 16, intensity: 0.5) {
+            SectionLabel("Variants")
+            Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     variantRow(key: nil, label: "Base model")
                     ForEach(variants, id: \.self) { key in
-                        GlassDivider()
+                        Hairline()
                         variantRow(key: key, label: key)
                     }
                 }
@@ -426,22 +431,22 @@ struct EditorInspectorPanel: View {
             } label: {
                 Label("Add variant", systemImage: "plus.circle")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(g.accent)
+                    .foregroundStyle(Color(.accent))
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.bottom, 18)
 
-            GLabel("Field")
-            GCard(cornerRadius: 16, intensity: 0.5) {
+            SectionLabel("Field")
+            Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(ModelField.allCases.enumerated()), id: \.1) { idx, f in
-                        if idx > 0 { GlassDivider() }
+                        if idx > 0 { Hairline() }
                         HStack {
                             Text(f.lingo.fieldName).font(.system(size: 15))
                             Spacer()
                             if field == f {
                                 Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(g.accent)
+                                    .foregroundStyle(Color(.accent))
                             }
                         }
                         .padding(.horizontal, 14).padding(.vertical, 11)
@@ -452,11 +457,11 @@ struct EditorInspectorPanel: View {
             }
             .padding(.bottom, 18)
 
-            GLabel(lingo.substancesLabel)
-            GCard(cornerRadius: 16, intensity: 0.5) {
+            SectionLabel(LocalizedStringKey(lingo.substancesLabel))
+            Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(nuclideBindings.enumerated()), id: \.1.id) { idx, nb in
-                        if idx > 0 { GlassDivider() }
+                        if idx > 0 { Hairline() }
                         nuclideEditorRow(nb)
                     }
                     if nuclideBindings.isEmpty {
@@ -471,7 +476,7 @@ struct EditorInspectorPanel: View {
             Button { onAddNuclide() } label: {
                 Label("Add \(lingo.substanceName)", systemImage: "plus.circle")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(g.accent)
+                    .foregroundStyle(Color(.accent))
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -490,7 +495,7 @@ struct EditorInspectorPanel: View {
                     .onSubmit { onCommitVariantRename() }
                 Button("Done") { onCommitVariantRename() }
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(g.accent)
+                    .foregroundStyle(Color(.accent))
                     .buttonStyle(PlainButtonStyle())
                 Button { onCancelVariantRename() } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
@@ -505,7 +510,7 @@ struct EditorInspectorPanel: View {
                 if isEditing {
                     Image(systemName: "pencil.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(g.accent)
+                        .foregroundStyle(Color(.accent))
                 }
                 if let key {
                     Button { onBeginVariantRename(key) } label: {
@@ -520,7 +525,7 @@ struct EditorInspectorPanel: View {
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 11)
-            .background(isEditing ? g.accent.opacity(0.06) : Color.clear)
+            .background(isEditing ? Color(.accent).opacity(0.06) : Color.clear)
             .contentShape(Rectangle())
             .onTapGesture { onSelectEditingVariant(key) }
         }
@@ -582,7 +587,7 @@ struct EditorInspectorPanel: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 21, weight: .bold))
-                Text(sub).font(.system(size: 14)).foregroundStyle(g.faint)
+                Text(sub).font(.system(size: 14)).foregroundStyle(Color(.inkFaint))
             }
             Spacer()
         }
@@ -595,7 +600,7 @@ struct EditorInspectorPanel: View {
             Circle().fill(dot).frame(width: 9, height: 9)
             Text(label).font(.system(size: 16))
             Spacer()
-            GToggle(isOn: isOn)
+            Toggle("", isOn: isOn).labelsHidden().tint(Color(.accent))
         }
         .padding(.horizontal, 15)
         .padding(.vertical, 12)
@@ -644,7 +649,7 @@ struct EditorInspectorPanel: View {
         switch severity {
         case .error:   .orange
         case .warning: dark ? .yellow : Color(hue: 0.12, saturation: 0.8, brightness: 0.6)
-        case .info:    g.muted
+        case .info:    Color(.inkMuted)
         }
     }
 

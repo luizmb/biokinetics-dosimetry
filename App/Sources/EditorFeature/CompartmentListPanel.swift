@@ -1,6 +1,7 @@
 import AppDomain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - EditorModelListPanel (pure)
 
@@ -17,7 +18,6 @@ struct EditorModelListPanel: View {
     var onDeleteSelected: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,14 +26,14 @@ struct EditorModelListPanel: View {
                 Text("MODEL")
                     .font(.system(size: 11, weight: .semibold))
                     .kerning(0.6)
-                    .foregroundStyle(g.faint)
+                    .foregroundStyle(Color(.inkFaint))
                 Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 10)
 
-            GlassDivider()
+            Hairline()
 
             ScrollViewReader { proxy in
                 List {
@@ -82,7 +82,7 @@ struct EditorModelListPanel: View {
 
             // Delete footer
             if selectionFooterLabel != nil {
-                GlassDivider()
+                Hairline()
                 deleteFooter
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)

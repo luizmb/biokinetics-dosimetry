@@ -3,7 +3,8 @@ import SwiftRex
 import SwiftRexArchitecture
 import SwiftRexSwiftUI
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 /// The app shell — a `NavigationStack` over the store's path.
 ///
@@ -34,6 +35,5 @@ public struct AppRootView: View, Routable {
                     router.destination(for: route, from: viewStore)
                 }
         }
-        .glassEnvironment()
     }
 }

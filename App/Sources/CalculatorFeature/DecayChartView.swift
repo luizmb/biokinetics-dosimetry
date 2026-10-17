@@ -2,7 +2,8 @@ import AppDomain
 import Charts
 import Domain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - DecayChartContent (pure)
 
@@ -73,7 +74,7 @@ struct DecayChartContent: View {
                     // A stopped run: its valid part below, the reason and the fixes above it.
                     if let err = error {
                         VStack(alignment: .leading, spacing: 8) {
-                            GBanner(tone: .warn, systemImage: "exclamationmark.triangle", message: err)
+                            Banner(Text(err), style: .warning)
                             remedyButtons
                         }
                         .padding(.horizontal, 10).padding(.top, 8)
@@ -158,8 +159,14 @@ struct DecayChartContent: View {
 
     private var remedyButtonList: some View {
         ForEach(remedies, id: \.self) { remedy in
-            GButton(remedy.title, tone: remedy == remedies.first ? .accent : .neutral, size: .sm) { onRemedy(remedy) }
-                .fixedSize()
+            Group {
+                if remedy == remedies.first {
+                    ButtonPrimary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                } else {
+                    ButtonSecondary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                }
+            }
+            .fixedSize()
         }
     }
 
@@ -261,10 +268,10 @@ struct DecayChartContent: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(series) { s in
-                    GChip(
-                        color: Color(hue: s.tint.hue / 360, saturation: 0.65, brightness: 0.62),
-                        label: s.name,
-                        isActive: s.isVisible
+                    SeriesChip(
+                        colour: Color(hue: s.tint.hue / 360, saturation: 0.65, brightness: 0.62),
+                        name: s.name,
+                        isShown: s.isVisible
                     ) { onToggleSeries(s.id) }
                 }
             }
@@ -299,5 +306,30 @@ struct DecayChartContent: View {
         let lo = Int(floor(log10(min)))
         let hi = Int(ceil(log10(max)))
         return (lo...hi).map { Double($0) }
+    }
+}
+
+/// A series in the chart's legend: its line's colour, its name, faded while hidden. Tap to show or
+/// hide it.
+private struct SeriesChip: View {
+    let colour: Color
+    let name: String
+    let isShown: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Pill(isActive: false, action: onToggle) {
+            HStack(spacing: Space.small) {
+                Capsule().fill(colour).frame(width: 18, height: 4)
+                Text(name)
+                    .font(.controlSmall)
+                    .foregroundStyle(isShown ? .ink : .inkFaint)
+            }
+            .padding(.leading, Space.small)
+            .padding(.trailing, Space.medium)
+            .frame(height: Size.controlSmall)
+        }
+        .opacity(isShown ? 1 : 0.5)
+        .accessibilityAddTraits(isShown ? .isSelected : [])
     }
 }

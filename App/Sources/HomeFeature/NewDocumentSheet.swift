@@ -1,6 +1,7 @@
 import AppDomain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 struct NewDocumentSheet: View {
     @Binding var field: ModelField
@@ -12,32 +13,31 @@ struct NewDocumentSheet: View {
     var onRestoreSampleModels: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
         NavigationStack {
             ZStack {
-                GlassAppBackground()
+                Backdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        GLabel("Field")
-                        GCard(cornerRadius: 16, intensity: 0.5) {
+                        SectionLabel("Field")
+                        Panel(cornerRadius: 16, padding: 0) {
                             VStack(spacing: 0) {
                                 ForEach(Array(ModelField.allCases.enumerated()), id: \.1) { idx, f in
-                                    if idx > 0 { GlassDivider() }
+                                    if idx > 0 { Hairline() }
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(f.lingo.fieldName)
                                                 .font(.system(size: 15))
                                             Text("\(f.lingo.substanceName) · \(f.lingo.intakeLabel) · \(f.lingo.eliminationLabel)")
                                                 .font(.system(size: 11))
-                                                .foregroundStyle(g.faint)
+                                                .foregroundStyle(Color(.inkFaint))
                                         }
                                         Spacer()
                                         if field == f {
                                             Image(systemName: "checkmark")
                                                 .font(.system(size: 13, weight: .semibold))
-                                                .foregroundStyle(g.accent)
+                                                .foregroundStyle(Color(.accent))
                                         }
                                     }
                                     .padding(.horizontal, 14).padding(.vertical, 11)
@@ -48,8 +48,8 @@ struct NewDocumentSheet: View {
                         }
                         .padding(.bottom, 24)
 
-                        GLabel("Name")
-                        GCard(cornerRadius: 12, intensity: 0.5) {
+                        SectionLabel("Name")
+                        Panel(cornerRadius: 12, padding: 0) {
                             TextField("Model name", text: $name)
                                 .padding(.horizontal, 14)
                                 .frame(height: 44)
@@ -58,23 +58,22 @@ struct NewDocumentSheet: View {
 
                         Text("You can rename the model and change its field at any time from the editor.")
                             .font(.caption)
-                            .foregroundStyle(g.faint)
+                            .foregroundStyle(Color(.inkFaint))
                             .padding(.horizontal, 4)
 
                         if restorableSampleCount > 0 {
-                            GLabel("Sample models")
+                            SectionLabel("Sample models")
                                 .padding(.top, 28)
-                            GButton(
+                            ButtonSecondary(
                                 restorableSampleCount == 1 ? "Restore 1 sample model" : "Restore \(restorableSampleCount) sample models",
                                 icon: Image(systemName: "arrow.counterclockwise"),
-                                tone: .neutral,
-                                size: .md,
-                                fullWidth: true,
+                                size: .medium,
+                                fillsWidth: true,
                                 action: onRestoreSampleModels
                             )
                             Text("Brings back the sample models you deleted. Samples you edited stay as they are.")
                                 .font(.caption)
-                                .foregroundStyle(g.faint)
+                                .foregroundStyle(Color(.inkFaint))
                                 .padding(.horizontal, 4)
                                 .padding(.top, 8)
                         }
