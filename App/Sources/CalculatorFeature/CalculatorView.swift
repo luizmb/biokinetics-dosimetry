@@ -2,7 +2,8 @@ import AppDomain
 import Domain
 import SwiftRexArchitecture
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 private extension Array where Element == CompartmentalModel.ValidationIssue {
     var hasErrors: Bool { contains { $0.severity == .error } }
@@ -168,7 +169,7 @@ struct CalculatorContent: View {
 
     var body: some View {
         ZStack {
-            GlassAppBackground()
+            Backdrop()
             if isCompact { compactLayout } else { regularLayout }
         }
         .navigationTitle(documentName)
@@ -195,7 +196,7 @@ struct CalculatorContent: View {
                 )
                 .frame(width: 300)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-                GlassVDivider()
+                Hairline(.vertical)
             }
             contentTabView.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -213,10 +214,7 @@ struct CalculatorContent: View {
     private var compactTabView: some View {
         TabView(selection: activeView) {
             // Chart tab
-            GCard(cornerRadius: 20, intensity: 0.55,
-                  tint: colorScheme == .dark
-                        ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
-                        : Color.white.opacity(0.40)) {
+            Panel(cornerRadius: 20, padding: 0) {
                 VStack(spacing: 0) {
                     if !series.isEmpty && !isCalculating {
                         HStack(spacing: 7) {
@@ -276,24 +274,22 @@ struct CalculatorContent: View {
             .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0) {
                 if let msg = durationWarningMessage {
-                    GBanner(
-                        tone: bannerTone(durationWarning),
-                        systemImage: bannerTone(durationWarning) == .neutral ? "clock" : "exclamationmark.triangle",
-                        message: msg
-                    )
+                    Banner(Text(msg), style: bannerTone(durationWarning))
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
                 }
-                GButton(
-                    calculateButtonTitle,
-                    icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                    size: .lg, fullWidth: true,
-                    disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
+                ButtonPrimary(
+                    LocalizedStringKey(calculateButtonTitle),
+                    icon: Image(systemName: "play.fill"),
+                    size: .large,
+                    fillsWidth: true,
+                    isBusy: isCalculating,
                     action: {
                         onCalculate()
                         activeView.wrappedValue = .chart
                     }
                 )
+                .disabled(validationIssues.hasErrors || hints.integrationStepIsUnstable)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
                 .padding(.top, 10)
@@ -314,10 +310,7 @@ struct CalculatorContent: View {
         )
         return TabView(selection: ipadBinding) {
             // Chart tab
-            GCard(cornerRadius: 20, intensity: 0.55,
-                  tint: colorScheme == .dark
-                        ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.35)
-                        : Color.white.opacity(0.40)) {
+            Panel(cornerRadius: 20, padding: 0) {
                 VStack(spacing: 0) {
                     if !series.isEmpty && !isCalculating {
                         HStack(spacing: 7) {
@@ -402,7 +395,7 @@ struct CalculatorContent: View {
     // MARK: - Helpers
 
     private func logPill(_ label: String, binding: Binding<Bool>) -> some View {
-        GPill(intensity: binding.wrappedValue ? 1.0 : 0.5, action: { binding.wrappedValue.toggle() }) {
+        Pill(isActive: binding.wrappedValue, action: { binding.wrappedValue.toggle() }) {
             Text(label)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(binding.wrappedValue ? Color.accentColor : .secondary)
@@ -410,11 +403,11 @@ struct CalculatorContent: View {
         }
     }
 
-    private func bannerTone(_ w: BiokineticsSimulationPlan.DurationWarning) -> GBannerTone {
+    private func bannerTone(_ w: BiokineticsSimulationPlan.DurationWarning) -> BannerStyle {
         switch w {
         case .none, .brief: .neutral
-        case .slow:         .warn
-        case .veryLong:     .danger
+        case .slow:         .warning
+        case .veryLong:     .error
         }
     }
 

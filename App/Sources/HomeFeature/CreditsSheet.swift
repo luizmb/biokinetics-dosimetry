@@ -1,18 +1,18 @@
 import AppDomain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - CreditsSheet
 
 struct CreditsSheet: View {
     var onDismiss: () -> Void
 
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
         NavigationStack {
             ZStack {
-                GlassAppBackground()
+                Backdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         sectionHeader("Scientific References & Model Credits")
@@ -27,7 +27,7 @@ struct CreditsSheet: View {
 
                         Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP, São Paulo, Brazil.")
                             .font(.caption)
-                            .foregroundStyle(g.faint)
+                            .foregroundStyle(Color(.inkFaint))
                             .padding(.horizontal, 16)
                             .padding(.top, 24)
                             .padding(.bottom, 32)
@@ -52,7 +52,7 @@ struct CreditsSheet: View {
         Text(title.uppercased())
             .font(.system(size: 11, weight: .semibold))
             .kerning(0.5)
-            .foregroundStyle(g.faint)
+            .foregroundStyle(Color(.inkFaint))
             .padding(.horizontal, 16)
             .padding(.top, 28)
             .padding(.bottom, 8)
@@ -64,32 +64,32 @@ struct CreditsSheet: View {
             HStack(spacing: 6) {
                 Text(item.title)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(g.ink)
+                    .foregroundStyle(Color(.ink))
                 Spacer()
                 if let badge = item.license {
                     Text(badge)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(g.accent)
+                        .foregroundStyle(Color(.accent))
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(g.accent.opacity(0.10), in: Capsule())
+                        .background(Color(.accent).opacity(0.10), in: Capsule())
                 }
                 if item.url != nil {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 11))
-                        .foregroundStyle(g.faint)
+                        .foregroundStyle(Color(.inkFaint))
                 }
             }
             if let subtitle = item.subtitle {
                 Text(subtitle)
                     .font(.system(size: 13))
-                    .foregroundStyle(g.muted)
+                    .foregroundStyle(Color(.inkMuted))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let detail = item.detail {
                 Text(detail)
                     .font(.system(size: 12))
-                    .foregroundStyle(g.faint)
+                    .foregroundStyle(Color(.inkFaint))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

@@ -2,7 +2,8 @@ import AppDomain
 import Domain
 import SwiftRexArchitecture
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - EditorView (container)
 
@@ -237,7 +238,7 @@ struct EditorContent: View {
 
     var body: some View {
         ZStack {
-            GlassAppBackground()
+            Backdrop()
             if isCompact { compactLayout } else { regularLayout }
         }
         .navigationTitle(documentName.wrappedValue)
@@ -263,7 +264,7 @@ struct EditorContent: View {
                 )
                 .frame(width: 264)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-                GlassVDivider()
+                Hairline(.vertical)
             }
 
             ZStack(alignment: .top) {
@@ -272,7 +273,8 @@ struct EditorContent: View {
                     .ignoresSafeArea(edges: .vertical)
 
                 if let text = linkingBannerText {
-                    GlassLinkingBanner(message: text, onCancel: onCancelLinking)
+                    Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
+                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
                         .padding(.top, 16)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -290,7 +292,7 @@ struct EditorContent: View {
             }
 
             if isRightPanelVisible {
-                GlassVDivider()
+                Hairline(.vertical)
                 EditorInspectorPanel(
                     documentName: documentName,
                     documentDescription: documentDescription,
@@ -348,7 +350,8 @@ struct EditorContent: View {
             EdgeFade(.bottom)
 
             if let text = linkingBannerText {
-                GlassLinkingBanner(message: text, onCancel: onCancelLinking)
+                Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
+                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
                     .padding(.top, 12)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(), value: text)
@@ -403,7 +406,7 @@ struct EditorContent: View {
     private var compactBottomToolbar: some View {
         GlassEffectContainer(spacing: 9) {
         HStack(spacing: 9) {
-            GPill(intensity: 0.8) {
+            Pill {
                 Button { onAddCompartment(.steel) } label: {
                     Label("Compartment", systemImage: "plus.square")
                         .font(.system(size: 14, weight: .semibold))
@@ -412,7 +415,7 @@ struct EditorContent: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: linkingBannerText != nil ? 1.0 : 0.8) {
+            Pill(isActive: linkingBannerText != nil) {
                 Button {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
@@ -423,7 +426,7 @@ struct EditorContent: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: 0.8) {
+            Pill {
                 Button { modelListSheet.wrappedValue = true } label: {
                     Label("Model", systemImage: "list.bullet")
                         .font(.system(size: 14, weight: .semibold))
@@ -534,7 +537,7 @@ struct EditorContent: View {
 
     private var canvasToolbar: some View {
         HStack(spacing: 8) {
-            GPill(intensity: 0.85) {
+            Pill {
                 Menu {
                     ForEach(CompartmentTint.allCases, id: \.self) { tint in
                         Button { onAddCompartment(tint) } label: {
@@ -550,7 +553,7 @@ struct EditorContent: View {
                         .padding(.horizontal, 15).frame(height: 44)
                 }
             }
-            GPill(intensity: linkingBannerText != nil ? 1.0 : 0.85) {
+            Pill(isActive: linkingBannerText != nil) {
                 Button {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
@@ -563,7 +566,7 @@ struct EditorContent: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: showKValues ? 1.0 : 0.85) {
+            Pill(isActive: showKValues) {
                 Button(action: onToggleKValues) {
                     Text("K")
                         .font(.system(size: 14, weight: .bold))

@@ -1,6 +1,7 @@
 import AppDomain
 import SwiftUI
-import UIComponents
+import Vitral
+import VitralTokens
 
 // MARK: - CompartmentCanvasView (pure)
 
@@ -64,14 +65,13 @@ struct CompartmentCanvasView: View {
             ZStack {
             // ── Graph paper — outside the pinch image and drawn at the pinch in progress, so a
             // zoom-out never shows past its edge (it's one cheap drawing, no glass) ──
-            GlassBackdrop(
+            Backdrop(.grid(
                 origin: CGPoint(
                     x: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).x - hw) * pinchScale + hw + pinchOffset.x,
                     y: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).y - hh) * pinchScale + hh + pinchOffset.y
                 ),
                 scale: s * pinchScale
-            )
-            .allowsHitTesting(false)
+            ))
             ZStack {
 
                 // ── Intake arrows — bold arrows from above for intake compartments ──
@@ -80,7 +80,7 @@ struct CompartmentCanvasView: View {
                     let sp  = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
                     let len = sz.height * 0.55 * s          // ~half compartment height
                     let tail = CGPoint(x: sp.x, y: sp.y - sz.height/2*s - len)
-                    let intakeColor = Color(hex: 0x34C759)
+                    let intakeColor = Color(.success)
 
                     // Shaft
                     Path { p in
