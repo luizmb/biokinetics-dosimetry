@@ -162,7 +162,7 @@ private func uranium234(idFor: @Sendable (String) -> UUID) -> ModelDocument {
         field: .nuclear,
         model: model,
         variants: ["Type F": typeF, "Type M": typeM],
-        visuals: uranium234Visuals(for: model)
+        visuals: withSampleLayout("icrp.u234.type.s", uranium234Visuals(for: model))
     )
 }
 
@@ -247,7 +247,7 @@ private func caesium137(idFor: @Sendable (String) -> UUID) -> ModelDocument {
         description: "ICRP 67 simplified systemic model for Cs-137. Fast soft-tissue pool (T½ bio ≈ 2 d) and slow skeletal pool (T½ bio ≈ 110 d). Physical T½ = 11,012 d (30.2 y).",
         field: .nuclear,
         model: model,
-        visuals: caesium137Visuals(for: model)
+        visuals: withSampleLayout("icrp.cs137", caesium137Visuals(for: model))
     )
 }
 
@@ -319,7 +319,7 @@ private func strontium90(idFor: @Sendable (String) -> UUID) -> ModelDocument {
         description: "ICRP 67 simplified model for Sr-90, a calcium-analogue bone seeker. Deposition on bone surface followed by volume incorporation and slow skeletal remodelling. Physical T½ = 10,512 d (28.8 y).",
         field: .nuclear,
         model: model,
-        visuals: strontium90Visuals(for: model)
+        visuals: withSampleLayout("icrp.sr90", strontium90Visuals(for: model))
     )
 }
 

@@ -120,6 +120,6 @@ private func cadmium(idFor: @Sendable (String) -> UUID) -> ModelDocument {
         description: "Cadmium toxicokinetic model: initial liver accumulation, followed by slow redistribution to kidney cortex where Cd binds metallothionein. Kidney cortex t½ ≈ 10–30 years — cadmium is effectively irreversibly accumulated over a lifetime. Rates approximate; GI intake assumes ~5% absorption from a chronic dietary exposure scenario.",
         field: .toxicology,
         model: model,
-        visuals: defaultVisuals(for: model)
+        visuals: withSampleLayout("tox.cadmium", defaultVisuals(for: model))
     )
 }
