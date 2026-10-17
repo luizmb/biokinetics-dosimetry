@@ -71,11 +71,13 @@ struct HomeContent: View {
 
     var body: some View {
         ZStack {
-            GlassAppBackground()
+            // The editor's graph paper, fixed while the cards scroll over it: the glass has lines
+            // to bend, and Home and the editor share a look.
+            GlassBackdrop()
+                .ignoresSafeArea()
             GeometryReader { geo in
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 0) {
-                        header
                         if let msg = importErrorMessage {
                             GBanner(tone: .danger,
                                     systemImage: "exclamationmark.triangle",
@@ -117,52 +119,26 @@ struct HomeContent: View {
         .sheet(isPresented: $isCreditsSheetPresented) {
             CreditsSheet(onDismiss: { isCreditsSheetPresented = false })
         }
-        .inlineNavigationTitle()
-    }
-
-    // MARK: - Header
-
-    @ViewBuilder
-    private var header: some View {
-        let vPad: CGFloat = isCompact ? 6 : 28
-        let hPad: CGFloat = isCompact ? 16 : 36
-
-        VStack(alignment: .leading, spacing: 0) {
-            // Action pills row
-            HStack(spacing: 8) {
-                Button(action: onOpenCredits) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: isCompact ? 20 : 22))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-                Spacer()
-                GPill(intensity: 0.85, action: onOpenFilePicker) {
-                    Label("Import", systemImage: "doc.badge.arrow.up")
-                        .font(.system(size: isCompact ? 14 : 15, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.horizontal, isCompact ? 13 : 16)
-                        .frame(height: isCompact ? 38 : 42)
-                }
-                GButton("New", icon: Image(systemName: "plus"),
-                        size: isCompact ? .sm : .md, action: onOpenCreationSheet)
+        // The system's large title and glass toolbar: the list scrolls under real glass.
+        .navigationTitle("Biokinetics")
+        .navigationSubtitle("& Dosimetry")
+        .toolbar {
+            ToolbarItem(placement: .barLeading) {
+                Button(action: onOpenCredits) { Image(systemName: "info.circle") }
+                    .accessibilityLabel("About")
             }
-            .padding(.horizontal, hPad)
-            .padding(.top, isCompact ? 4 : 8)
-
-            // Large title
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Biokinetics")
-                    .font(.system(size: isCompact ? 40 : 44, weight: .heavy))
-                    .tracking(-1.4)
-                    .foregroundStyle(.primary)
-                Text("& Dosimetry")
-                    .font(.system(size: isCompact ? 20 : 22, weight: .medium))
-                    .foregroundStyle(.tertiary)
+            ToolbarItem(placement: .barTrailing) {
+                Button(action: onOpenFilePicker) { Label("Import", systemImage: "doc.badge.arrow.up") }
+                    .buttonStyle(.glass)
+                    .tint(.accentColor)
             }
-            .padding(.horizontal, hPad)
-            .padding(.top, 4)
-            .padding(.bottom, vPad)
+            ToolbarSpacer(.fixed, placement: .barTrailing)
+            ToolbarItem(placement: .barTrailing) {
+                // The main action: prominent glass, the rest regular.
+                Button(action: onOpenCreationSheet) { Label("New", systemImage: "plus") }
+                    .buttonStyle(.glassProminent)
+                    .tint(.accentColor)
+            }
         }
     }
 
@@ -187,13 +163,10 @@ struct HomeContent: View {
             if isLoading {
                 loadingSpinner
             } else if !cards.isEmpty {
-                GCard(cornerRadius: 22, intensity: 0.5,
-                      tint: colorScheme == .dark
-                            ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.34)
-                            : Color.white.opacity(0.42)) {
-                    VStack(spacing: 0) {
-                        ForEach(Array(cards.enumerated()), id: \.1.id) { idx, card in
-                            if idx > 0 { GlassDivider() }
+                // One glass card per model, apart from each other.
+                VStack(spacing: 14) {
+                    ForEach(cards) { card in
+                        GCard(cornerRadius: 22) {
                             HomeListRow(
                                 card: card,
                                 onEdit:      { onEdit(card.document) },
@@ -211,8 +184,11 @@ struct HomeContent: View {
     // MARK: - Regular (iPad 3-column grid)
 
     private var regularGrid: some View {
+        // Adaptive, top-aligned: two columns on a landscape phone, three on a landscape iPad, and
+        // cards of different heights start level.
         LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 3),
+            columns: [GridItem(.adaptive(minimum: 320), spacing: 20, alignment: .top)],
+            alignment: .leading,
             spacing: 20
         ) {
             newModelBox(big: false)
@@ -296,7 +272,7 @@ struct HomeContent: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 164)
-        .glassBackground(cornerRadius: 20)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -318,7 +294,7 @@ private struct HomeListRow: View {
                 SwatchCluster(tints: card.tints)
                 Spacer()
                 if card.halfLife > 0 {
-                    GPill(intensity: 0.7) {
+                    HalfLifeTag {
                         Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
                             .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(g.muted)
@@ -376,7 +352,7 @@ private struct HomeListRow: View {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
                     .font(.system(size: 14, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)) }
+                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
                              ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
@@ -418,7 +394,7 @@ private struct HomeModelCard: View {
                     SwatchCluster(tints: card.tints)
                     Spacer()
                     if card.halfLife > 0 {
-                        GPill(intensity: 0.7) {
+                        HalfLifeTag {
                             Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
                                 .font(.system(size: 12.5, weight: .semibold))
                                 .foregroundStyle(g.muted)
@@ -439,6 +415,7 @@ private struct HomeModelCard: View {
                         Text(card.description)
                             .font(.system(size: 14.5))
                             .foregroundStyle(g.muted)
+                            .lineLimit(4)
                     }
                     HStack(spacing: 16) {
                         Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
@@ -478,7 +455,11 @@ private struct HomeModelCard: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage).font(.system(size: 13, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 14.5, weight: .semibold)) }
+                if !label.isEmpty {
+                    Text(label).font(.system(size: 14.5, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
             }
             .foregroundStyle(danger
                              ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
@@ -488,5 +469,38 @@ private struct HomeModelCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - HalfLifeTag
+
+/// A quiet capsule for a value inside a glass card: glass on glass muddies both.
+private struct HalfLifeTag<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content.background(Capsule().fill(.quaternary.opacity(0.5)))
+    }
+}
+
+// MARK: - Toolbar placements
+
+private extension ToolbarItemPlacement {
+    /// The bar's leading / trailing edge on iOS; the package's macOS build (tests) takes the
+    /// nearest equivalent.
+    static var barLeading: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarLeading
+        #else
+            .navigation
+        #endif
+    }
+
+    static var barTrailing: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarTrailing
+        #else
+            .primaryAction
+        #endif
     }
 }

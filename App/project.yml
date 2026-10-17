@@ -2,7 +2,7 @@ name: BiokineticsDosimetry
 
 options:
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
   bundleIdPrefix: lu.ios
 
 packages:

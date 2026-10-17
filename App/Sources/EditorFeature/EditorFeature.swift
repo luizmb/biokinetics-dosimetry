@@ -32,9 +32,14 @@ public enum EditorFeature {
         /// Origin captured when a compartment drag begins; nil when no drag is in progress.
         public var compartmentDragOrigin: CompartmentDragOrigin? = nil
         /// Canvas-pan origin (nil when no pan is in progress).
-        public var canvasPanOrigin: CanvasPoint? = nil
+        /// The pan or pinch in progress: the transform and touches it measures from; `nil` between
+        /// gestures.
+        public var canvasTouchSession: CanvasTouchSession? = nil
+        /// While two fingers zoom, where the canvas will land; committed to `canvasOffset` /
+        /// `canvasScale` when they lift. Until then the view shows the committed layout scaled to
+        /// it as one image, so nothing (the glass above all) is rebuilt per frame.
+        public var canvasPinchPreview: CanvasTransform? = nil
         /// Canvas scale at pinch-gesture start (nil when no pinch is in progress).
-        public var canvasPinchOriginScale: Double? = nil
         /// iPhone sheet presentation flags.
         public var isInspectorSheetOpen: Bool = false
         public var isModelListSheetOpen: Bool = false
@@ -102,6 +107,36 @@ public enum EditorFeature {
         public init(x: Double, y: Double) { self.x = x; self.y = y }
     }
 
+    /// Where the canvas sits: `offset` in view points, `scale` its zoom.
+    public struct CanvasTransform: Sendable, Equatable {
+        public var offset: CanvasPoint
+        public var scale: Double
+        public init(offset: CanvasPoint, scale: Double) { self.offset = offset; self.scale = scale }
+    }
+
+    /// The fingers on the canvas, as the view reports them: each touch's location in the canvas
+    /// view's points, by touch id.
+    public struct CanvasTouches: Sendable, Equatable {
+        public var touches: [Int: CanvasPoint]
+        /// The middle of the canvas view: the transform's origin.
+        public var viewCenter: CanvasPoint
+        public init(touches: [Int: CanvasPoint], viewCenter: CanvasPoint) {
+            self.touches = touches
+            self.viewCenter = viewCenter
+        }
+    }
+
+    /// What a pan or pinch measures from: the transform and the touches when the current set of
+    /// fingers went down.
+    public struct CanvasTouchSession: Sendable, Equatable {
+        public var start: CanvasTransform
+        public var touches: [Int: CanvasPoint]
+        public init(start: CanvasTransform, touches: [Int: CanvasPoint]) {
+            self.start = start
+            self.touches = touches
+        }
+    }
+
     public struct CompartmentDragOrigin: Sendable, Equatable {
         public var id: String
         public var x: Double
@@ -148,10 +183,8 @@ public enum EditorFeature {
         case deleteLink(index: Int)
         // Canvas
         case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
-        case beginCanvasPan(originX: Double, originY: Double)
-        case endCanvasPan
-        case beginCanvasPinch(originScale: Double)
-        case endCanvasPinch
+        case canvasTouchesChanged(CanvasTouches)
+        case canvasTouchesEnded
         // Variants
         case addVariant(name: String)
         case deleteVariant(name: String)
@@ -238,15 +271,16 @@ public enum EditorFeature {
             public var canvasOffsetX: Double = 0
             public var canvasOffsetY: Double = 0
             public var canvasScale: Double = 1
+            /// A pinch in progress, relative to the committed layout: scale it by `pinchScale` about
+            /// the view's centre, then move it by `pinchOffset`. Identity between pinches.
+            public var pinchScale: Double = 1
+            public var pinchOffset: CanvasPoint = CanvasPoint(x: 0, y: 0)
             /// Non-nil while a compartment drag is active; holds the canvas position at drag start.
             public var compartmentDragOriginId: String? = nil
             public var compartmentDragOriginX: Double = 0
             public var compartmentDragOriginY: Double = 0
             /// Non-nil while a canvas pan is in progress; holds the offset at gesture start.
-            public var canvasPanOriginX: Double? = nil
-            public var canvasPanOriginY: Double? = nil
             /// Non-nil while a pinch is in progress; holds the scale at gesture start.
-            public var canvasPinchOriginScale: Double? = nil
             /// iPhone sheet flags.
             public var isInspectorSheetOpen: Bool = false
             public var isModelListSheetOpen: Bool = false
@@ -299,10 +333,8 @@ public enum EditorFeature {
             case updateLinkRate(index: Int, rate: Double)
             case deleteLink(index: Int)
             case setCanvasTransform(offsetX: Double, offsetY: Double, scale: Double)
-            case beginCanvasPan(originX: Double, originY: Double)
-            case endCanvasPan
-            case beginCanvasPinch(originScale: Double)
-            case endCanvasPinch
+            case canvasTouchesChanged(CanvasTouches)
+            case canvasTouchesEnded
             case toggleLeftPanel
             case toggleRightPanel
             case toggleKValues
@@ -318,6 +350,47 @@ public enum EditorFeature {
             case commitVariantRename
             case cancelVariantRename
         }
+
+    // MARK: - Pan and pinch
+
+    /// The transform `session` measures from, moved by its fingers: the centre between them pans,
+    /// their spread around it zooms, and the canvas point that was under the centre stays under it.
+    /// One finger only pans.
+    public static func canvasTransform(_ session: CanvasTouchSession, _ now: CanvasTouches) -> CanvasTransform {
+        let ids = Array(session.touches.keys)
+        let before = ids.compactMap { session.touches[$0] }
+        let after = ids.compactMap { now.touches[$0] }
+        guard !before.isEmpty, before.count == after.count else { return session.start }
+        let c0 = centroid(before), c1 = centroid(after)
+        let spread0 = spread(before, around: c0), spread1 = spread(after, around: c1)
+        let zoom = ids.count >= 2 && spread0 > 0 ? spread1 / spread0 : 1
+        let scale = max(0.2, min(5.0, session.start.scale * zoom))
+        let z = scale / session.start.scale
+        let center = now.viewCenter
+        return CanvasTransform(
+            offset: CanvasPoint(
+                x: c1.x - center.x - (c0.x - center.x - session.start.offset.x) * z,
+                y: c1.y - center.y - (c0.y - center.y - session.start.offset.y) * z
+            ),
+            scale: scale
+        )
+    }
+
+    static func commitPinchPreview(_ state: inout State) {
+        guard let preview = state.canvasPinchPreview else { return }
+        state.canvasOffset = preview.offset
+        state.canvasScale = preview.scale
+        state.canvasPinchPreview = nil
+    }
+
+    private static func centroid(_ points: [CanvasPoint]) -> CanvasPoint {
+        let n = Double(points.count)
+        return CanvasPoint(x: points.reduce(0) { $0 + $1.x } / n, y: points.reduce(0) { $0 + $1.y } / n)
+    }
+
+    private static func spread(_ points: [CanvasPoint], around c: CanvasPoint) -> Double {
+        points.reduce(0) { $0 + hypot($1.x - c.x, $1.y - c.y) } / Double(points.count)
+    }
 
     // MARK: - Mappings
 
@@ -399,12 +472,16 @@ public enum EditorFeature {
             canvasOffsetX: state.canvasOffset.x,
             canvasOffsetY: state.canvasOffset.y,
             canvasScale: state.canvasScale,
+            pinchScale: state.canvasPinchPreview.map { $0.scale / state.canvasScale } ?? 1,
+            pinchOffset: state.canvasPinchPreview.map {
+                CanvasPoint(
+                    x: $0.offset.x - state.canvasOffset.x * $0.scale / state.canvasScale,
+                    y: $0.offset.y - state.canvasOffset.y * $0.scale / state.canvasScale
+                )
+            } ?? CanvasPoint(x: 0, y: 0),
             compartmentDragOriginId: state.compartmentDragOrigin?.id,
             compartmentDragOriginX:  state.compartmentDragOrigin?.x ?? 0,
             compartmentDragOriginY:  state.compartmentDragOrigin?.y ?? 0,
-            canvasPanOriginX:        state.canvasPanOrigin?.x,
-            canvasPanOriginY:        state.canvasPanOrigin?.y,
-            canvasPinchOriginScale:  state.canvasPinchOriginScale,
             isInspectorSheetOpen:    state.isInspectorSheetOpen,
             isModelListSheetOpen:    state.isModelListSheetOpen,
             variants:                doc.variants.keys.sorted(),
@@ -451,10 +528,8 @@ public enum EditorFeature {
         case .updateLinkRate(let idx, let r):                      .updateLinkRate(index: idx, rate: r)
         case .deleteLink(let idx):                                 .deleteLink(index: idx)
         case .setCanvasTransform(let ox, let oy, let s):           .setCanvasTransform(offsetX: ox, offsetY: oy, scale: s)
-        case .beginCanvasPan(let ox, let oy):                     .beginCanvasPan(originX: ox, originY: oy)
-        case .endCanvasPan:                                        .endCanvasPan
-        case .beginCanvasPinch(let s):                            .beginCanvasPinch(originScale: s)
-        case .endCanvasPinch:                                      .endCanvasPinch
+        case .canvasTouchesChanged(let t):                       .canvasTouchesChanged(t)
+        case .canvasTouchesEnded:                                  .canvasTouchesEnded
         case .toggleLeftPanel:                                     .toggleLeftPanel
         case .toggleRightPanel:                                    .toggleRightPanel
         case .toggleKValues:                                       .toggleKValues
@@ -716,17 +791,30 @@ public enum EditorFeature {
                     state.canvasScale = max(0.2, min(5.0, scale))
                 }
 
-            case .beginCanvasPan(let ox, let oy):
-                .reduce { $0.canvasPanOrigin = CanvasPoint(x: ox, y: oy) }
+            case .canvasTouchesChanged(let now):
+                // From the reducer's own state, not the view's last render. A finger added or
+                // lifted commits any preview and starts a new session from there: no jump.
+                .reduce { state in
+                    guard let session = state.canvasTouchSession, Set(session.touches.keys) == Set(now.touches.keys) else {
+                        Self.commitPinchPreview(&state)
+                        let start = CanvasTransform(offset: state.canvasOffset, scale: state.canvasScale)
+                        state.canvasTouchSession = now.touches.isEmpty ? nil : CanvasTouchSession(start: start, touches: now.touches)
+                        return
+                    }
+                    let transform = Self.canvasTransform(session, now)
+                    if session.touches.count >= 2 {
+                        state.canvasPinchPreview = transform
+                    } else {
+                        state.canvasOffset = transform.offset
+                        state.canvasScale = transform.scale
+                    }
+                }
 
-            case .endCanvasPan:
-                .reduce { $0.canvasPanOrigin = nil }
-
-            case .beginCanvasPinch(let s):
-                .reduce { $0.canvasPinchOriginScale = s }
-
-            case .endCanvasPinch:
-                .reduce { $0.canvasPinchOriginScale = nil }
+            case .canvasTouchesEnded:
+                .reduce { state in
+                    Self.commitPinchPreview(&state)
+                    state.canvasTouchSession = nil
+                }
 
             case .setInspectorSheet(let v):
                 .reduce { $0.isInspectorSheetOpen = v }

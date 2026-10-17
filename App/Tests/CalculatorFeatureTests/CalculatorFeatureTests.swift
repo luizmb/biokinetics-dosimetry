@@ -284,6 +284,46 @@ struct CalculatorFeatureBehaviorTests {
         }
     }
 
+    // Typed text is never rewritten; leaving the field formats it.
+
+    @Test func typingIsNeverRewrittenEvenOnTheWayThroughAnInvalidValue() async {
+        let s = store()
+        for typed in ["0,", "0", ""] {
+            s.dispatch(.setStepSizeText(typed)) { _ in }
+            await s.runEffects()
+            s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { _, state in state.stepSizeText = typed }
+        }
+        #expect(s.state.stepSize == 1.0)
+    }
+
+    @Test func leavingTheFieldFormatsTheLastGoodValue() async {
+        var initial = CalculatorFeature.initialState(with: ())
+        initial.stepSize = 0.5
+        initial.stepSizeText = "0,"
+        let s = store(initial: initial)
+        s.dispatch(.commitField(.reportEvery)) { _ in }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.fieldFormatted) { pair, state in state.stepSizeText = pair.1 }
+        #expect(s.state.stepSizeText == CalculatorFeature.trimmed(env.formatDouble(0.5, 6)))
+    }
+
+    @Test func toleranceOutOfRangeWhileTypingKeepsTheTextAndTheLastValue() async {
+        let s = store(initial: rk45State)
+        s.dispatch(.setToleranceText("1e-1")) { _ in }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { _, state in state.toleranceText = "1e-1" }
+        #expect(s.state.solver == .rungeKutta45(tolerance: 1e-13, budget: .automatic))
+        s.dispatch(.commitField(.tolerance)) { _ in }
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.fieldFormatted) { _, state in state.toleranceText = "1e-13" }
+    }
+
+    @Test func trimmedDropsTrailingZerosInAnyLocale() {
+        #expect(CalculatorFeature.trimmed("0,500000") == "0,5")
+        #expect(CalculatorFeature.trimmed("2.000000") == "2")
+        #expect(CalculatorFeature.trimmed("1500") == "1500")
+    }
+
     @Test func solverFailuresReadAsAdvice() {
         let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
         #expect(CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format)

@@ -21,6 +21,7 @@ struct ParameterBindings {
     var selectedVariant:      Binding<String?>           // nil = base model
     var birchallComposition:  Binding<BirchallComposition>?  // non-nil only when Birchall is selected
     var manualStepsText:      Binding<String>
+    var onCommitField:        (CalculatorFeature.ParameterField) -> Void
 }
 
 /// What the model allows the explicit solvers, worded for the fields they sit under.
@@ -65,8 +66,7 @@ struct ParameterContent: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
+        ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     GLabel("Parameters")
                         .padding(.top, 18)
@@ -118,20 +118,20 @@ struct ParameterContent: View {
                     .padding(.bottom, 18)
 
                     GLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    GField(paramBindings.stepSizeText)
+                    GField(paramBindings.stepSizeText, keyboard: .decimal) { paramBindings.onCommitField(.reportEvery) }
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
 
                     if case .rungeKutta4 = solver {
                         GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        GField(paramBindings.integrationStepText)
+                        GField(paramBindings.integrationStepText, keyboard: .decimal) { paramBindings.onCommitField(.integrationStep) }
                             .padding(.horizontal, 18)
                         fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
                         GLabel("Tolerance").padding(.horizontal, 18)
-                        GField(paramBindings.toleranceText)
+                        GField(paramBindings.toleranceText, keyboard: .scientific) { paramBindings.onCommitField(.tolerance) }
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     }
@@ -150,7 +150,7 @@ struct ParameterContent: View {
                         .padding(.horizontal, 18)
                         if case .manual = budget.wrappedValue {
                             GLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
-                            GField(paramBindings.manualStepsText)
+                            GField(paramBindings.manualStepsText, keyboard: .integer) { paramBindings.onCommitField(.manualSteps) }
                                 .padding(.horizontal, 18)
                         }
                         fieldNote(hints.stepBudgetWarning ?? hints.stepBudgetHint, tone: hints.stepBudgetWarning == nil ? nil : .orange)
@@ -158,7 +158,10 @@ struct ParameterContent: View {
                 }
                 .padding(.bottom, 8)
             }
-
+        // Calculate floats on the list as a bar, the list scrolling under it with a soft fade:
+        // below the scroll view it was a solid strip of the panel's background.
+        .overlay { if showCalculateButton { EdgeFade(.bottom) } }
+        .safeAreaBar(edge: .bottom) {
             if showCalculateButton {
                 VStack(spacing: 10) {
                     if let msg = durationWarningMessage {
@@ -229,29 +232,57 @@ struct ReportContent: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ScrollView([.horizontal, .vertical]) {
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        headerCell("Time (\(lingo.timeUnit.label))")
-                        ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
-                    }
-                    .background(Color.platformTertiaryGroupedBackground)
-                    GlassDivider()
-                    ForEach(reportRows) { row in
-                        HStack(spacing: 0) {
-                            dataCell(row.day.formatted(.number.precision(.fractionLength(0))))
-                            ForEach(Array(row.values.enumerated()), id: \.0) { _, val in
-                                dataCell(String(format: "%.9e", val))
+            // A table, not one block scrolled both ways: rows scroll vertically under a pinned
+            // header and are built as they come into view; the columns that don't fit scroll
+            // sideways, header and rows together.
+            ScrollView(.horizontal) {
+                // Nested rather than one two-way scroll view: each swipe moves one way. The inner
+                // view's indicator would sit at the content's edge, not the screen's (it floated
+                // mid-table once scrolled sideways), so it's hidden.
+                ScrollView(.vertical) {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            ForEach(reportRows) { row in
+                                HStack(spacing: 0) {
+                                    timeCell(row.day.formatted(.number.precision(.fractionLength(0))))
+                                    ForEach(Array(row.values.enumerated()), id: \.0) { _, val in
+                                        dataCell(String(format: "%.9e", val))
+                                    }
+                                }
+                                GlassDivider()
                             }
+                        } header: {
+                            VStack(spacing: 0) {
+                                HStack(spacing: 0) {
+                                    timeHeaderCell("Time (\(lingo.timeUnit.label))")
+                                    ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
+                                }
+                                GlassDivider()
+                            }
+                            .background(.bar)
                         }
-                        GlassDivider()
                     }
+                    .padding(.bottom, 90)
                 }
+                .scrollIndicators(.hidden)
             }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .overlay { EdgeFade(.bottom) }
             .font(.system(size: 11, design: .monospaced))
         }
     }
 
+    private func timeHeaderCell(_ text: String) -> some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+            .frame(width: 64, alignment: .trailing)
+            .padding(.horizontal, 8).padding(.vertical, 6)
+    }
+    private func timeCell(_ text: String) -> some View {
+        Text(text)
+            .frame(width: 64, alignment: .trailing)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+    }
     private func headerCell(_ text: String) -> some View {
         Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
             .frame(width: 120, alignment: .trailing)

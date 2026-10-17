@@ -116,12 +116,11 @@ public struct EditorView: View {
             canvasOffsetX:      viewStore.state.canvasOffsetX,
             canvasOffsetY:      viewStore.state.canvasOffsetY,
             canvasScale:        viewStore.state.canvasScale,
+            pinchScale:              viewStore.state.pinchScale,
+            pinchOffset:              viewStore.state.pinchOffset.value,
             compartmentDragOriginId: viewStore.state.compartmentDragOriginId,
             compartmentDragOriginX:  viewStore.state.compartmentDragOriginX,
             compartmentDragOriginY:  viewStore.state.compartmentDragOriginY,
-            canvasPanOriginX:        viewStore.state.canvasPanOriginX,
-            canvasPanOriginY:        viewStore.state.canvasPanOriginY,
-            canvasPinchOriginScale:  viewStore.state.canvasPinchOriginScale,
             variants:                viewStore.state.variants.value,
             editingVariant:          viewStore.state.editingVariant,
             renamingVariant:         viewStore.state.renamingVariant,
@@ -140,10 +139,8 @@ public struct EditorView: View {
             onMoveCompartment:       { viewStore.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
             onBeginCompartmentDrag:  { viewStore.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
             onEndCompartmentDrag:    { viewStore.dispatch(.endCompartmentDrag) },
-            onBeginCanvasPan:        { viewStore.dispatch(.beginCanvasPan(originX: $0, originY: $1)) },
-            onEndCanvasPan:          { viewStore.dispatch(.endCanvasPan) },
-            onBeginCanvasPinch:      { viewStore.dispatch(.beginCanvasPinch(originScale: $0)) },
-            onEndCanvasPinch:        { viewStore.dispatch(.endCanvasPinch) },
+            onCanvasTouches:         { viewStore.dispatch(.canvasTouchesChanged($0)) },
+            onEndCanvasTouches:      { viewStore.dispatch(.canvasTouchesEnded) },
             onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
             inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen).action(\.setInspectorSheet)),
             modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen).action(\.setModelListSheet)),
@@ -191,12 +188,11 @@ struct EditorContent: View {
     let canvasOffsetX: Double
     let canvasOffsetY: Double
     let canvasScale: Double
+    let pinchScale: Double
+    let pinchOffset: EditorFeature.CanvasPoint
     let compartmentDragOriginId: String?
     let compartmentDragOriginX: Double
     let compartmentDragOriginY: Double
-    let canvasPanOriginX: Double?
-    let canvasPanOriginY: Double?
-    let canvasPinchOriginScale: Double?
     let variants: [String]
     let editingVariant: String?
     let renamingVariant: String?
@@ -217,10 +213,8 @@ struct EditorContent: View {
     var onMoveCompartment: (String, Double, Double) -> Void
     var onBeginCompartmentDrag: (String, Double, Double) -> Void
     var onEndCompartmentDrag: () -> Void
-    var onBeginCanvasPan: (Double, Double) -> Void
-    var onEndCanvasPan: () -> Void
-    var onBeginCanvasPinch: (Double) -> Void
-    var onEndCanvasPinch: () -> Void
+    var onCanvasTouches: (EditorFeature.CanvasTouches) -> Void
+    var onEndCanvasTouches: () -> Void
     var onSetCanvasTransform: (Double, Double, Double) -> Void
     var inspectorSheet: Binding<Bool>
     var modelListSheet: Binding<Bool>
@@ -235,7 +229,11 @@ struct EditorContent: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var hSize
-    private var isCompact: Bool { hSize == .compact }
+    @Environment(\.verticalSizeClass) private var vSize
+    /// The phone layout whenever either dimension is compact: a landscape iPhone has regular width
+    /// but not the height for three columns. A real iPad (or an unfolded foldable) is regular both
+    /// ways and gets the panels.
+    private var isCompact: Bool { hSize == .compact || vSize == .compact }
 
     var body: some View {
         ZStack {
@@ -265,16 +263,13 @@ struct EditorContent: View {
                 )
                 .frame(width: 264)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .leading, action: onToggleLeftPanel)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                GlassVDivider()
             }
-
-            GlassVDivider()
 
             ZStack(alignment: .top) {
                 canvas
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea(edges: .vertical)
 
                 if let text = linkingBannerText {
                     GlassLinkingBanner(message: text, onCancel: onCancelLinking)
@@ -282,12 +277,20 @@ struct EditorContent: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                VStack { Spacer(); canvasToolbar.padding(.bottom, 16) }
+                // Labels where they fit, icons where they don't: never a wrapped "Co m…".
+                VStack {
+                    Spacer()
+                    ViewThatFits(in: .horizontal) {
+                        canvasToolbar.labelStyle(.titleAndIcon)
+                        canvasToolbar.labelStyle(.iconOnly)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 16)
+                }
             }
 
-            GlassVDivider()
-
             if isRightPanelVisible {
+                GlassVDivider()
                 EditorInspectorPanel(
                     documentName: documentName,
                     documentDescription: documentDescription,
@@ -325,9 +328,6 @@ struct EditorContent: View {
                 )
                 .frame(width: 326)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .trailing, action: onToggleRightPanel)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isLeftPanelVisible)
@@ -339,8 +339,13 @@ struct EditorContent: View {
 
     private var compactLayout: some View {
         ZStack(alignment: .top) {
+            // Edge to edge: the navigation bar and the bottom buttons are glass over the canvas,
+            // not bars over a flat background.
             canvas
-                .padding(.bottom, 90)
+                .ignoresSafeArea()
+            // A soft fade where the canvas runs under the navigation bar and the buttons.
+            EdgeFade(.top)
+            EdgeFade(.bottom)
 
             if let text = linkingBannerText {
                 GlassLinkingBanner(message: text, onCancel: onCancelLinking)
@@ -349,8 +354,10 @@ struct EditorContent: View {
                     .animation(.spring(), value: text)
             }
 
-            VStack { Spacer(); compactBottomToolbar }
         }
+        // In the safe area, not on top of it: the system knows the buttons are there, so the fade
+        // and anything else that respects the safe area clears them on any device.
+        .safeAreaInset(edge: .bottom) { compactBottomToolbar }
         .sheet(isPresented: inspectorSheet) { inspectorSheetContent }
         .sheet(isPresented: modelListSheet) { modelListSheetContent }
     }
@@ -366,12 +373,11 @@ struct EditorContent: View {
             isLinking: linkingBannerText != nil,
             canvasOffsetX: canvasOffsetX, canvasOffsetY: canvasOffsetY,
             canvasScale: canvasScale,
+            pinchScale: pinchScale,
+            pinchOffset: pinchOffset,
             compartmentDragOriginId: compartmentDragOriginId,
             compartmentDragOriginX: compartmentDragOriginX,
             compartmentDragOriginY: compartmentDragOriginY,
-            canvasPanOriginX: canvasPanOriginX,
-            canvasPanOriginY: canvasPanOriginY,
-            canvasPinchOriginScale: canvasPinchOriginScale,
             onSelectCompartment: { id in
                 if linkingBannerText != nil { if let id { onLinkStep(id) } }
                 else {
@@ -386,10 +392,8 @@ struct EditorContent: View {
             onMoveCompartment: onMoveCompartment,
             onBeginCompartmentDrag: onBeginCompartmentDrag,
             onEndCompartmentDrag: onEndCompartmentDrag,
-            onBeginCanvasPan: onBeginCanvasPan,
-            onEndCanvasPan: onEndCanvasPan,
-            onBeginCanvasPinch: onBeginCanvasPinch,
-            onEndCanvasPinch: onEndCanvasPinch,
+            onCanvasTouches: onCanvasTouches,
+            onEndCanvasTouches: onEndCanvasTouches,
             onSetCanvasTransform: onSetCanvasTransform
         )
     }
@@ -397,6 +401,7 @@ struct EditorContent: View {
     // MARK: - Compact bottom toolbar
 
     private var compactBottomToolbar: some View {
+        GlassEffectContainer(spacing: 9) {
         HStack(spacing: 9) {
             GPill(intensity: 0.8) {
                 Button { onAddCompartment(.steel) } label: {
@@ -428,7 +433,8 @@ struct EditorContent: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .padding(.horizontal, 14).padding(.bottom, 30)
+        }
+        .padding(.horizontal, 14).padding(.bottom, 8)
     }
 
     // MARK: - Inspector sheet (iPhone)
@@ -539,6 +545,8 @@ struct EditorContent: View {
                     Label("Compartment", systemImage: "plus.square")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
                 }
             }
@@ -549,6 +557,8 @@ struct EditorContent: View {
                     Label("Link", systemImage: "arrow.triangle.branch")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
                 }
                 .buttonStyle(PlainButtonStyle())

@@ -31,10 +31,17 @@ public struct GPill<Content: View>: View {
         }
     }
 
+    /// Real Liquid Glass in a capsule (tappable pills react to touch). `intensity` at or above 1
+    /// marks an active pill: it takes a light accent tint.
     private var inner: some View {
         content
             .foregroundStyle(g.ink)
-            .glassBackground(cornerRadius: 999, intensity: intensity)
+            .glassEffect(glass, in: Capsule())
+    }
+
+    private var glass: Glass {
+        let base: Glass = intensity >= 1 ? .regular.tint(g.accent.opacity(0.18)) : .regular
+        return action == nil ? base : base.interactive()
     }
 }
 
@@ -60,34 +67,11 @@ public struct GCard<Content: View>: View {
         self.content = content()
     }
 
+    /// Real Liquid Glass, cut to the card.
     public var body: some View {
         content
             .foregroundStyle(g.ink)
-            .background {
-                ZStack {
-                    // Material blur
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    // Base tint
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(tintOverride ?? g.tintColor)
-                    // Top gloss
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.white.opacity(g.sheen * intensity), location: 0),
-                            .init(color: Color.white.opacity(g.sheenMid * intensity), location: 0.60),
-                            .init(color: .clear, location: 1),
-                        ],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                    // Edge
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(g.edgeColor, lineWidth: 0.5)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .shadow(color: g.shadowColor, radius: g.shadowRadius * 0.6, y: g.shadowY * 0.6)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
@@ -127,54 +111,25 @@ public struct GButton: View {
     private var height: CGFloat { size == .lg ? 52 : size == .md ? 40 : 32 }
     private var fontSize: CGFloat { size == .lg ? 17 : size == .md ? 15 : 13 }
 
+    /// The system's glass button styles: prominent (accent-filled glass) for the main action,
+    /// plain glass otherwise.
     public var body: some View {
-        Button(action: action) {
+        let button = Button(action: action) {
             HStack(spacing: 8) {
                 if let icon { icon }
                 Text(title)
             }
             .font(.system(size: fontSize, weight: .semibold))
-            .foregroundStyle(tone == .accent ? Color.white : g.ink)
             .frame(maxWidth: isFullWidth ? .infinity : nil)
-            .frame(height: height)
-            .padding(.horizontal, 22)
-            .background { buttonBackground }
+            .frame(height: height - 12)
+            .padding(.horizontal, 10)
         }
-        .buttonStyle(PlainButtonStyle())
         .disabled(isDisabled)
-        .opacity(isDisabled ? 0.75 : 1)
-    }
-
-    @ViewBuilder
-    private var buttonBackground: some View {
-        ZStack {
-            if isDisabled {
-                Capsule()
-                    .fill(g.isDark
-                          ? Color(white: 0.47, opacity: 0.30)
-                          : Color(white: 0.47, opacity: 0.22))
-            } else if tone == .accent {
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [g.accentTop, g.accent, g.accentBot],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.45), .clear],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                    .frame(maxHeight: .infinity)
-                    .clipShape(Capsule())
-                    .allowsHitTesting(false)
+        Group {
+            if tone == .accent {
+                button.buttonStyle(.glassProminent)
             } else {
-                Capsule().fill(.ultraThinMaterial)
-                Capsule().fill(g.tintColor)
-                Capsule().strokeBorder(g.edgeColor, lineWidth: 0.5)
+                button.buttonStyle(.glass)
             }
         }
     }
@@ -221,7 +176,7 @@ public struct GSegmented<Value: Hashable & Sendable>: View {
             }
         }
         .padding(3)
-        .glassBackground(cornerRadius: 999, intensity: 0.85)
+        .glassEffect(.regular, in: Capsule())
     }
 }
 
@@ -350,7 +305,7 @@ public struct GJumpStepper: View {
             jump(coarse, systemImage: "chevron.right.2")
         }
         .frame(height: 44)
-        .glassBackground(cornerRadius: 999, intensity: 0.7)
+        .glassEffect(.regular, in: Capsule())
         .accessibilityElement(children: .contain)
     }
 
@@ -376,16 +331,27 @@ public struct GField: View {
     private let suffix: String?
     private let isMono: Bool
 
-    public init(_ text: Binding<String>, suffix: String? = nil, mono: Bool = true) {
+    private let keyboard: GFieldKeyboard
+    private let onEndEditing: () -> Void
+
+    /// - Parameter onEndEditing: called when editing ends (the field loses focus): where a store
+    ///   formats what was typed, so nothing is rewritten under the cursor while typing.
+    public init(
+        _ text: Binding<String>, suffix: String? = nil, mono: Bool = true, keyboard: GFieldKeyboard = .text,
+        onEndEditing: @escaping () -> Void = {}
+    ) {
         self._text = text
         self.suffix = suffix
         self.isMono = mono
+        self.keyboard = keyboard
+        self.onEndEditing = onEndEditing
     }
 
     public var body: some View {
         ZStack(alignment: .trailing) {
             GCard(cornerRadius: 12, intensity: 0.5) {
-                TextField("", text: $text)
+                TextField("", text: $text, onEditingChanged: { editing in if !editing { onEndEditing() } })
+                    .gFieldKeyboard(keyboard)
                     .font(.system(size: 16, design: isMono ? .monospaced : .default))
                     .foregroundStyle(g.ink)
                     .frame(height: 44)
@@ -399,6 +365,33 @@ public struct GField: View {
                     .padding(.trailing, 14)
             }
         }
+    }
+}
+
+/// The keyboard a field asks for.
+public enum GFieldKeyboard: Sendable {
+    case text
+    /// Digits and the locale's decimal separator.
+    case decimal
+    /// Digits only.
+    case integer
+    /// Digits and punctuation: exponent notation ("1e-13").
+    case scientific
+}
+
+private extension View {
+    @ViewBuilder
+    func gFieldKeyboard(_ keyboard: GFieldKeyboard) -> some View {
+        #if os(iOS)
+            switch keyboard {
+            case .text: self
+            case .decimal: keyboardType(.decimalPad)
+            case .integer: keyboardType(.numberPad)
+            case .scientific: keyboardType(.numbersAndPunctuation).autocorrectionDisabled().textInputAutocapitalization(.never)
+            }
+        #else
+            self
+        #endif
     }
 }
 
@@ -444,7 +437,7 @@ public struct GChip: View {
             .padding(.leading, 9)
             .padding(.trailing, 12)
             .frame(height: 30)
-            .glassBackground(cornerRadius: 999, intensity: 0.7)
+            .glassEffect(.regular, in: Capsule())
             .opacity(isActive ? 1 : 0.5)
         }
         .buttonStyle(PlainButtonStyle())
@@ -626,31 +619,6 @@ public struct SwatchCluster: View {
     }
 }
 
-// MARK: - GlassPanelRevealStrip (Xcode-style collapsed panel strip)
-
-public struct GlassPanelRevealStrip: View {
-    @Environment(\.glassTokens) private var g
-    private let edge: HorizontalEdge
-    private let action: () -> Void
-
-    public init(edge: HorizontalEdge, action: @escaping () -> Void) {
-        self.edge = edge
-        self.action = action
-    }
-
-    public var body: some View {
-        Button(action: action) {
-            Image(systemName: edge == .leading ? "chevron.right" : "chevron.left")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(g.accent)
-                .frame(maxHeight: .infinity)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .frame(width: 26)
-        .background(g.isDark ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
-    }
-}
-
 // MARK: - Linking flow banner
 
 public struct GlassLinkingBanner: View {
@@ -680,7 +648,7 @@ public struct GlassLinkingBanner: View {
         }
         .padding(.leading, 14)
         .padding(.vertical, 12)
-        .glassBackground(cornerRadius: 999, intensity: 0.9)
+        .glassEffect(.regular, in: Capsule())
         .padding(.horizontal, 12)
     }
 }

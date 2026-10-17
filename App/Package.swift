@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "BiokineticsDosimetryApp",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
         .library(name: "Style",              targets: ["Style"]),
         .library(name: "UIComponents",       targets: ["UIComponents"]),

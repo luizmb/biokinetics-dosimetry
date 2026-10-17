@@ -69,7 +69,8 @@ public struct CalculatorView: View {
             manualStepsText: Binding(
                 get: { viewStore.state.manualStepsText },
                 set: { viewStore.dispatch(.setManualStepsText($0)) }
-            )
+            ),
+            onCommitField: { viewStore.dispatch(.commitField($0)) }
         )
 
         return CalculatorContent(
@@ -194,11 +195,8 @@ struct CalculatorContent: View {
                 )
                 .frame(width: 300)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-            } else {
-                GlassPanelRevealStrip(edge: .leading, action: onToggleParamPanel)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                GlassVDivider()
             }
-            GlassVDivider()
             contentTabView.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isParamPanelVisible)
@@ -242,6 +240,8 @@ struct CalculatorContent: View {
                 }
             }
             .padding(.horizontal, 12)
+            // Clear of the floating tab bar.
+            .padding(.bottom, 16)
             .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
             .tag(CalculatorFeature.CalcView.chart)
 
@@ -253,9 +253,9 @@ struct CalculatorContent: View {
             .tabItem { Label("Report", systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
 
-            // Parameters tab
-            VStack(spacing: 0) {
-                ParameterContent(
+            // Parameters tab: the list scrolls under the Calculate button, which floats on it as
+            // a registered bar, so the scroll view gives it the system's edge effect.
+            ParameterContent(
                     paramBindings: paramBindings,
                     lingo: lingo,
                     variants: variants, solver: solver,
@@ -269,6 +269,12 @@ struct CalculatorContent: View {
                     onSetSolver: onSetSolver,
                     onCalculate: {}
                 )
+            // The panel's own background sits between its scroll view and the bar, so the
+            // system's edge effect doesn't reach; our fade, sized from the safe area (which now
+            // holds the button), does the same job.
+            .overlay { EdgeFade(.bottom) }
+            .safeAreaBar(edge: .bottom) {
+            VStack(spacing: 0) {
                 if let msg = durationWarningMessage {
                     GBanner(
                         tone: bannerTone(durationWarning),
@@ -279,7 +285,7 @@ struct CalculatorContent: View {
                     .padding(.top, 10)
                 }
                 GButton(
-                    isCalculating ? "Calculating…" : "Calculate",
+                    calculateButtonTitle,
                     icon: isCalculating ? nil : Image(systemName: "play.fill"),
                     size: .lg, fullWidth: true,
                     disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
@@ -289,8 +295,9 @@ struct CalculatorContent: View {
                     }
                 )
                 .padding(.horizontal, 16)
-                .padding(.bottom, 30)
+                .padding(.bottom, 12)
                 .padding(.top, 10)
+            }
             }
             .tabItem { Label("Parameters", systemImage: "slider.horizontal.3") }
             .tag(CalculatorFeature.CalcView.parameters)
