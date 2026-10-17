@@ -34,21 +34,21 @@ struct SampleLayoutTests {
     @Test(arguments: samples.map(\.name))
     func crossingsStayAtTheRecordedMinimum(name: String) throws {
         let document = try #require(Self.samples.first { $0.name == name })
-        let bound = [Self.id(for: "icrp.u234.type.s"): 23, Self.id(for: "icrp.u238.chain"): 19][document.id] ?? 0
+        let bound = [Self.id(for: "icrp.u234.type.s"): 9, Self.id(for: "icrp.u238.chain"): 2][document.id] ?? 0
         #expect(Self.quality(document).crossings <= bound, "\(Self.quality(document))")
     }
 
     @Test func tidyLayoutIsReproducibleFromItsSeed() throws {
         let document = try #require(Self.samples.first { $0.id == Self.id(for: "icrp.sr90") })
         var first = SplitMix64(seed: 7), second = SplitMix64(seed: 7)
-        let a = tidyLayout(of: document.model).run(&first), b = tidyLayout(of: document.model).run(&second)
+        let a = tidyLayout(of: document.model, attempts: 1).run(&first), b = tidyLayout(of: document.model, attempts: 1).run(&second)
         #expect(a.mapValues { [$0.x, $0.y] } == b.mapValues { [$0.x, $0.y] })
     }
 
     @Test func tidyLayoutUntanglesASmallModel() throws {
         let document = try #require(Self.samples.first { $0.id == Self.id(for: "icrp.pb210.po210") })
         var rng = SplitMix64(seed: SampleLayouts.seed)
-        let quality = layoutQuality(of: document.model, positions: tidyLayout(of: document.model).run(&rng))
+        let quality = layoutQuality(of: document.model, positions: tidyLayout(of: document.model, attempts: 1).run(&rng))
         #expect(quality == LayoutQuality(overlaps: 0, crossings: 0, linksUnderCompartments: 0))
     }
 

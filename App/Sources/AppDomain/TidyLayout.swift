@@ -16,7 +16,8 @@ import Foundation
 /// The randomness is the `Gen`: it draws the start positions and the list of candidate moves, and
 /// the rest is a pure function of those. Run it with a seeded `SplitMix64` for a reproducible layout.
 public func tidyLayout<R: RandomNumberGenerator & Sendable>(
-    of model: CompartmentalModel
+    of model: CompartmentalModel,
+    attempts: Int = 6
 ) -> Gen<R, [String: (x: Double, y: Double)]> {
     let ids = model.compartments.map(\.id)
     let index = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($1, $0) })
@@ -31,18 +32,35 @@ public func tidyLayout<R: RandomNumberGenerator & Sendable>(
     let start = Gen<R, (Double, Double)>.zip(.double(in: 0 ... 600), .double(in: 0 ... 600))
         .map { (x: $0.0, y: $0.1) }
         .array(ofCount: n)
+        .array(ofCount: max(1, attempts))
     let moves = (LayoutMove.generator(count: n) as Gen<R, LayoutMove>).array(ofCount: LayoutSearch.steps(for: n))
-    return Gen<R, ([(x: Double, y: Double)], [LayoutMove])>.zip(start, moves).map { start, moves in
-        // Two starts, kept by final score: hub links as two hops keeps compartments between the hubs
-        // they link (a decay chain's bands); leaving hub links out lets a single hub's satellites
-        // (a respiratory tract's ladder) take their own shape.
-        let best = [2, nil].map { hubHops in
-            let initial = stressLayout(from: start, links: links, hubs: hubs, hubHops: hubHops, sizes: sizes)
-            return LayoutSearch(positions: initial, sizes: sizes, links: links, hubs: hubs).anneal(moves)
+    return Gen<R, ([[(x: Double, y: Double)]], [LayoutMove])>.zip(start, moves).map { starts, moves in
+        // Where a run starts decides much of where it ends (the same model ends with 2 or 31
+        // crossings), so each start gets four runs and the best of all is kept, by what
+        // `layoutQuality` counts (the score only steers each run):
+        // - hub links as two hops keeps compartments between the hubs they link (a decay chain's
+        //   bands); leaving them out lets a single hub's satellites (a respiratory tract's ladder)
+        //   take their own shape;
+        // - a hub's link crossing an ordinary one priced low lets several hubs reach across the
+        //   chains between them; priced as any crossing, a single hub's links route clear.
+        let runs = starts.flatMap { start in [2, nil].map { (start, $0) } }.flatMap { start, hubHops in
+            [Penalty.crossing, Penalty.hubCrossing].map { hubCrossing in
+                let initial = stressLayout(from: start, links: links, hubs: hubs, hubHops: hubHops, sizes: sizes)
+                return LayoutSearch(positions: initial, sizes: sizes, links: links, hubs: hubs, hubCrossing: hubCrossing)
+                    .anneal(moves)
+                    .positions
+            }
         }
-        .min { $0.score < $1.score }
-        return centred(Dictionary(uniqueKeysWithValues: zip(ids, best?.positions ?? start)))
+        let best = runs
+            .map { positions in (positions, layoutQuality(of: model, positions: Dictionary(uniqueKeysWithValues: zip(ids, positions)))) }
+            .min { lhs, rhs in lhs.1.rank.lexicographicallyPrecedes(rhs.1.rank) }
+        return centred(Dictionary(uniqueKeysWithValues: zip(ids, best?.0 ?? starts.first ?? [])))
     }
+}
+
+extension LayoutQuality {
+    /// Overlaps and links under compartments first (they make a diagram wrong), then crossings.
+    fileprivate var rank: [Int] { [overlaps + linksUnderCompartments, crossings] }
 }
 
 /// One candidate step of the search, drawn up front: what to try, and the uniform draw that decides
@@ -154,9 +172,8 @@ private enum Penalty {
     static let overlap = 100_000.0
     static let linkUnderCompartment = 20_000.0
     static let crossing = 2_000.0
-    /// A hub's link crossing an ordinary link: the hub's link visibly runs to the hub, so it costs
-    /// less to read, and avoiding it would stretch the links that carry the structure. Two hubs'
-    /// links crossing is the confusing case and costs the full `crossing`.
+    /// A hub's link crossing an ordinary link, in the runs that price it low: the hub's link visibly
+    /// runs to the hub, so it costs less to read. Two hubs' links crossing costs the full `crossing`.
     static let hubCrossing = 300.0
     static let crowding = 300.0
     /// Gap kept between compartments (penalised as crowding below it).
@@ -174,8 +191,17 @@ private struct LayoutSearch {
     /// How much each link's length counts: a hub's links count a fifth.
     let lengthWeight: [Double]
     let isHubLink: [Bool]
+    /// What a hub's link crossing an ordinary link costs.
+    let hubCrossing: Double
 
-    init(positions: [(x: Double, y: Double)], sizes: [(width: Double, height: Double)], links: [(Int, Int)], hubs: Set<Int>) {
+    init(
+        positions: [(x: Double, y: Double)],
+        sizes: [(width: Double, height: Double)],
+        links: [(Int, Int)],
+        hubs: Set<Int>,
+        hubCrossing: Double
+    ) {
+        self.hubCrossing = hubCrossing
         self.positions = positions
         self.sizes = sizes
         self.links = links
@@ -243,7 +269,7 @@ private struct LayoutSearch {
             let segment = self.segment(l)
             total += segment.length * lengthWeight[l]
             for m in links.indices where m != l && !(movedLinks.contains(m) && m < l) && !sharesEnd(l, m) {
-                if segment.crosses(self.segment(m)) { total += isHubLink[l] != isHubLink[m] ? Penalty.hubCrossing : Penalty.crossing }
+                if segment.crosses(self.segment(m)) { total += isHubLink[l] != isHubLink[m] ? hubCrossing : Penalty.crossing }
             }
             for node in positions.indices where node != links[l].0 && node != links[l].1 {
                 if segment.meets(box(node, inflatedBy: Penalty.linkClearance)) { total += Penalty.linkUnderCompartment }
