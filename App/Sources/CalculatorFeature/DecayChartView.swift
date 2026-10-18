@@ -38,14 +38,14 @@ struct DecayChartContent: View {
             } else if isCalculating {
                 VStack(spacing: 14) {
                     ProgressView()
-                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
+                    Text("Calculating…").font(.callout).foregroundStyle(.inkMuted)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = error, series.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.title).foregroundStyle(.orange)
-                    Text(err).font(.callout).foregroundStyle(.secondary)
+                        .font(.title).foregroundStyle(.warning)
+                    Text(err).font(.callout).foregroundStyle(.inkMuted)
                         .multilineTextAlignment(.center)
                     remedyButtons.padding(.top, 6)
                 }
@@ -58,9 +58,9 @@ struct DecayChartContent: View {
                     }
                     VStack(spacing: 12) {
                         Image(systemName: "waveform.path.ecg")
-                            .font(.system(size: 48)).foregroundStyle(.quaternary)
+                            .font(.system(size: 48)).foregroundStyle(.inkFaint)
                         Text("Tap Calculate to run the solver")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.inkMuted)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -92,19 +92,19 @@ struct DecayChartContent: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.warning)
                 Text("Model cannot be calculated")
                     .font(.headline)
             }
-            Divider()
+            Hairline()
             ForEach(errorIssues.indices, id: \.self) { i in
                 issueRow(errorIssues[i])
             }
             if !nonErrorIssues.isEmpty {
-                Divider()
+                Hairline()
                 Text("Also:")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.inkMuted)
                 ForEach(nonErrorIssues.indices, id: \.self) { i in
                     issueRow(nonErrorIssues[i])
                 }
@@ -127,11 +127,11 @@ struct DecayChartContent: View {
     private func issueRow(_ issue: CompartmentalModel.ValidationIssue) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: issue.systemImageName)
-                .font(.system(size: 13))
+                .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .frame(width: 18)
             Text(issue.issueDescription)
-                .font(.system(size: 12.5))
+                .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -182,13 +182,13 @@ struct DecayChartContent: View {
                     xStart: .value(lingo.timeUnit.displayName, xPosition(stop)),
                     xEnd: .value(lingo.timeUnit.displayName, xPosition(Double(finalDay)))
                 )
-                .foregroundStyle(Color.secondary.opacity(0.12))
+                .foregroundStyle(Color(ColorToken.ink.opacity(0.07)))
                 RuleMark(x: .value(lingo.timeUnit.displayName, xPosition(stop)))
-                    .foregroundStyle(Color.orange)
+                    .foregroundStyle(Color(.warning))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .annotation(position: .trailing, alignment: .top, spacing: 4) {
                         if let stoppedLabel {
-                            Text(stoppedLabel).font(.caption2).foregroundStyle(.orange).fixedSize()
+                            Text(stoppedLabel).font(.caption2).foregroundStyle(.warning).fixedSize()
                         }
                     }
             }

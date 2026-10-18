@@ -17,13 +17,14 @@ struct EditorModelListPanel: View {
     var onDeleteSelected: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accent) private var accent
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
                 Text("MODEL")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TypeToken.sectionLabel)
                     .kerning(0.6)
                     .foregroundStyle(Color(.inkFaint))
                 Spacer()
@@ -35,42 +36,30 @@ struct EditorModelListPanel: View {
             Hairline()
 
             ScrollViewReader { proxy in
-                List {
+                GlassList {
                     if nuclides.count > 1 {
                         ForEach(nuclides) { nuclide in
                             let comps = compartments.filter { $0.nuclideId == nuclide.id }
-                            Section {
+                            GlassSection(LocalizedStringKey(nuclide.name), trailing: { halfLifeLabel(nuclide) }) {
                                 ForEach(comps) { comp in
                                     compartmentRow(comp, proxy: proxy)
                                 }
-                            } header: {
-                                nuclideHeader(nuclide)
                             }
                         }
                     } else {
-                        Section {
+                        GlassSection("Compartments") {
                             ForEach(compartments) { comp in
                                 compartmentRow(comp, proxy: proxy)
                             }
-                        } header: {
-                            Text("Compartments")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
                         }
                     }
 
-                    Section {
+                    GlassSection("Transfers") {
                         ForEach(links) { link in
                             linkRow(link)
                         }
-                    } header: {
-                        Text("Transfers")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
                     }
                 }
-                .listStyle(.sidebar)
-                .scrollContentBackground(.hidden)
                 .onChange(of: selectedCompartmentId) { _, id in
                     if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
                 }
@@ -87,22 +76,15 @@ struct EditorModelListPanel: View {
                     .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
             }
         }
-        .background(Color.platformGroupedBackground)
         .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
     }
 
     // MARK: - Nuclide header
 
-    private func nuclideHeader(_ nuclide: EditorFeature.NuclideRow) -> some View {
-        HStack(spacing: 4) {
-            Text(nuclide.name)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            if nuclide.halfLife > 0 {
-                Text("· \(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-            }
+    @ViewBuilder
+    private func halfLifeLabel(_ nuclide: EditorFeature.NuclideRow) -> some View {
+        if nuclide.halfLife > 0 {
+            Text("\(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
         }
     }
 
@@ -121,7 +103,7 @@ struct EditorModelListPanel: View {
                 .frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 1) {
                 Text(comp.name)
-                    .font(.system(size: 12.5, weight: isSelected ? .semibold : .regular))
+                    .font(TypeToken.detail.weight(isSelected ? .semibold : .regular))
                     .lineLimit(1)
                 if comp.follow || comp.dispose || comp.intake {
                     HStack(spacing: 4) {
@@ -133,10 +115,11 @@ struct EditorModelListPanel: View {
             }
             Spacer()
         }
+        .padding(.horizontal, Space.large)
+        .frame(minHeight: Size.hitTarget)
+        // The selection washes over the row's glass rather than replacing it.
+        .background(isSelected ? Color(accent.base.opacity(0.14)) : Color.clear)
         .contentShape(Rectangle())
-        .listRowBackground(
-            isSelected ? Color.accentColor.opacity(0.08) : Color.clear
-        )
         .id(comp.id)
         .onTapGesture { onSelectCompartment(comp.id) }
     }
@@ -147,23 +130,24 @@ struct EditorModelListPanel: View {
         let isSelected = selectedLinkIndex == link.id
         return HStack(spacing: 8) {
             Image(systemName: "arrow.forward")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
+                .font(TypeToken.sectionLabel.weight(.medium))
+                .foregroundStyle(.inkMuted)
             Text("K\(link.id + 1)")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(TypeToken.codeSmall.weight(.semibold))
                 .foregroundStyle(link.fromTint.indicator(dark: colorScheme == .dark))
             Text("\(link.fromName) → \(link.toName)")
-                .font(.system(size: 11.5))
+                .font(TypeToken.detail)
                 .lineLimit(1)
             Spacer()
             Text(link.rate.scientificString)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .font(TypeToken.codeSmall)
+                .foregroundStyle(.inkFaint)
         }
+        .padding(.horizontal, Space.large)
+        .frame(minHeight: Size.hitTarget)
+        // The selection washes over the row's glass rather than replacing it.
+        .background(isSelected ? Color(accent.base.opacity(0.14)) : Color.clear)
         .contentShape(Rectangle())
-        .listRowBackground(
-            isSelected ? Color.accentColor.opacity(0.08) : Color.clear
-        )
         .id("link-\(link.id)")
         .onTapGesture { onSelectLink(link.id) }
     }
@@ -175,7 +159,7 @@ struct EditorModelListPanel: View {
             if let label = selectionFooterLabel {
                 Label(label, systemImage: selectedCompartmentId != nil ? "square.fill" : "arrow.forward")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.inkMuted)
                     .lineLimit(1)
             }
             Spacer()
@@ -193,8 +177,8 @@ struct EditorModelListPanel: View {
 
     private func flagChip(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(.secondary)
+            .font(TypeToken.sectionLabel.weight(.medium))
+            .foregroundStyle(.inkMuted)
             .padding(.horizontal, 5)
             .padding(.vertical, 1.5)
             .background(.quaternary, in: Capsule())

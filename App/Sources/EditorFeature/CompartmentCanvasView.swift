@@ -104,7 +104,7 @@ struct CompartmentCanvasView: View {
                             .font(.system(size: 9, weight: .semibold, design: .monospaced))
                             .foregroundStyle(intakeColor)
                             .padding(.horizontal, 4).padding(.vertical, 1)
-                            .background(.regularMaterial, in: Capsule())
+                            .background(Color(.selectedSurface), in: Capsule())
                             .position(x: sp.x + sz.width/2*s*0.5 + 10,
                                       y: (tail.y + sp.y - sz.height/2*s) / 2)
                             .allowsHitTesting(false)
@@ -152,9 +152,9 @@ struct CompartmentCanvasView: View {
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
                         .foregroundStyle(selectedLinkIndex == link.id
                                          ? link.fromTint.indicator(dark: isDark)
-                                         : Color.secondary)
+                                         : Color(.inkMuted))
                         .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(.regularMaterial, in: Capsule())
+                        .background(Color(.selectedSurface), in: Capsule())
                         .position(x: mid.x, y: mid.y - 12)
                         .allowsHitTesting(false)
                 }
@@ -366,8 +366,8 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        // Sheer glass (nothing behind blurred) in the compartment's colour, lit from below and rimmed like a gel.
-        .finish(.glass(GlassToken(.sheer, tint: glassTint)).with(.glow, .rim, strength: 0.7), in: shape)
+        // The system's clear glass (it bends what's behind), barely tinted with the compartment's colour, with a hint of Aqua's gloss and glow.
+        .finish(.glass(GlassToken(.clear, tint: glassTint)).with(.glow, .gloss, strength: 0.2), in: shape)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
@@ -392,7 +392,7 @@ private struct CompartmentNode: View {
     private var glassTint: ColorToken {
         isDragging ? ColorToken.fixedWhite.opacity(dark ? 0.25 : 0.55)
             : isLinkingTarget && !comp.isSelected ? ColorToken.accent.opacity(0.25)
-            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.35 : 0.16)
+            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.22 : 0.04)
     }
 
     private func dot(_ c: Color) -> some View {

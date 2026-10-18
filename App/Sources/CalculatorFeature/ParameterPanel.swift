@@ -67,8 +67,13 @@ struct ParameterContent: View {
     var body: some View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    SectionLabel("Parameters")
+                    // The panel's title, so it doesn't read as one more section heading over "Method".
+                    Text("Parameters")
+                        .font(TypeToken.title)
+                        .foregroundStyle(.ink)
+                        .accessibilityAddTraits(.isHeader)
                         .padding(.top, 18)
+                        .padding(.bottom, Space.medium)
                         .padding(.horizontal, 18)
 
                     if !variants.isEmpty {
@@ -228,9 +233,9 @@ struct ReportContent: View {
         if reportRows.isEmpty {
             VStack(spacing: 16) {
                 Image(systemName: "tablecells")
-                    .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    .font(.system(size: 48)).foregroundStyle(.inkFaint)
                 Text("Run a calculation to see the tabular report")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.inkMuted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -271,12 +276,12 @@ struct ReportContent: View {
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .overlay { EdgeFade(.bottom) }
-            .font(.system(size: 11, design: .monospaced))
+            .font(TypeToken.codeSmall)
         }
     }
 
     private func timeHeaderCell(_ text: String) -> some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+        Text(text).font(TypeToken.sectionLabel).lineLimit(1)
             .frame(width: 64, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 6)
     }
@@ -286,12 +291,12 @@ struct ReportContent: View {
             .padding(.horizontal, 8).padding(.vertical, 4)
     }
     private func headerCell(_ text: String) -> some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+        Text(text).font(TypeToken.sectionLabel).lineLimit(1)
             .frame(width: 120, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 6)
     }
     private func dataCell(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary)
+        Text(text).foregroundStyle(.inkMuted)
             .frame(width: 120, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 4)
     }

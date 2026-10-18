@@ -214,15 +214,15 @@ struct HomeContent: View {
                 ZStack {
                     Circle()
                         .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6]))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.inkFaint)
                         .frame(width: 60, height: 60)
                     Image(systemName: "plus")
                         .font(.system(size: 22, weight: .light))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.inkMuted)
                 }
                 Text("New blank model")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .font(TypeToken.title.weight(.semibold))
+                    .foregroundStyle(.inkMuted)
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: big ? 220 : 132)
@@ -234,14 +234,14 @@ struct HomeContent: View {
                     )
                     .foregroundStyle(
                         colorScheme == .dark
-                            ? Color.white.opacity(0.22)
-                            : Color.black.opacity(0.20)
+                            ? Color(ColorToken.fixedWhite.opacity(0.22))
+                            : Color(ColorToken.fixedBlack.opacity(0.20))
                     )
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(
                         colorScheme == .dark
-                            ? Color.white.opacity(0.03)
-                            : Color.white.opacity(0.28)
+                            ? Color(ColorToken.fixedWhite.opacity(0.03))
+                            : Color(ColorToken.fixedWhite.opacity(0.28))
                     )
             }
         }
@@ -254,8 +254,8 @@ struct HomeContent: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Loading documents…")
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
+                .font(TypeToken.body)
+                .foregroundStyle(.inkMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -265,12 +265,12 @@ struct HomeContent: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Loading…")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
+                .font(TypeToken.detail)
+                .foregroundStyle(.inkMuted)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 164)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassSurface(.regular, cornerRadius: Radius.card)
     }
 }
 
@@ -293,7 +293,7 @@ private struct HomeListRow: View {
                 if card.halfLife > 0 {
                     HalfLifeTag {
                         Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
-                            .font(.system(size: 12.5, weight: .semibold))
+                            .font(TypeToken.detail.weight(.semibold))
                             .foregroundStyle(Color(.inkMuted))
                             .padding(.horizontal, 11)
                             .frame(height: 26)
@@ -306,11 +306,11 @@ private struct HomeListRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(TypeToken.title)
                     .tracking(-0.3)
                 if !card.description.isEmpty {
                     Text(card.description)
-                        .font(.system(size: 14.5))
+                        .font(TypeToken.detail)
                         .foregroundStyle(Color(.inkMuted))
                 }
                 HStack(spacing: 16) {
@@ -348,8 +348,8 @@ private struct HomeListRow: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8) }
+                    .font(TypeToken.detail.weight(.medium))
+                if !label.isEmpty { Text(label).font(TypeToken.bodyStrong).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
                              ? Color(.danger)
@@ -363,7 +363,7 @@ private struct HomeListRow: View {
 
     private func countStat(systemImage: String, n: Int) -> some View {
         Label("\(n)", systemImage: systemImage)
-            .font(.system(size: 13.5))
+            .font(TypeToken.detail)
             .foregroundStyle(Color(.inkFaint))
     }
 }
@@ -389,7 +389,7 @@ private struct HomeModelCard: View {
                     if card.halfLife > 0 {
                         HalfLifeTag {
                             Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
-                                .font(.system(size: 12.5, weight: .semibold))
+                                .font(TypeToken.detail.weight(.semibold))
                                 .foregroundStyle(Color(.inkMuted))
                                 .padding(.horizontal, 11)
                                 .frame(height: 26)
@@ -402,11 +402,11 @@ private struct HomeModelCard: View {
                 // Name + description + counts
                 VStack(alignment: .leading, spacing: 4) {
                     Text(card.name)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(TypeToken.title)
                         .tracking(-0.3)
                     if !card.description.isEmpty {
                         Text(card.description)
-                            .font(.system(size: 14.5))
+                            .font(TypeToken.detail)
                             .foregroundStyle(Color(.inkMuted))
                             .lineLimit(4)
                     }
@@ -414,7 +414,7 @@ private struct HomeModelCard: View {
                         Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
                         Label("\(card.connectionCount)", systemImage: "arrow.triangle.branch")
                     }
-                    .font(.system(size: 13.5))
+                    .font(TypeToken.detail)
                     .foregroundStyle(Color(.inkFaint))
                     .padding(.top, 8)
                 }
@@ -447,9 +447,9 @@ private struct HomeModelCard: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 7) {
-                Image(systemName: systemImage).font(.system(size: 13, weight: .medium))
+                Image(systemName: systemImage).font(TypeToken.detail.weight(.medium))
                 if !label.isEmpty {
-                    Text(label).font(.system(size: 14.5, weight: .semibold))
+                    Text(label).font(TypeToken.detail.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }

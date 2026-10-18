@@ -396,7 +396,7 @@ struct CalculatorContent: View {
     private func logPill(_ label: String, binding: Binding<Bool>) -> some View {
         Pill(isActive: binding.wrappedValue, action: { binding.wrappedValue.toggle() }) {
             Text(label)
-                .font(.system(size: 13, weight: .semibold))
+                .font(TypeToken.detail.weight(.semibold))
                 .foregroundStyle(binding.wrappedValue ? Color.accentColor : .secondary)
                 .padding(.horizontal, 13).frame(height: 34)
         }

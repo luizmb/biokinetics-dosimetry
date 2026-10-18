@@ -49,7 +49,7 @@ struct CreditsSheet: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title.uppercased())
-            .font(.system(size: 11, weight: .semibold))
+            .font(TypeToken.sectionLabel)
             .kerning(0.5)
             .foregroundStyle(Color(.inkFaint))
             .padding(.horizontal, 16)
@@ -62,32 +62,32 @@ struct CreditsSheet: View {
         let content = VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Text(item.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(TypeToken.bodyStrong)
                     .foregroundStyle(Color(.ink))
                 Spacer()
                 if let badge = item.license {
                     Text(badge)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(TypeToken.codeSmall.weight(.medium))
                         .foregroundStyle(Color(.accent))
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Color(.accent).opacity(0.10), in: Capsule())
                 }
                 if item.url != nil {
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 11))
+                        .font(TypeToken.sectionLabel.weight(.regular))
                         .foregroundStyle(Color(.inkFaint))
                 }
             }
             if let subtitle = item.subtitle {
                 Text(subtitle)
-                    .font(.system(size: 13))
+                    .font(TypeToken.detail)
                     .foregroundStyle(Color(.inkMuted))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let detail = item.detail {
                 Text(detail)
-                    .font(.system(size: 12))
+                    .font(TypeToken.detail)
                     .foregroundStyle(Color(.inkFaint))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -422,8 +422,8 @@ struct EditorContent: View {
             Pill {
                 Button { onAddCompartment(.steel) } label: {
                     Label("Compartment", systemImage: "plus.square")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -433,7 +433,7 @@ struct EditorContent: View {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
                     Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
@@ -442,8 +442,8 @@ struct EditorContent: View {
             Pill {
                 Button { modelListSheet.wrappedValue = true } label: {
                     Label("Model", systemImage: "list.bullet")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -561,8 +561,8 @@ struct EditorContent: View {
                     }
                 } label: {
                     Label("Compartment", systemImage: "plus.square")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .lineLimit(1)
                         .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
@@ -573,7 +573,7 @@ struct EditorContent: View {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
                     Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
                         .lineLimit(1)
                         .fixedSize()
@@ -584,7 +584,7 @@ struct EditorContent: View {
             Pill(isActive: showKValues) {
                 Button(action: onToggleKValues) {
                     Text("K")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(TypeToken.detail.weight(.bold))
                         .foregroundStyle(showKValues ? Color.accentColor : .primary)
                         .padding(.horizontal, 15).frame(height: 44)
                 }

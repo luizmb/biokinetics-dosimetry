@@ -27,15 +27,15 @@ struct NewDocumentSheet: View {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(f.lingo.fieldName)
-                                                .font(.system(size: 15))
+                                                .font(TypeToken.body)
                                             Text("\(f.lingo.substanceName) · \(f.lingo.intakeLabel) · \(f.lingo.eliminationLabel)")
-                                                .font(.system(size: 11))
+                                                .font(TypeToken.sectionLabel.weight(.regular))
                                                 .foregroundStyle(Color(.inkFaint))
                                         }
                                         Spacer()
                                         if field == f {
                                             Image(systemName: "checkmark")
-                                                .font(.system(size: 13, weight: .semibold))
+                                                .font(TypeToken.detail.weight(.semibold))
                                                 .foregroundStyle(Color(.accent))
                                         }
                                     }
@@ -48,11 +48,7 @@ struct NewDocumentSheet: View {
                         .padding(.bottom, 24)
 
                         SectionLabel("Name")
-                        Panel(cornerRadius: 12, padding: 0) {
-                            TextField("Model name", text: $name)
-                                .padding(.horizontal, 14)
-                                .frame(height: 44)
-                        }
+                        FieldText("Model name", text: $name)
                         .padding(.bottom, 8)
 
                         Text("You can rename the model and change its field at any time from the editor.")
