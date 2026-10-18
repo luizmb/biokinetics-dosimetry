@@ -2,7 +2,6 @@ import AppDomain
 import Domain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - Derived helpers used internally
 

@@ -155,6 +155,8 @@ public enum EditorFeature {
         case renameDocument(String)
         case updateDescription(String)
         case updateField(ModelField)
+        /// The canvas's backdrop for this model; `nil` goes back to its field's.
+        case updateBackdrop(EditorBackdrop?)
         case updateHalfLife(Double)
         // Nuclide management
         case addNuclide
@@ -255,6 +257,9 @@ public enum EditorFeature {
             public var documentName: String = ""
             public var documentDescription: String = ""
             public var field: ModelField = .generic
+            /// The document's own backdrop (`nil` for its field's), and the one shown.
+            public var backdrop: EditorBackdrop?
+            public var resolvedBackdrop: EditorBackdrop = .graphPaper
             public var lingo: FieldLingo = ModelField.generic.lingo
             /// Shortcut for the primary nuclide's half-life; kept for the toolbar badge.
             public var halfLife: Double = 0
@@ -310,6 +315,7 @@ public enum EditorFeature {
             case renameDocument(String)
             case updateDescription(String)
             case updateField(ModelField)
+            case updateBackdrop(EditorBackdrop?)
             // Nuclide management
             case addNuclide
             case updateNuclideName(id: String, name: String)
@@ -457,6 +463,8 @@ public enum EditorFeature {
             documentName: doc.name,
             documentDescription: doc.description,
             field: doc.field,
+            backdrop: doc.backdrop,
+            resolvedBackdrop: doc.resolvedBackdrop,
             lingo: doc.field.lingo,
             halfLife: doc.halfLife,
             nuclides: nuclides,
@@ -507,6 +515,7 @@ public enum EditorFeature {
         case .renameDocument(let n):                               .renameDocument(n)
         case .updateDescription(let d):                            .updateDescription(d)
         case .updateField(let f):                                  .updateField(f)
+        case .updateBackdrop(let b):                               .updateBackdrop(b)
         case .addNuclide:                                          .addNuclide
         case .updateNuclideName(let id, let n):                    .updateNuclideName(id: id, name: n)
         case .updateNuclideHalfLife(let id, let hl):               .updateNuclideHalfLife(id: id, halfLife: hl)
@@ -586,6 +595,9 @@ public enum EditorFeature {
 
             case .updateField(let f):
                 .reduce { $0.document.field = f }
+
+            case .updateBackdrop(let backdrop):
+                .reduce { $0.document.backdrop = backdrop }
 
             case .updateHalfLife(let hl):
                 .reduce { state in

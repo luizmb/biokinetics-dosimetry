@@ -1,7 +1,6 @@
 import AppDomain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - CompartmentCanvasView (pure)
 
@@ -17,6 +16,8 @@ import VitralTokens
 struct CompartmentCanvasView: View {
     let compartments: [EditorFeature.CompartmentRow]
     let links:        [EditorFeature.LinkRow]
+    /// Draws the graph paper, sliding with the canvas; otherwise the backdrop behind shows.
+    let drawsGraphPaper: Bool
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
     let showKValues: Bool
@@ -65,6 +66,7 @@ struct CompartmentCanvasView: View {
             ZStack {
             // ── Graph paper — outside the pinch image and drawn at the pinch in progress, so a
             // zoom-out never shows past its edge (it's one cheap drawing, no glass) ──
+            if drawsGraphPaper {
             Backdrop(.grid(
                 origin: CGPoint(
                     x: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).x - hw) * pinchScale + hw + pinchOffset.x,
@@ -72,6 +74,7 @@ struct CompartmentCanvasView: View {
                 ),
                 scale: s * pinchScale
             ))
+            }
             ZStack {
 
                 // ── Intake arrows — bold arrows from above for intake compartments ──
@@ -363,8 +366,8 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        .glassEffect(.clear.tint(isDragging ? Color.white.opacity(dark ? 0.25 : 0.55) : glassTint), in: shape)
-        .glassEffectTransition(.identity)
+        // Clear glass tinted with the compartment's colour, lit from below and rimmed like a gel.
+        .finish(.glass(GlassToken(.clear, tint: glassTint)).with(.glow, .rim), in: shape)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
@@ -384,10 +387,12 @@ private struct CompartmentNode: View {
         .padding(.horizontal, 8)
     }
 
-    /// No border: the glass edge is the outline. Selection and linking show as a deeper tint.
-    private var glassTint: Color {
-        if isLinkingTarget, !comp.isSelected { return Color.accentColor.opacity(0.25) }
-        return comp.tint.indicator(dark: dark).opacity(comp.isSelected ? 0.35 : 0.1)
+    /// No border: the glass edge is the outline. Selection, linking and dragging show as a
+    /// deeper tint.
+    private var glassTint: ColorToken {
+        isDragging ? ColorToken.fixedWhite.opacity(dark ? 0.25 : 0.55)
+            : isLinkingTarget && !comp.isSelected ? ColorToken.accent.opacity(0.25)
+            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.35 : 0.1)
     }
 
     private func dot(_ c: Color) -> some View {

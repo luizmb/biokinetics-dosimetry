@@ -3,7 +3,6 @@ import Charts
 import Domain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - DecayChartContent (pure)
 

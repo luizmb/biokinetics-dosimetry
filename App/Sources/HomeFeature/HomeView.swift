@@ -2,7 +2,6 @@ import AppDomain
 import SwiftRexArchitecture
 import SwiftUI
 import Vitral
-import VitralTokens
 import UniformTypeIdentifiers
 
 // MARK: - HomeView (container — thin SwiftRex wrapper)

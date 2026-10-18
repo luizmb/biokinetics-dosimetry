@@ -3,7 +3,6 @@ import Domain
 import SwiftRexArchitecture
 import SwiftUI
 import Vitral
-import VitralTokens
 
 private extension Array where Element == CompartmentalModel.ValidationIssue {
     var hasErrors: Bool { contains { $0.severity == .error } }

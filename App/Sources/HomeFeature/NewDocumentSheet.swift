@@ -1,7 +1,6 @@
 import AppDomain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 struct NewDocumentSheet: View {
     @Binding var field: ModelField

@@ -3,7 +3,6 @@ import Domain
 import SwiftRexArchitecture
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - EditorView (container)
 
@@ -76,6 +75,11 @@ public struct EditorView: View {
             set: { viewStore.dispatch(.updateField($0)) }
         )
 
+        let backdropBinding = Binding(
+            get: { viewStore.state.backdrop.value },
+            set: { viewStore.dispatch(.updateBackdrop($0)) }
+        )
+
         // Nuclide field bindings — one entry per nuclide in the document.
         let nuclideBindings: [NuclideEditBinding] = viewStore.state.nuclides.value.map { n in
             NuclideEditBinding(
@@ -97,6 +101,8 @@ public struct EditorView: View {
             documentName:        documentNameBinding,
             documentDescription: documentDescriptionBinding,
             field:               fieldBinding,
+            backdrop:            backdropBinding,
+            resolvedBackdrop:    viewStore.state.resolvedBackdrop.value,
             lingo:               viewStore.state.lingo.value,
             halfLife:           viewStore.state.halfLife,
             nuclides:           viewStore.state.nuclides.value,
@@ -165,6 +171,9 @@ struct EditorContent: View {
     var documentName:        Binding<String>
     var documentDescription: Binding<String>
     var field:               Binding<ModelField>
+    /// The model's own backdrop (`nil` for its field's), and the one shown.
+    var backdrop:            Binding<EditorBackdrop?>
+    let resolvedBackdrop:    EditorBackdrop
     let lingo: FieldLingo
     let halfLife: Double
     let nuclides: [EditorFeature.NuclideRow]
@@ -238,7 +247,8 @@ struct EditorContent: View {
 
     var body: some View {
         ZStack {
-            Backdrop()
+            // Graph paper is the canvas's own, sliding with it; any other backdrop sits behind.
+            if resolvedBackdrop != .graphPaper { Backdrop(resolvedBackdrop.style) } else { Backdrop() }
             if isCompact { compactLayout } else { regularLayout }
         }
         .navigationTitle(documentName.wrappedValue)
@@ -297,6 +307,8 @@ struct EditorContent: View {
                     documentName: documentName,
                     documentDescription: documentDescription,
                     field: field,
+                    backdrop: backdrop,
+                    resolvedBackdrop: resolvedBackdrop,
                     lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,
@@ -370,6 +382,7 @@ struct EditorContent: View {
     private var canvas: some View {
         CompartmentCanvasView(
             compartments: compartments, links: links,
+            drawsGraphPaper: resolvedBackdrop == .graphPaper,
             selectedCompartmentId: selectedCompartmentId,
             selectedLinkIndex: selectedLinkIndex,
             showKValues: showKValues,
@@ -457,6 +470,8 @@ struct EditorContent: View {
                     documentName: documentName,
                     documentDescription: documentDescription,
                     field: field,
+                    backdrop: backdrop,
+                    resolvedBackdrop: resolvedBackdrop,
                     lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,

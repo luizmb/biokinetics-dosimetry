@@ -2,7 +2,6 @@ import AppDomain
 import Domain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - Field binding groups
 // Created in the @BoundTo container; the pure inspector views just consume them.
@@ -35,6 +34,8 @@ struct EditorInspectorPanel: View {
     @Binding var documentName: String
     @Binding var documentDescription: String
     @Binding var field: ModelField
+    @Binding var backdrop: EditorBackdrop?
+    let resolvedBackdrop: EditorBackdrop
     let lingo: FieldLingo
     let nuclides:             [EditorFeature.NuclideRow]
     let compartments:         [EditorFeature.CompartmentRow]
@@ -457,6 +458,10 @@ struct EditorInspectorPanel: View {
             }
             .padding(.bottom, 18)
 
+            SectionLabel("Backdrop")
+            BackdropPicker(selection: $backdrop, fieldDefault: field.backdrop)
+                .padding(.bottom, 18)
+
             SectionLabel(LocalizedStringKey(lingo.substancesLabel))
             Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
@@ -663,3 +668,38 @@ struct EditorInspectorPanel: View {
 }
 
 private enum ArrowDirection { case forward, backward }
+
+/// The model's backdrop: its field's (automatic), or one of its own, as tiles.
+struct BackdropPicker: View {
+    @Binding var selection: EditorBackdrop?
+    let fieldDefault: EditorBackdrop
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: Space.small)], spacing: Space.small) {
+            tile(title: "Automatic", backdrop: fieldDefault, value: nil)
+            ForEach(EditorBackdrop.allCases, id: \.self) { backdrop in
+                tile(title: LocalizedStringKey(backdrop.title), backdrop: backdrop, value: backdrop)
+            }
+        }
+    }
+
+    func tile(title: LocalizedStringKey, backdrop: EditorBackdrop, value: EditorBackdrop?) -> some View {
+        Button { selection = value } label: {
+            Tag(title)
+                .font(.caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .bottomLeading)
+                .padding(Space.extraSmall)
+                .background { Backdrop(backdrop.style) }
+                .clipShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                        .strokeBorder(Color(selection == value ? .accent : .hairline), lineWidth: selection == value ? 2.5 : 0.5)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selection == value ? .isSelected : [])
+    }
+}

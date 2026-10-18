@@ -4,7 +4,6 @@ import SwiftRexArchitecture
 import SwiftRexSwiftUI
 import SwiftUI
 import Vitral
-import VitralTokens
 
 /// The app shell — a `NavigationStack` over the store's path.
 ///
@@ -35,5 +34,7 @@ public struct AppRootView: View, Routable {
                     router.destination(for: route, from: viewStore)
                 }
         }
+        // Buttons are clear glass under Aqua's gloss and glow; the main action keeps the accent.
+        .controlFinish(.glass(.clear).gel)
     }
 }

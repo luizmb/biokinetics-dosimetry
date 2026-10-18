@@ -1,7 +1,6 @@
 import AppDomain
 import SwiftUI
 import Vitral
-import VitralTokens
 
 // MARK: - EditorModelListPanel (pure)
 
