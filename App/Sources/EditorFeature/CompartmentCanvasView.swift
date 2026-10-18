@@ -367,7 +367,7 @@ private struct CompartmentNode: View {
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
         // The system's clear glass (it bends what's behind), barely tinted with the compartment's colour, with a hint of Aqua's gloss and glow.
-        .finish(.glass(GlassToken(.clear, tint: glassTint)).with(.glow, .gloss, strength: 0.2), in: shape)
+        .finish(.glass(GlassToken(.clear, tint: glassTint)).sheen(gloss: 0.2, glow: 0.2), in: shape)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
