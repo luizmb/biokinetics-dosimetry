@@ -141,7 +141,9 @@ jobs:
               params={"filter[name]": profile_name, "filter[profileState]": "ACTIVE"},
               timeout=30,
           )
-          resp.raise_for_status()
+          if not resp.ok:
+              # Apple says why in the body (an agreement to accept, a key without the role, …).
+              raise SystemExit(f"App Store Connect API {resp.status_code}: {resp.text}")
           items = resp.json()["data"]
           if not items:
               raise SystemExit(f"No active profile named {profile_name!r} found via the App Store Connect API")
