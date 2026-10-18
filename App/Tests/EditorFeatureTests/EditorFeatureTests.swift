@@ -432,11 +432,12 @@ struct EditorFeatureNuclideTests {
         let s = store(initial: initial)
         s.dispatch(.addNuclide) { _ in }
         await s.runEffects()
-        s.receive(EditorFeature.Action.prism.addNuclideWithId) { id, state in
+        s.receive(EditorFeature.Action.prism.addNuclideWithId) { new, state in
             // Name comes from field lingo; .validation fixture uses .generic → "New Substance"
+            #expect(new.1 == "New \(state.document.field.lingo.substanceName)")
             state.document.model = state.document.model.with(
                 nuclides: state.document.model.nuclides + [
-                    Nuclide(id: id, name: "New \(state.document.field.lingo.substanceName)", halfLife: 0)
+                    Nuclide(id: new.0, name: new.1, halfLife: 0)
                 ]
             )
         }

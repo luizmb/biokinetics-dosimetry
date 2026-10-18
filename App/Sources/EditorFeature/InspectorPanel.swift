@@ -1,6 +1,7 @@
 import AppDomain
 import Domain
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - Field binding groups
@@ -85,8 +86,8 @@ struct EditorInspectorPanel: View {
                 SegmentedControlGlass(
                     selection: $inspectorTab,
                     options: [
-                        ChoiceOption(EditorFeature.InspectorTab.details, title: "Details"),
-                        ChoiceOption(EditorFeature.InspectorTab.relationships, title: "Relationships"),
+                        ChoiceOption(EditorFeature.InspectorTab.details, title: L.Editor.details),
+                        ChoiceOption(EditorFeature.InspectorTab.relationships, title: L.Editor.relationships),
                     ]
                 )
                 .padding(.horizontal, 12)
@@ -94,7 +95,7 @@ struct EditorInspectorPanel: View {
                 Hairline()
             } else {
                 HStack {
-                    Text("INSPECTOR")
+                    Text(L.Editor.inspectorHeading)
                         .font(TypeToken.sectionLabel)
                         .kerning(0.5)
                         .foregroundStyle(Color(.inkFaint))
@@ -130,7 +131,7 @@ struct EditorInspectorPanel: View {
         _ comp: EditorFeature.CompartmentRow,
         bindings: CompartmentFieldBindings
     ) -> some View {
-        inspectorHead(swatch: comp.tint, title: comp.name, sub: "Compartment")
+        inspectorHead(swatch: comp.tint, title: Text(verbatim: comp.name), sub: Text(L.Common.compartment))
 
         switch inspectorTab {
         case .details:       compartmentDetails(comp, bindings: bindings)
@@ -143,11 +144,11 @@ struct EditorInspectorPanel: View {
         _ comp: EditorFeature.CompartmentRow,
         bindings: CompartmentFieldBindings
     ) -> some View {
-        SectionLabel("Name")
-        FieldText("Name", text: bindings.name)
+        SectionLabel(L.Common.name)
+        FieldText(L.Common.name, text: bindings.name)
         .padding(.bottom, 18)
 
-        SectionLabel("Color")
+        SectionLabel(L.Editor.color)
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 8) {
             ForEach(CompartmentTint.allCases, id: \.self) { tint in
                 Circle()
@@ -161,19 +162,19 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 18)
 
-        SectionLabel("Flags")
+        SectionLabel(L.Editor.flags)
         Panel(cornerRadius: 16, padding: 0) {
             VStack(spacing: 0) {
-                flagRow("Track",                  dot: Color(.accent), isOn: bindings.follow)
+                flagRow(L.Editor.track,                  dot: Color(.accent), isOn: bindings.follow)
                 Hairline()
-                flagRow(lingo.eliminationLabel,   dot: Color(.warning), isOn: bindings.dispose)
+                flagRow(L.domain(lingo.eliminationLabel),   dot: Color(.warning), isOn: bindings.dispose)
                 Hairline()
-                flagRow(lingo.intakeLabel,        dot: Color(.success), isOn: bindings.intake)
+                flagRow(L.domain(lingo.intakeLabel),        dot: Color(.success), isOn: bindings.intake)
                 if bindings.intake.wrappedValue {
                     Hairline()
                     HStack(spacing: 10) {
                         Circle().fill(Color(.success).opacity(0.4)).frame(width: 9, height: 9)
-                        Text("Fraction (0–1)").font(TypeToken.body)
+                        Text(L.Editor.fraction).font(TypeToken.body)
                         Spacer()
                         TextField("0", value: bindings.fraction, format: .number.precision(.fractionLength(6)))
                             .font(TypeToken.code)
@@ -188,7 +189,7 @@ struct EditorInspectorPanel: View {
         }
         .padding(.bottom, 14)
 
-        SectionLabel(LocalizedStringKey(lingo.substanceName))
+        SectionLabel(L.domain(lingo.substanceName))
         if nuclides.count > 1 {
             RadioList(
                 selection: bindings.nuclideId,
@@ -197,7 +198,7 @@ struct EditorInspectorPanel: View {
                         n.id,
                         title: LocalizedStringKey(n.name),
                         detail: n.halfLife > 0
-                            ? Text(verbatim: "\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)")
+                            ? (Text(L.domain(lingo.halfLifeLabel)) + Text(verbatim: " \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) ") + Text(L.domain(lingo.timeUnit.label)))
                             : nil
                     )
                 }
@@ -208,7 +209,7 @@ struct EditorInspectorPanel: View {
                     Text(n.name).font(TypeToken.body)
                     Spacer()
                     if n.halfLife > 0 {
-                        Text("\(lingo.halfLifeLabel) \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) \(lingo.timeUnit.label)")
+                        (Text(L.domain(lingo.halfLifeLabel)) + Text(verbatim: " \(n.halfLife.formatted(.number.precision(.fractionLength(2)))) ") + Text(L.domain(lingo.timeUnit.label)))
                             .font(TypeToken.codeSmall)
                             .foregroundStyle(.inkMuted)
                     }
@@ -223,13 +224,13 @@ struct EditorInspectorPanel: View {
         let outbound = links.filter { $0.fromId == comp.id }
         let inbound  = links.filter { $0.toId   == comp.id }
 
-        transferGroup("Outbound", links: outbound, direction: .forward)
-        transferGroup("Inbound",  links: inbound,  direction: .backward)
+        transferGroup(L.Editor.outbound, links: outbound, direction: .forward)
+        transferGroup(L.Editor.inbound,  links: inbound,  direction: .backward)
 
         Button {
             onBeginLinking()
         } label: {
-            Label("Add transfer", systemImage: "plus.circle")
+            Label(L.Editor.addTransfer, systemImage: "plus.circle")
                 .font(TypeToken.bodyStrong)
                 .foregroundStyle(Color(.accent))
         }
@@ -239,12 +240,12 @@ struct EditorInspectorPanel: View {
 
     @ViewBuilder
     private func transferGroup(
-        _ title: String,
+        _ title: LocalizedStringKey,
         links groupLinks: [EditorFeature.LinkRow],
         direction: ArrowDirection
     ) -> some View {
         if !groupLinks.isEmpty {
-            SectionLabel(LocalizedStringKey(title))
+            SectionLabel(title)
             Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(groupLinks.enumerated()), id: \.1.id) { idx, link in
@@ -296,8 +297,8 @@ struct EditorInspectorPanel: View {
         _ link: EditorFeature.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
-        inspectorHead(branch: true, title: "K\(link.id + 1)",
-                      sub: "\(link.fromName) → \(link.toName)")
+        inspectorHead(branch: true, title: Text(verbatim: "K\(link.id + 1)"),
+                      sub: Text(verbatim: "\(link.fromName) → \(link.toName)"))
 
         switch inspectorTab {
         case .details:       linkDetails(link, bindings: bindings)
@@ -310,33 +311,33 @@ struct EditorInspectorPanel: View {
         _ link: EditorFeature.LinkRow,
         bindings: LinkFieldBindings
     ) -> some View {
-        SectionLabel("Rate (\(lingo.rateUnit))")
+        SectionLabel(L.Editor.rateWithUnit(L.domainString(lingo.rateUnit)))
         FieldContainer {
-            TextField("Rate", value: bindings.rate, format: .number)
+            TextField(L.Editor.rate, value: bindings.rate, format: .number)
                 .fontDesign(.monospaced)
                 .decimalKeyboard()
         }
         .padding(.bottom, 18)
 
-        SectionLabel("Endpoints")
+        SectionLabel(L.Editor.endpoints)
         Panel(cornerRadius: 16, padding: 0) {
             VStack(spacing: 0) {
-                endpointRow(name: link.fromName, tint: link.fromTint, label: "From") {
+                endpointRow(name: link.fromName, tint: link.fromTint, label: L.Editor.from) {
                     onSelectCompartment(link.fromId)
                 }
                 Hairline()
-                endpointRow(name: link.toName, tint: link.toTint, label: "To") {
+                endpointRow(name: link.toName, tint: link.toTint, label: L.Editor.to) {
                     onSelectCompartment(link.toId)
                 }
             }
         }
 
-        deleteButton(label: "Delete transfer") { onDeleteSelected() }
+        deleteButton(label: L.Editor.deleteTransfer) { onDeleteSelected() }
     }
 
     @ViewBuilder
     private func linkRelationships(_ link: EditorFeature.LinkRow) -> some View {
-        SectionLabel("Reverse transfer")
+        SectionLabel(L.Editor.reverseTransfer)
         let reverse = links.first { $0.fromId == link.toId && $0.toId == link.fromId }
         if let rev = reverse {
             Panel(cornerRadius: 12, padding: 0) {
@@ -345,7 +346,7 @@ struct EditorInspectorPanel: View {
                         .font(TypeToken.codeSmall)
                         .foregroundStyle(Color(.ink))
                     Spacer()
-                    Button("Jump") { onSelectLink(rev.id) }
+                    Button(L.Editor.jump) { onSelectLink(rev.id) }
                         .font(.caption)
                         .foregroundStyle(Color(.accent))
                         .buttonStyle(PlainButtonStyle())
@@ -357,7 +358,7 @@ struct EditorInspectorPanel: View {
             Button {
                 onBeginLinking()
             } label: {
-                Label("Add reverse transfer", systemImage: "plus.circle")
+                Label(L.Editor.addReverseTransfer, systemImage: "plus.circle")
                     .font(TypeToken.bodyStrong)
                     .foregroundStyle(Color(.accent))
             }
@@ -372,26 +373,26 @@ struct EditorInspectorPanel: View {
             HStack(spacing: 10) {
                 Image(systemName: "doc.text").font(.title2).foregroundStyle(.inkMuted)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Document").font(.headline)
-                    Text("Model properties").font(.caption).foregroundStyle(.inkMuted)
+                    Text(L.Common.document).font(.headline)
+                    Text(L.Editor.modelProperties).font(.caption).foregroundStyle(.inkMuted)
                 }
             }
             .padding(.bottom, 16)
 
-            SectionLabel("Name")
-            FieldText("Model name", text: $documentName)
+            SectionLabel(L.Common.name)
+            FieldText(L.Common.modelName, text: $documentName)
             .padding(.bottom, 14)
 
-            SectionLabel("Description")
+            SectionLabel(L.Editor.description)
             FieldContainer {
-                TextField("Optional description", text: $documentDescription, axis: .vertical)
+                TextField(L.Editor.optionalDescription, text: $documentDescription, axis: .vertical)
                     .lineLimit(3...5)
                     .padding(.vertical, Space.small)
             }
             .padding(.bottom, 18)
 
             if !validationIssues.isEmpty {
-                SectionLabel("Issues")
+                SectionLabel(L.Editor.issues)
                 Panel(cornerRadius: 16, padding: 0) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(validationIssues.indices, id: \.self) { i in
@@ -403,36 +404,36 @@ struct EditorInspectorPanel: View {
                 .padding(.bottom, 18)
             }
 
-            SectionLabel("Variants")
+            SectionLabel(L.Editor.variants)
             Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
-                    variantRow(key: nil, label: "Base model")
+                    variantRow(key: nil, label: Text(L.Editor.baseModel))
                     ForEach(variants, id: \.self) { key in
                         Hairline()
-                        variantRow(key: key, label: key)
+                        variantRow(key: key, label: Text(verbatim: key))
                     }
                 }
             }
             .padding(.bottom, 8)
 
             Button {
-                let name = "Variant \(variants.count + 1)"
+                let name = String(localized: L.Resource.Editor.variantNumber(variants.count + 1))
                 onAddVariant(name)
             } label: {
-                Label("Add variant", systemImage: "plus.circle")
+                Label(L.Editor.addVariant, systemImage: "plus.circle")
                     .font(TypeToken.bodyStrong)
                     .foregroundStyle(Color(.accent))
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.bottom, 18)
 
-            SectionLabel("Field")
+            SectionLabel(L.Common.field)
             Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(ModelField.allCases.enumerated()), id: \.1) { idx, f in
                         if idx > 0 { Hairline() }
                         HStack {
-                            Text(f.lingo.fieldName).font(TypeToken.body)
+                            Text(L.domain(f.lingo.fieldName)).font(TypeToken.body)
                             Spacer()
                             if field == f {
                                 Image(systemName: "checkmark").font(TypeToken.detail.weight(.semibold))
@@ -447,11 +448,11 @@ struct EditorInspectorPanel: View {
             }
             .padding(.bottom, 18)
 
-            SectionLabel("Backdrop")
+            SectionLabel(L.Editor.backdrop)
             BackdropPicker(selection: $backdrop, fieldDefault: field.backdrop)
                 .padding(.bottom, 18)
 
-            SectionLabel(LocalizedStringKey(lingo.substancesLabel))
+            SectionLabel(L.domain(lingo.substancesLabel))
             Panel(cornerRadius: 16, padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(nuclideBindings.enumerated()), id: \.1.id) { idx, nb in
@@ -459,7 +460,7 @@ struct EditorInspectorPanel: View {
                         nuclideEditorRow(nb)
                     }
                     if nuclideBindings.isEmpty {
-                        Text("No nuclides — tap + to add one")
+                        Text(L.Editor.noSubstances(L.domainString(lingo.substancesLabel)))
                             .font(.caption).foregroundStyle(.inkMuted)
                             .padding(12).frame(maxWidth: .infinity)
                     }
@@ -468,7 +469,7 @@ struct EditorInspectorPanel: View {
             .padding(.bottom, 8)
 
             Button { onAddNuclide() } label: {
-                Label("Add \(lingo.substanceName)", systemImage: "plus.circle")
+                Label(L.Editor.add(L.domainString(lingo.substanceName)), systemImage: "plus.circle")
                     .font(TypeToken.bodyStrong)
                     .foregroundStyle(Color(.accent))
             }
@@ -477,17 +478,17 @@ struct EditorInspectorPanel: View {
     }
 
     @ViewBuilder
-    private func variantRow(key: String?, label: String) -> some View {
+    private func variantRow(key: String?, label: Text) -> some View {
         let isEditing  = editingVariant == key
         let isRenaming = key != nil && renamingVariant == key
 
         if isRenaming {
             HStack(spacing: 8) {
-                TextField("Variant name", text: $variantRenameDraft)
+                TextField(L.Editor.variantName, text: $variantRenameDraft)
                     .font(TypeToken.body)
                     .submitLabel(.done)
                     .onSubmit { onCommitVariantRename() }
-                Button("Done") { onCommitVariantRename() }
+                Button(L.Common.done) { onCommitVariantRename() }
                     .font(TypeToken.detail.weight(.semibold))
                     .foregroundStyle(Color(.accent))
                     .buttonStyle(PlainButtonStyle())
@@ -499,7 +500,7 @@ struct EditorInspectorPanel: View {
             .padding(.horizontal, 14).padding(.vertical, 11)
         } else {
             HStack {
-                Text(label).font(TypeToken.body)
+                label.font(TypeToken.body)
                 Spacer()
                 if isEditing {
                     Image(systemName: "pencil.circle.fill")
@@ -529,7 +530,7 @@ struct EditorInspectorPanel: View {
     private func nuclideEditorRow(_ nb: NuclideEditBinding) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                TextField("Name", text: nb.name)
+                TextField(L.Common.name, text: nb.name)
                     .font(TypeToken.detail.weight(.semibold))
                 if nb.canDelete {
                     Button(role: .destructive) { onDeleteNuclide(nb.id) } label: {
@@ -539,9 +540,9 @@ struct EditorInspectorPanel: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(lingo.halfLifeLabel).font(TypeToken.sectionLabel.weight(.medium)).foregroundStyle(.inkMuted)
+                Text(L.domain(lingo.halfLifeLabel)).font(TypeToken.sectionLabel.weight(.medium)).foregroundStyle(.inkMuted)
                 if nb.halfLife.wrappedValue == 0 && !lingo.isHalfLifeRequired {
-                    Text("None")
+                    Text(L.Common.none)
                         .font(TypeToken.codeSmall)
                         .foregroundStyle(.inkFaint)
                         .onTapGesture { nb.halfLife.wrappedValue = 1 }
@@ -549,11 +550,11 @@ struct EditorInspectorPanel: View {
                     TextField("0", value: nb.halfLife, format: .number.precision(.fractionLength(4)))
                         .font(TypeToken.codeSmall)
                         .decimalKeyboard()
-                    Text(lingo.timeUnit.label).font(TypeToken.sectionLabel.weight(.regular)).foregroundStyle(.inkMuted)
+                    Text(L.domain(lingo.timeUnit.label)).font(TypeToken.sectionLabel.weight(.regular)).foregroundStyle(.inkMuted)
                 }
             }
             if nb.compartmentCount > 0 {
-                Text("\(nb.compartmentCount) compartment\(nb.compartmentCount == 1 ? "" : "s")")
+                Text(L.Editor.compartmentCount(nb.compartmentCount))
                     .font(TypeToken.sectionLabel.weight(.regular)).foregroundStyle(.inkFaint)
             }
         }
@@ -567,8 +568,8 @@ struct EditorInspectorPanel: View {
     private func inspectorHead(
         swatch: CompartmentTint? = nil,
         branch: Bool = false,
-        title: String,
-        sub: String
+        title: Text,
+        sub: Text
     ) -> some View {
         HStack(spacing: 12) {
             if let swatch {
@@ -580,8 +581,8 @@ struct EditorInspectorPanel: View {
                 Image(systemName: "arrow.triangle.branch").font(.title2).foregroundStyle(.inkMuted)
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(TypeToken.title)
-                Text(sub).font(TypeToken.detail).foregroundStyle(Color(.inkFaint))
+                title.font(TypeToken.title)
+                sub.font(TypeToken.detail).foregroundStyle(Color(.inkFaint))
             }
             Spacer()
         }
@@ -589,17 +590,17 @@ struct EditorInspectorPanel: View {
     }
 
     // Binding<Bool> is passed in directly — no inline get/set needed in the pure view.
-    private func flagRow(_ label: String, dot: Color, isOn: Binding<Bool>) -> some View {
+    private func flagRow(_ label: LocalizedStringKey, dot: Color, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 10) {
             Circle().fill(dot).frame(width: 9, height: 9)
-            ToggleSwitch(LocalizedStringKey(label), isOn: isOn)
+            ToggleSwitch(label, isOn: isOn)
         }
         .padding(.horizontal, 15)
     }
 
     @ViewBuilder
     private func endpointRow(
-        name: String, tint: CompartmentTint, label: String, onTap: @escaping () -> Void
+        name: String, tint: CompartmentTint, label: LocalizedStringKey, onTap: @escaping () -> Void
     ) -> some View {
         HStack(spacing: 10) {
             Text(label)
@@ -627,7 +628,7 @@ struct EditorInspectorPanel: View {
                 .font(TypeToken.detail)
                 .foregroundStyle(issueTint(issue.severity))
                 .frame(width: 20)
-            Text(issue.issueDescription)
+            Text(issue.text)
                 .font(TypeToken.detail)
                 .foregroundStyle(issueTint(issue.severity))
                 .fixedSize(horizontal: false, vertical: true)
@@ -644,7 +645,7 @@ struct EditorInspectorPanel: View {
         }
     }
 
-    private func deleteButton(label: String, action: @escaping () -> Void) -> some View {
+    private func deleteButton(label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(role: .destructive, action: action) {
             Label(label, systemImage: "trash").font(TypeToken.bodyStrong)
         }
@@ -662,9 +663,9 @@ struct BackdropPicker: View {
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: Space.small)], spacing: Space.small) {
-            tile(title: "Automatic", backdrop: fieldDefault, value: nil)
+            tile(title: L.Common.automatic, backdrop: fieldDefault, value: nil)
             ForEach(EditorBackdrop.allCases, id: \.self) { backdrop in
-                tile(title: LocalizedStringKey(backdrop.title), backdrop: backdrop, value: backdrop)
+                tile(title: L.domain(backdrop.title), backdrop: backdrop, value: backdrop)
             }
         }
     }

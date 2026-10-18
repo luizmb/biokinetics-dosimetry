@@ -1,5 +1,5 @@
 {
-  "originHash" : "944d13f5925bf3134b485bda269a59840cb9c242ea9330cdba9adc737a5869fb",
+  "originHash" : "6ba7ebada02ab48911a5a05d5fe32bfb3fa47317a3189f89e46cc66956103567",
   "pins" : [
     {
       "identity" : "fp",
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SwiftRex/SwiftRex.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "5d35ccca10f3cbca0e678ac7ea74715b41ee8a9a"
+        "branch" : "feature/localized-resource-leaf",
+        "revision" : "efb7d508fdbabff36180ea2f109313b9b7099590"
       }
     },
     {
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/Vitral.git",
       "state" : {
-        "revision" : "b8d40ba7b61784cbb042355cc1e7824f33d85017",
-        "version" : "0.2.4"
+        "revision" : "ddbb844467516d7f07cda33cfb0eb2ba5a6cf832",
+        "version" : "0.2.6"
       }
     },
     {

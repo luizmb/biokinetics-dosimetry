@@ -1,5 +1,6 @@
 import AppDomain
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - CreditsSheet
@@ -14,17 +15,17 @@ struct CreditsSheet: View {
                 Backdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        sectionHeader("Scientific References & Model Credits")
+                        sectionHeader(L.Credits.scientific)
                         ForEach(scientificCredits) { item in
                             creditRow(item)
                         }
 
-                        sectionHeader("Open Source Libraries")
+                        sectionHeader(L.Credits.libraries)
                         ForEach(libraryCredits) { item in
                             creditRow(item)
                         }
 
-                        Text("This app is a Swift translation and extension of the SSID project originally developed by Thiago Claro at IPEN‑CNEN/SP, São Paulo, Brazil.")
+                        Text(L.Credits.ssidStatement)
                             .font(.caption)
                             .foregroundStyle(Color(.inkFaint))
                             .padding(.horizontal, 16)
@@ -33,11 +34,11 @@ struct CreditsSheet: View {
                     }
                 }
             }
-            .navigationTitle("Credits & Licenses")
+            .navigationTitle(L.Credits.title)
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: onDismiss)
+                    Button(L.Common.done, action: onDismiss)
                 }
             }
         }
@@ -47,8 +48,9 @@ struct CreditsSheet: View {
 
     // MARK: - Rows
 
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .textCase(.uppercase)
             .font(TypeToken.sectionLabel)
             .kerning(0.5)
             .foregroundStyle(Color(.inkFaint))
@@ -61,7 +63,7 @@ struct CreditsSheet: View {
     private func creditRow(_ item: CreditItem) -> some View {
         let content = VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(item.title)
+                item.title
                     .font(TypeToken.bodyStrong)
                     .foregroundStyle(Color(.ink))
                 Spacer()
@@ -79,14 +81,14 @@ struct CreditsSheet: View {
                 }
             }
             if let subtitle = item.subtitle {
-                Text(subtitle)
+                subtitle
                     .font(TypeToken.detail)
                     .foregroundStyle(Color(.inkMuted))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let detail = item.detail {
-                Text(detail)
+                detail
                     .font(TypeToken.detail)
                     .foregroundStyle(Color(.inkFaint))
                     .multilineTextAlignment(.leading)
@@ -108,14 +110,16 @@ struct CreditsSheet: View {
 
 private struct CreditItem: Identifiable {
     let id:       String   // unique — used by ForEach
-    let title:    String
-    let subtitle: String?
-    let detail:   String?
+    let title:    Text
+    let subtitle: Text?
+    let detail:   Text?
     let license:  String?
     let url:      URL?
 
-    init(_ id: String, _ title: String,
-         subtitle: String? = nil, detail: String? = nil,
+    /// Text, not strings: what is said about a work is translated, its name and where it was
+    /// published are not.
+    init(_ id: String, _ title: Text,
+         subtitle: Text? = nil, detail: Text? = nil,
          license: String? = nil, urlString: String? = nil) {
         self.id       = id
         self.title    = title
@@ -130,114 +134,114 @@ private struct CreditItem: Identifiable {
 
 private let scientificCredits: [CreditItem] = [
     CreditItem("icrp",
-               "ICRP Publications 56, 67, 69, 130–137",
-               subtitle: "International Commission on Radiological Protection",
-               detail: "Biokinetic models, transfer rates, and dosimetric methodology used in nuclear models.",
+               Text(L.Credits.icrpTitle),
+               subtitle: Text(L.Credits.icrpOrg),
+               detail: Text(L.Credits.icrpDetail),
                urlString: "https://www.icrp.org"),
 
     CreditItem("leggett1994",
-               "Leggett (1994) — Uranium Systemic Model",
-               subtitle: "Health Physics 67(6):589–610",
-               detail: "Physiological systems model for uranium — basis for the ICRP 137 uranium systemic model.",
+               Text(L.Credits.leggettTitle),
+               subtitle: Text(verbatim: "Health Physics 67(6):589–610"),
+               detail: Text(L.Credits.leggettDetail),
                urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=leggett+uranium+physiological+1994"),
 
     CreditItem("birchall1986",
-               "Birchall (1986) — Scaling-and-Squaring Solver",
-               subtitle: "Health Physics 50(3):389–397",
-               detail: "Matrix-exponential algorithm for compartmental radionuclide models. Implemented here as the Birchall solver.",
+               Text(L.Credits.birchallTitle),
+               subtitle: Text(verbatim: "Health Physics 50(3):389–397"),
+               detail: Text(L.Credits.birchallDetail),
                urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=birchall+microcomputer+compartmental+radionuclide+1986"),
 
     CreditItem("dormandprince1980",
-               "Dormand & Prince (1980) — RK45",
-               subtitle: "J. Comput. Appl. Math. 6(1):19–26",
-               detail: "Dormand-Prince embedded Runge-Kutta pair underlying the adaptive RK45 solver path.",
+               Text(L.Credits.dormandTitle),
+               subtitle: Text(verbatim: "J. Comput. Appl. Math. 6(1):19–26"),
+               detail: Text(L.Credits.dormandDetail),
                urlString: "https://doi.org/10.1016/0771-050X(80)90013-3"),
 
     CreditItem("rabinowitz1976",
-               "Rabinowitz et al. (1976) — Lead Model",
-               subtitle: "J. Clin. Invest. 57(1):68–73",
-               detail: "Three-pool lead toxicokinetic model (blood / bone / soft tissue) validated with stable isotope tracers.",
+               Text(L.Credits.rabinowitzTitle),
+               subtitle: Text(verbatim: "J. Clin. Invest. 57(1):68–73"),
+               detail: Text(L.Credits.rabinowitzDetail),
                urlString: "https://pubmed.ncbi.nlm.nih.gov/?term=rabinowitz+lead+kinetic+analysis+1976"),
 
     CreditItem("whomercury1990",
-               "WHO/IPCS EHC 101 (1990) — Methylmercury",
-               subtitle: "World Health Organization / IPCS",
-               detail: "Environmental Health Criteria for methylmercury; basis for the mercury toxicokinetic model.",
+               Text(L.Credits.whoTitle),
+               subtitle: Text(L.Credits.whoOrg),
+               detail: Text(L.Credits.whoDetail),
                urlString: "https://inchem.org/documents/ehc/ehc/ehc101.htm"),
 
     CreditItem("sheiner1979",
-               "Digoxin 2-Compartment PK",
-               subtitle: "Standard clinical pharmacokinetics literature",
-               detail: "Two-compartment intravenous model for digoxin with large volume of distribution and slow peripheral equilibration.",
+               Text(L.Credits.digoxinTitle),
+               subtitle: Text(L.Credits.digoxinSource),
+               detail: Text(L.Credits.digoxinDetail),
                urlString: "https://en.wikipedia.org/wiki/Digoxin#Pharmacokinetics"),
 
     CreditItem("tclaro2011",
-               "Thiago Claro — SSID",
-               subtitle: "MSc Thesis, IPEN‑CNEN/SP / Universidade de São Paulo, 2011",
-               detail: "\"Desenvolvimento de programa computacional para cálculo de dosimetria interna baseado em modelos multicompartimentais.\" Original Smart Software for Internal Dosimetry — this app is a Swift rewrite of that work.",
+               Text(verbatim: "Thiago Claro — SSID"),
+               subtitle: Text(L.Credits.claroThesis),
+               detail: Text(L.Credits.claroDetail("\"Desenvolvimento de programa computacional para cálculo de dosimetria interna baseado em modelos multicompartimentais.\"")),
                urlString: "https://teses.usp.br/teses/disponiveis/85/85131/tde-20122011-090939/pt-br.html"),
 
     CreditItem("orlando2011",
-               "Orlando Rodriguez Júnior — IPEN‑CNEN/SP",
-               subtitle: "Dissertação, Instituto de Pesquisas Energéticas e Nucleares",
-               detail: "Computational work in biokinetic modelling and dosimetry that informed this project.",
+               Text(verbatim: "Orlando Rodriguez Júnior — IPEN‑CNEN/SP"),
+               subtitle: Text(L.Credits.orlandoSource),
+               detail: Text(L.Credits.orlandoDetail),
                urlString: "https://repositorio.ipen.br/server/api/core/bitstreams/bc0b5a16-e4b3-4311-a862-145e39280026/content"),
 
 ]
 
 private let libraryCredits: [CreditItem] = [
     CreditItem("ssid",
-               "SSID/CBT — tclaro/ipen",
-               subtitle: "© Thiago Claro / IPEN‑CNEN/SP",
-               detail: "Original C# codebase rewritten in Swift for this app. Compartment structure, XML schema, and Birchall algorithm port derived from this repository.",
+               Text(verbatim: "SSID/CBT — tclaro/ipen"),
+               subtitle: Text(verbatim: "© Thiago Claro / IPEN‑CNEN/SP"),
+               detail: Text(L.Credits.ssidDetail),
                urlString: "https://github.com/tclaro/ipen"),
 
     CreditItem("swiftrex",
-               "SwiftRex",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Unidirectional data flow: the store, reducers, effects and the SwiftUI view stores behind every screen.",
+               Text(verbatim: "SwiftRex"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.swiftrexDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/SwiftRex/SwiftRex"),
 
     CreditItem("fp",
-               "FP",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Functional programming foundations: Result and Reader composition, optics (lenses, prisms), monad transformers and the @Lenses / @Prisms macros.",
+               Text(verbatim: "FP"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.fpDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/luizmb/FP"),
 
     CreditItem("swiftcalx",
-               "SwiftCalx",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Numerical building blocks: Matrix, the Taylor exponential behind Birchall, RK4 (including its linear propagator) and adaptive RK45.",
+               Text(verbatim: "SwiftCalx"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.swiftcalxDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/luizmb/SwiftCalx"),
 
     CreditItem("networktools",
-               "NetworkTools",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Decoding and conversion tools used for XML, JSON and CSV import.",
+               Text(verbatim: "NetworkTools"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.networktoolsDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/luizmb/NetworkTools"),
 
     CreditItem("reactiveconcurrency",
-               "ReactiveConcurrency",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Lazy tasks and publishers on Swift concurrency: how each calculation runs off the main thread.",
+               Text(verbatim: "ReactiveConcurrency"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.reactiveDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/luizmb/ReactiveConcurrency"),
 
     CreditItem("hourglass",
-               "Hourglass",
-               subtitle: "© Luiz Rodrigo Martins Barbosa",
-               detail: "Scheduling and time primitives used by ReactiveConcurrency and SwiftRex.",
+               Text(verbatim: "Hourglass"),
+               subtitle: Text(verbatim: "© Luiz Rodrigo Martins Barbosa"),
+               detail: Text(L.Credits.hourglassDetail),
                license: "Apache 2.0",
                urlString: "https://github.com/luizmb/Hourglass"),
 
     CreditItem("xmlcoder",
-               "XMLCoder",
-               subtitle: "© Shawn Moore & XMLCoder contributors",
-               detail: "XML ↔ Codable bridge used for IPEN XML model import.",
+               Text(verbatim: "XMLCoder"),
+               subtitle: Text(L.Credits.contributors),
+               detail: Text(L.Credits.xmlcoderDetail),
                license: "MIT",
                urlString: "https://github.com/CoreOffice/XMLCoder"),
 ]

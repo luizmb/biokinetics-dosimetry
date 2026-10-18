@@ -3,6 +3,7 @@ import Domain
 import Foundation
 import SwiftRex
 import SwiftUI
+import Localization
 import SwiftRexArchitecture
 
 // MARK: - EditorFeature
@@ -160,14 +161,16 @@ public enum EditorFeature {
         case updateHalfLife(Double)
         // Nuclide management
         case addNuclide
-        case addNuclideWithId(String)
+        /// The id and the name it starts with ("New Nuclide", in the reader's language).
+        case addNuclideWithId(String, name: String)
         case updateNuclideName(id: String, name: String)
         case updateNuclideHalfLife(id: String, halfLife: Double)
         case deleteNuclide(id: String)
         // Compartment mutations
         case setCompartmentNuclide(compartmentId: String, nuclideId: String)
         case addCompartment(CompartmentTint)
-        case addCompartmentWithId(String, CompartmentTint)
+        /// The id, its tint and the name it starts with ("New Compartment", in the reader's language).
+        case addCompartmentWithId(String, CompartmentTint, name: String)
         case updateCompartmentName(id: String, name: String)
         case updateCompartmentFollow(id: String, value: Bool)
         case updateCompartmentDispose(id: String, value: Bool)
@@ -301,9 +304,9 @@ public enum EditorFeature {
             // MARK: Pre-computed label strings
 
             /// Banner message shown during guided link creation, or nil when not linking.
-            public var linkingBannerText: String? = nil
+            public var linkingBannerText: LocalizedStringResource? = nil
             /// Footer text in the left panel (e.g. "Selected · Plasma" or nil).
-            public var selectionFooterLabel: String? = nil
+            public var selectionFooterLabel: LocalizedStringResource? = nil
             /// Structural and completeness issues in the current model.
             public var validationIssues: [CompartmentalModel.ValidationIssue] = []
         }
@@ -441,23 +444,17 @@ public enum EditorFeature {
                 rate: conn.rate
             )
         }
-        let linkingBannerText: String? = {
-            switch state.linkingState {
-            case .idle:        nil
-            case .awaitingFrom: "Tap the source compartment"
-            case .awaitingTo:   "Now tap the destination compartment"
-            }
-        }()
-        let selectionFooterLabel: String? = {
-            if let id = state.selectedCompartmentId,
-               let name = editingModel.compartments.first(where: { $0.id == id })?.name {
-                return "Selected · \(name)"
-            }
-            if let idx = state.selectedLinkIndex {
-                return "Selected · K\(idx + 1)"
-            }
-            return nil
-        }()
+        let linkingBannerText: LocalizedStringResource? = switch state.linkingState {
+        case .idle: nil
+        case .awaitingFrom: L.Resource.Editor.tapSource
+        case .awaitingTo: L.Resource.Editor.tapDestination
+        }
+        let selectionFooterLabel: LocalizedStringResource? = if let id = state.selectedCompartmentId,
+            let name = editingModel.compartments.first(where: { $0.id == id })?.name {
+            L.Resource.Editor.selected(name)
+        } else {
+            state.selectedLinkIndex.map { L.Resource.Editor.selected("K\($0 + 1)") }
+        }
 
         return ViewState(
             documentName: doc.name,
@@ -560,7 +557,7 @@ public enum EditorFeature {
     public static func initialState(with _: Void) -> State { .init() }
 
     public static func behavior() -> Behavior<Action, State, Environment> {
-        .handle { action, _ in
+        .handle { action, context in
             switch action {
             case .load(let doc):
                 .reduce {
@@ -608,11 +605,14 @@ public enum EditorFeature {
                 }
 
             case .addNuclide:
-                .produce { ctx in .just(.addNuclideWithId(ctx.environment.newId().uuidString.prefix(8).lowercased().description)) }
+                // Named in an effect: the reader's language is read here, never in a reducer.
+                .produce { [field = (context.stateBefore ?? State()).document.field] ctx in .just(.addNuclideWithId(
+                    ctx.environment.newId().uuidString.prefix(8).lowercased().description,
+                    name: String(localized: L.Resource.Editor.newSubstance(L.domainString(field.lingo.substanceName))))) }
 
-            case .addNuclideWithId(let id):
+            case .addNuclideWithId(let id, let name):
                 .reduce { state in
-                    let nuclide = Nuclide(id: id, name: "New \(state.document.field.lingo.substanceName)", halfLife: 0)
+                    let nuclide = Nuclide(id: id, name: name, halfLife: 0)
                     state.document.model = state.document.model.with(
                         nuclides: state.document.model.nuclides + [nuclide]
                     )
@@ -662,13 +662,17 @@ public enum EditorFeature {
                 }
 
             case .addCompartment(let tint):
-                .produce { ctx in .just(.addCompartmentWithId(ctx.environment.newId().uuidString.prefix(8).lowercased().description, tint)) }
+                .produce { ctx in .just(.addCompartmentWithId(
+                    ctx.environment.newId().uuidString.prefix(8).lowercased().description,
+                    tint,
+                    name: String(localized: L.Resource.Editor.newCompartment)
+                )) }
 
-            case .addCompartmentWithId(let idStr, let tint):
+            case .addCompartmentWithId(let idStr, let tint, let name):
                 .reduce { state in
                     let nuclideId = state.currentModel.nuclides.first?.id ?? "n0"
                     let compartment = Compartment(
-                        id: idStr, nuclideId: nuclideId, name: "New Compartment",
+                        id: idStr, nuclideId: nuclideId, name: name,
                         follow: false, intake: false, dispose: false, fraction: 0
                     )
                     state.setCurrentModel(state.currentModel.with(

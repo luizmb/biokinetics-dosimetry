@@ -1,6 +1,7 @@
 import AppDomain
 import Domain
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - Derived helpers used internally
@@ -26,10 +27,10 @@ struct ParameterBindings {
 
 /// What the model allows the explicit solvers, worded for the fields they sit under.
 struct SolverHints: Equatable {
-    var integrationStepHint: String?
+    var integrationStepHint: LocalizedStringResource?
     var integrationStepIsUnstable = false
-    var stepBudgetHint: String?
-    var stepBudgetWarning: String?
+    var stepBudgetHint: LocalizedStringResource?
+    var stepBudgetWarning: LocalizedStringResource?
     var automaticStepsPerDay = 0
 }
 
@@ -47,8 +48,9 @@ struct ParameterContent: View {
     let solver:       SolverMethod
     let isCalculating: Bool
     let validationIssues: [CompartmentalModel.ValidationIssue]
-    let calculateButtonTitle: String
-    let durationWarningMessage: String?
+    let calculateButtonTitle: LocalizedStringResource
+    let durationWarningMessage: LocalizedStringResource?
+    let fasterChoiceHint: LocalizedStringResource?
     let durationWarningTone: BannerStyle
     var hints = SolverHints()
     var showCalculateButton: Bool = true
@@ -68,7 +70,7 @@ struct ParameterContent: View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     // The panel's title, so it doesn't read as one more section heading over "Method".
-                    Text("Parameters")
+                    Text(L.Calc.parameters)
                         .font(TypeToken.title)
                         .foregroundStyle(.ink)
                         .accessibilityAddTraits(.isHeader)
@@ -77,18 +79,18 @@ struct ParameterContent: View {
                         .padding(.horizontal, 18)
 
                     if !variants.isEmpty {
-                        SectionLabel("Variant").padding(.horizontal, 18)
+                        SectionLabel(L.Calc.variant).padding(.horizontal, 18)
                         RadioList(
                             selection: paramBindings.selectedVariant,
                             options: ([nil as String?] + variants.map(Optional.some)).map { key in
-                                ChoiceOption(key, title: LocalizedStringKey(key ?? "Base model"))
+                                ChoiceOption(key, title: key.map { LocalizedStringKey($0) } ?? L.Editor.baseModel)
                             }
                         )
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
                     }
 
-                    SectionLabel("Method").padding(.horizontal, 18)
+                    SectionLabel(L.Calc.method).padding(.horizontal, 18)
                     RadioList(
                         selection: Binding(
                             get: { solverKey(for: solver) },
@@ -104,49 +106,49 @@ struct ParameterContent: View {
                     .padding(.bottom, 18)
 
                     if let compBinding = paramBindings.birchallComposition {
-                        SectionLabel("Composition").padding(.horizontal, 18)
+                        SectionLabel(L.Calc.composition).padding(.horizontal, 18)
                         RadioList(
                             selection: compBinding,
                             options: [
-                                ChoiceOption(BirchallComposition.perTime, title: LocalizedStringKey("Per-time"), detail: Text("exact")),
-                                ChoiceOption(BirchallComposition.semigroup, title: LocalizedStringKey("Semigroup"), detail: Text("fast")),
+                                ChoiceOption(BirchallComposition.perTime, title: L.Calc.perTime, detail: Text(L.Calc.exact)),
+                                ChoiceOption(BirchallComposition.semigroup, title: L.Calc.semigroup, detail: Text(L.Calc.fast)),
                             ]
                         )
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
                     }
 
-                    SectionLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    SectionLabel(L.Calc.duration(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
                     StepperJump(
                         value: paramBindings.finalDay,
                         coarse: 20,
-                        decreaseLabel: { [unit = lingo.timeUnit.label] in Text("Minus \($0) \(unit)") },
-                        increaseLabel: { [unit = lingo.timeUnit.label] in Text("Plus \($0) \(unit)") }
+                        decreaseLabel: { [unit = L.domainString(lingo.timeUnit.label)] in Text(L.Calc.minus("\($0)", unit)) },
+                        increaseLabel: { [unit = L.domainString(lingo.timeUnit.label)] in Text(L.Calc.plus("\($0)", unit)) }
                     )
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
-                    SectionLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    SectionLabel(L.Calc.reportEvery(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
                     FieldText("", text: paramBindings.stepSizeText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.reportEvery) }
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
 
                     if case .rungeKutta4 = solver {
-                        SectionLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                        SectionLabel(L.Calc.integrationStep(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
                         FieldText("", text: paramBindings.integrationStepText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.integrationStep) }
                             .padding(.horizontal, 18)
                         fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
-                        SectionLabel("Tolerance").padding(.horizontal, 18)
+                        SectionLabel(L.Calc.tolerance).padding(.horizontal, 18)
                         FieldText("", text: paramBindings.toleranceText, keyboard: .scientific, isMonospaced: true) { paramBindings.onCommitField(.tolerance) }
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     }
 
                     if let budget = paramBindings.stepBudget {
-                        SectionLabel("Step budget").padding(.horizontal, 18)
+                        SectionLabel(L.Calc.stepBudget).padding(.horizontal, 18)
                         SegmentedControlGlass(
                             selection: Binding(
                                 get: { if case .manual = budget.wrappedValue { BudgetMode.manual } else { .automatic } },
@@ -154,11 +156,11 @@ struct ParameterContent: View {
                                     budget.wrappedValue = mode == .manual ? .manual(stepsPerDay: hints.automaticStepsPerDay) : .automatic
                                 }
                             ),
-                            options: [ChoiceOption(BudgetMode.automatic, title: "Automatic"), ChoiceOption(BudgetMode.manual, title: "Manual")]
+                            options: [ChoiceOption(BudgetMode.automatic, title: L.Common.automatic), ChoiceOption(BudgetMode.manual, title: L.Common.manual)]
                         )
                         .padding(.horizontal, 18)
                         if case .manual = budget.wrappedValue {
-                            SectionLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
+                            SectionLabel(L.Calc.maxSteps(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18).padding(.top, 12)
                             FieldText("", text: paramBindings.manualStepsText, keyboard: .integer, isMonospaced: true) { paramBindings.onCommitField(.manualSteps) }
                                 .padding(.horizontal, 18)
                         }
@@ -174,10 +176,10 @@ struct ParameterContent: View {
             if showCalculateButton {
                 VStack(spacing: 10) {
                     if let msg = durationWarningMessage {
-                        Banner(Text(msg), style: durationWarningTone)
+                        Banner(estimateText(msg, fasterChoiceHint), style: durationWarningTone)
                     }
                     ButtonPrimary(
-                        LocalizedStringKey(calculateButtonTitle),
+                        Text(calculateButtonTitle),
                         icon: Image(systemName: "play.fill"),
                         size: .large,
                         fillsWidth: true,
@@ -197,7 +199,7 @@ struct ParameterContent: View {
 
     /// A line under a field: what the model allows, or a warning in `tone`.
     @ViewBuilder
-    private func fieldNote(_ text: String?, tone: Color?) -> some View {
+    private func fieldNote(_ text: LocalizedStringResource?, tone: Color?) -> some View {
         if let text {
             Text(text)
                 .font(.footnote)
@@ -234,7 +236,7 @@ struct ReportContent: View {
             VStack(spacing: 16) {
                 Image(systemName: "tablecells")
                     .font(.system(size: 48)).foregroundStyle(.inkFaint)
-                Text("Run a calculation to see the tabular report")
+                Text(L.Calc.runToSeeReport)
                     .font(.callout).foregroundStyle(.inkMuted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -261,7 +263,7 @@ struct ReportContent: View {
                         } header: {
                             VStack(spacing: 0) {
                                 HStack(spacing: 0) {
-                                    timeHeaderCell("Time (\(lingo.timeUnit.label))")
+                                    timeHeaderCell(L.Common.time(L.domainString(lingo.timeUnit.label)))
                                     ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
                                 }
                                 Hairline()
@@ -280,7 +282,7 @@ struct ReportContent: View {
         }
     }
 
-    private func timeHeaderCell(_ text: String) -> some View {
+    private func timeHeaderCell(_ text: LocalizedStringKey) -> some View {
         Text(text).font(TypeToken.sectionLabel).lineLimit(1)
             .frame(width: 64, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 6)

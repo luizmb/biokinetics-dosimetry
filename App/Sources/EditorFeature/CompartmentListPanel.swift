@@ -1,5 +1,6 @@
 import AppDomain
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - EditorModelListPanel (pure)
@@ -11,7 +12,7 @@ struct EditorModelListPanel: View {
     let links: [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
-    let selectionFooterLabel: String?
+    let selectionFooterLabel: LocalizedStringResource?
     var onSelectCompartment: (String?) -> Void
     var onSelectLink: (Int?) -> Void
     var onDeleteSelected: () -> Void
@@ -23,7 +24,7 @@ struct EditorModelListPanel: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("MODEL")
+                Text(L.Editor.compartmentsAndTransfers)
                     .font(TypeToken.sectionLabel)
                     .kerning(0.6)
                     .foregroundStyle(Color(.inkFaint))
@@ -47,14 +48,14 @@ struct EditorModelListPanel: View {
                             }
                         }
                     } else {
-                        GlassSection("Compartments") {
+                        GlassSection(L.Common.compartments) {
                             ForEach(compartments) { comp in
                                 compartmentRow(comp, proxy: proxy)
                             }
                         }
                     }
 
-                    GlassSection("Transfers") {
+                    GlassSection(L.Common.transfers) {
                         ForEach(links) { link in
                             linkRow(link)
                         }
@@ -84,7 +85,7 @@ struct EditorModelListPanel: View {
     @ViewBuilder
     private func halfLifeLabel(_ nuclide: EditorFeature.NuclideRow) -> some View {
         if nuclide.halfLife > 0 {
-            Text("\(lingo.halfLifeLabel) \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) \(lingo.timeUnit.label)")
+            (Text(L.domain(lingo.halfLifeLabel)) + Text(verbatim: " \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(lingo.timeUnit.label)))
         }
     }
 
@@ -107,9 +108,9 @@ struct EditorModelListPanel: View {
                     .lineLimit(1)
                 if comp.follow || comp.dispose || comp.intake {
                     HStack(spacing: 4) {
-                        if comp.follow  { flagChip("Track") }
-                        if comp.dispose { flagChip(lingo.eliminationLabel) }
-                        if comp.intake  { flagChip(lingo.intakeLabel) }
+                        if comp.follow  { flagChip(L.Editor.track) }
+                        if comp.dispose { flagChip(L.domain(lingo.eliminationLabel)) }
+                        if comp.intake  { flagChip(L.domain(lingo.intakeLabel)) }
                     }
                 }
             }
@@ -164,7 +165,7 @@ struct EditorModelListPanel: View {
             }
             Spacer()
             Button(role: .destructive, action: onDeleteSelected) {
-                Label("Delete", systemImage: "trash")
+                Label(L.Common.delete, systemImage: "trash")
                     .font(.caption.weight(.medium))
             }
             .buttonStyle(.borderless)
@@ -175,7 +176,7 @@ struct EditorModelListPanel: View {
 
     // MARK: - Flag chip
 
-    private func flagChip(_ text: String) -> some View {
+    private func flagChip(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(TypeToken.sectionLabel.weight(.medium))
             .foregroundStyle(.inkMuted)

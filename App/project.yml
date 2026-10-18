@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
   bundleIdPrefix: lu.ios
+  developmentLanguage: en-GB
 
 packages:
   BiokineticsDosimetryApp:

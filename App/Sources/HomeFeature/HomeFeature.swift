@@ -6,6 +6,7 @@ import Foundation
 import Parser
 import SwiftRex
 import SwiftUI
+import Localization
 import SwiftRexArchitecture
 
 /// The root feature — owns both the navigation stack and the document library.
@@ -177,7 +178,7 @@ public enum HomeFeature {
                 if case .success(let docs) = result, docs.isEmpty {
                     // First launch: build seeds using injected seedId, then dispatch seedsReady.
                     return .produce { ctx in
-                        .just(.seedsReady(SeedDocuments.samples(idFor: ctx.environment.seedId)))
+                        .just(.seedsReady(SeedDocuments.samples(idFor: ctx.environment.seedId).map { $0.localized(by: L.domainString) }))
                     }
                 }
                 return .reduce { state in
@@ -193,7 +194,7 @@ public enum HomeFeature {
                     let model   = CompartmentalModel(nuclides: [nuclide], compartments: [], connections: [])
                     let newDoc  = ModelDocument(
                         id:    ctx.environment.newId(),
-                        name:  name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name,
+                        name:  name.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: L.Resource.Home.untitled) : name,
                         field: field,
                         model: model
                     )
@@ -219,7 +220,7 @@ public enum HomeFeature {
                                         let model = xmlModel.toCompartmentalModel()
                                         return ModelDocument(
                                             id:          ctx.environment.newId(),
-                                            name:        xmlModel.modelo?.name ?? "Imported Model",
+                                            name:        xmlModel.modelo?.name ?? String(localized: L.Resource.Home.importedModel),
                                             description: xmlModel.modelo?.description ?? "",
                                             model:       model,
                                             visuals:     Self.visuals(from: xmlModel, model: model)
@@ -239,7 +240,7 @@ public enum HomeFeature {
                 return .reduce { $0.filePicker = .loaded(); $0.documents = $0.documents.startLoading() }
                     .produce { ctx in
                         let result = parseCSVRateMatrix(data: data)
-                            .map { model in model.asModelDocument(id: ctx.environment.newId()) }
+                            .map { model in model.asModelDocument(id: ctx.environment.newId(), name: String(localized: L.Resource.Home.importedCsvModel)) }
                             .mapError { err in
                                 DecodingError.dataCorrupted(
                                     DecodingError.Context(codingPath: [], debugDescription: err.localizedDescription)
@@ -303,7 +304,7 @@ public enum HomeFeature {
                 // Which samples are missing is decided against the documents as they are when the
                 // restore runs, in `.sampleModelsRestored`.
                 return .produce { ctx in
-                    .just(.sampleModelsRestored(SeedDocuments.samples(idFor: ctx.environment.seedId)))
+                    .just(.sampleModelsRestored(SeedDocuments.samples(idFor: ctx.environment.seedId).map { $0.localized(by: L.domainString) }))
                 }
 
             case .sampleModelsRestored(let samples):
@@ -336,8 +337,9 @@ public enum HomeFeature {
         guard let original = (context.stateBefore ?? State()).documents.loaded?.first(where: { $0.id == id }) else {
             return .reduce { _ in }
         }
-        let nameOnly = original.name + " (Copy)"
         return .produce { ctx in
+            // Named in the effect: the reader's language is read here, never in a reducer.
+            let nameOnly = String(localized: L.Resource.Home.copyOf(original.name))
             let copy = ModelDocument(
                 id:          ctx.environment.newId(),
                 name:        nameOnly,
