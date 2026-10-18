@@ -1,7 +1,7 @@
 import AppDomain
 import Domain
 import SwiftUI
-import UIComponents
+import Vitral
 
 // MARK: - Derived helpers used internally
 
@@ -49,7 +49,7 @@ struct ParameterContent: View {
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let calculateButtonTitle: String
     let durationWarningMessage: String?
-    let durationWarningTone: GBannerTone
+    let durationWarningTone: BannerStyle
     var hints = SolverHints()
     var showCalculateButton: Bool = true
 
@@ -57,7 +57,6 @@ struct ParameterContent: View {
     var onSetSolver:  (SolverMethod) -> Void   // sets method + resets associated params
     var onCalculate:  () -> Void
 
-    @Environment(\.glassTokens) private var g
 
     private let algorithms: [(name: String, method: SolverMethod)] = [
         ("Birchall",       .birchall(composition: .perTime)),
@@ -68,24 +67,29 @@ struct ParameterContent: View {
     var body: some View {
         ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    GLabel("Parameters")
+                    // The panel's title, so it doesn't read as one more section heading over "Method".
+                    Text("Parameters")
+                        .font(TypeToken.title)
+                        .foregroundStyle(.ink)
+                        .accessibilityAddTraits(.isHeader)
                         .padding(.top, 18)
+                        .padding(.bottom, Space.medium)
                         .padding(.horizontal, 18)
 
                     if !variants.isEmpty {
-                        GLabel("Variant").padding(.horizontal, 18)
-                        GRadioList(
+                        SectionLabel("Variant").padding(.horizontal, 18)
+                        RadioList(
                             selection: paramBindings.selectedVariant,
                             options: ([nil as String?] + variants.map(Optional.some)).map { key in
-                                GRadioOption(value: key, label: key ?? "Base model")
+                                ChoiceOption(key, title: LocalizedStringKey(key ?? "Base model"))
                             }
                         )
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
                     }
 
-                    GLabel("Method").padding(.horizontal, 18)
-                    GRadioList(
+                    SectionLabel("Method").padding(.horizontal, 18)
+                    RadioList(
                         selection: Binding(
                             get: { solverKey(for: solver) },
                             set: { key in
@@ -94,63 +98,68 @@ struct ParameterContent: View {
                                 }
                             }
                         ),
-                        options: algorithms.map { GRadioOption(value: solverKey(for: $0.method), label: $0.name) }
+                        options: algorithms.map { ChoiceOption(solverKey(for: $0.method), title: LocalizedStringKey($0.name)) }
                     )
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
                     if let compBinding = paramBindings.birchallComposition {
-                        GLabel("Composition").padding(.horizontal, 18)
-                        GRadioList(
+                        SectionLabel("Composition").padding(.horizontal, 18)
+                        RadioList(
                             selection: compBinding,
                             options: [
-                                GRadioOption(value: BirchallComposition.perTime,   label: "Per-time",  detail: "exact"),
-                                GRadioOption(value: BirchallComposition.semigroup, label: "Semigroup", detail: "fast"),
+                                ChoiceOption(BirchallComposition.perTime, title: LocalizedStringKey("Per-time"), detail: Text("exact")),
+                                ChoiceOption(BirchallComposition.semigroup, title: LocalizedStringKey("Semigroup"), detail: Text("fast")),
                             ]
                         )
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
                     }
 
-                    GLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    GJumpStepper(value: paramBindings.finalDay, unit: lingo.timeUnit.label)
+                    SectionLabel("Duration (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    StepperJump(
+                        value: paramBindings.finalDay,
+                        coarse: 20,
+                        decreaseLabel: { [unit = lingo.timeUnit.label] in Text("Minus \($0) \(unit)") },
+                        increaseLabel: { [unit = lingo.timeUnit.label] in Text("Plus \($0) \(unit)") }
+                    )
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
-                    GLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                    GField(paramBindings.stepSizeText, keyboard: .decimal) { paramBindings.onCommitField(.reportEvery) }
+                    SectionLabel("Report every (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                    FieldText("", text: paramBindings.stepSizeText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.reportEvery) }
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
 
                     if case .rungeKutta4 = solver {
-                        GLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
-                        GField(paramBindings.integrationStepText, keyboard: .decimal) { paramBindings.onCommitField(.integrationStep) }
+                        SectionLabel("Integration step (\(lingo.timeUnit.label))").padding(.horizontal, 18)
+                        FieldText("", text: paramBindings.integrationStepText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.integrationStep) }
                             .padding(.horizontal, 18)
                         fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
                     }
 
                     if case .rungeKutta45 = solver {
-                        GLabel("Tolerance").padding(.horizontal, 18)
-                        GField(paramBindings.toleranceText, keyboard: .scientific) { paramBindings.onCommitField(.tolerance) }
+                        SectionLabel("Tolerance").padding(.horizontal, 18)
+                        FieldText("", text: paramBindings.toleranceText, keyboard: .scientific, isMonospaced: true) { paramBindings.onCommitField(.tolerance) }
                             .padding(.horizontal, 18)
                             .padding(.bottom, 18)
                     }
 
                     if let budget = paramBindings.stepBudget {
-                        GLabel("Step budget").padding(.horizontal, 18)
-                        GSegmented(
+                        SectionLabel("Step budget").padding(.horizontal, 18)
+                        SegmentedControlGlass(
                             selection: Binding(
                                 get: { if case .manual = budget.wrappedValue { BudgetMode.manual } else { .automatic } },
                                 set: { mode in
                                     budget.wrappedValue = mode == .manual ? .manual(stepsPerDay: hints.automaticStepsPerDay) : .automatic
                                 }
                             ),
-                            options: [(label: "Automatic", value: BudgetMode.automatic), (label: "Manual", value: .manual)]
+                            options: [ChoiceOption(BudgetMode.automatic, title: "Automatic"), ChoiceOption(BudgetMode.manual, title: "Manual")]
                         )
                         .padding(.horizontal, 18)
                         if case .manual = budget.wrappedValue {
-                            GLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
-                            GField(paramBindings.manualStepsText, keyboard: .integer) { paramBindings.onCommitField(.manualSteps) }
+                            SectionLabel("Max steps (per \(lingo.timeUnit.label))").padding(.horizontal, 18).padding(.top, 12)
+                            FieldText("", text: paramBindings.manualStepsText, keyboard: .integer, isMonospaced: true) { paramBindings.onCommitField(.manualSteps) }
                                 .padding(.horizontal, 18)
                         }
                         fieldNote(hints.stepBudgetWarning ?? hints.stepBudgetHint, tone: hints.stepBudgetWarning == nil ? nil : .orange)
@@ -165,18 +174,17 @@ struct ParameterContent: View {
             if showCalculateButton {
                 VStack(spacing: 10) {
                     if let msg = durationWarningMessage {
-                        GBanner(
-                            tone: durationWarningTone,
-                            systemImage: durationWarningTone == .neutral ? "clock" : "exclamationmark.triangle",
-                            message: msg
-                        )
+                        Banner(Text(msg), style: durationWarningTone)
                     }
-                    GButton(
-                        calculateButtonTitle,
-                        icon: isCalculating ? nil : Image(systemName: "play.fill"),
-                        size: .lg, fullWidth: true, disabled: isCalculating || validationIssues.hasErrors || hints.integrationStepIsUnstable,
+                    ButtonPrimary(
+                        LocalizedStringKey(calculateButtonTitle),
+                        icon: Image(systemName: "play.fill"),
+                        size: .large,
+                        fillsWidth: true,
+                        isBusy: isCalculating,
                         action: onCalculate
                     )
+                    .disabled(validationIssues.hasErrors || hints.integrationStepIsUnstable)
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 18)
@@ -193,7 +201,7 @@ struct ParameterContent: View {
         if let text {
             Text(text)
                 .font(.footnote)
-                .foregroundStyle(tone ?? g.muted)
+                .foregroundStyle(tone ?? Color(.inkMuted))
                 .padding(.horizontal, 22)
                 .padding(.top, 6)
                 .padding(.bottom, 18)
@@ -220,15 +228,14 @@ struct ReportContent: View {
     let lingo: FieldLingo
     let isCompact: Bool
 
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
         if reportRows.isEmpty {
             VStack(spacing: 16) {
                 Image(systemName: "tablecells")
-                    .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    .font(.system(size: 48)).foregroundStyle(.inkFaint)
                 Text("Run a calculation to see the tabular report")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.inkMuted)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -249,7 +256,7 @@ struct ReportContent: View {
                                         dataCell(String(format: "%.9e", val))
                                     }
                                 }
-                                GlassDivider()
+                                Hairline()
                             }
                         } header: {
                             VStack(spacing: 0) {
@@ -257,7 +264,7 @@ struct ReportContent: View {
                                     timeHeaderCell("Time (\(lingo.timeUnit.label))")
                                     ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
                                 }
-                                GlassDivider()
+                                Hairline()
                             }
                             .background(.bar)
                         }
@@ -269,12 +276,12 @@ struct ReportContent: View {
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .overlay { EdgeFade(.bottom) }
-            .font(.system(size: 11, design: .monospaced))
+            .font(TypeToken.codeSmall)
         }
     }
 
     private func timeHeaderCell(_ text: String) -> some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+        Text(text).font(TypeToken.sectionLabel).lineLimit(1)
             .frame(width: 64, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 6)
     }
@@ -284,12 +291,12 @@ struct ReportContent: View {
             .padding(.horizontal, 8).padding(.vertical, 4)
     }
     private func headerCell(_ text: String) -> some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+        Text(text).font(TypeToken.sectionLabel).lineLimit(1)
             .frame(width: 120, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 6)
     }
     private func dataCell(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary)
+        Text(text).foregroundStyle(.inkMuted)
             .frame(width: 120, alignment: .trailing)
             .padding(.horizontal, 8).padding(.vertical, 4)
     }

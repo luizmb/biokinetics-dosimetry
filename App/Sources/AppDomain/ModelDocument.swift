@@ -41,6 +41,9 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
     public var variants: [String: CompartmentalModel]
     /// Per-compartment visual info, keyed by `Compartment.id`.
     public var visuals: [String: CompartmentVisuals]
+    /// What the editor's canvas sits on; `nil` for the field's (`resolvedBackdrop`). Older
+    /// documents have none and decode as `nil`.
+    public var backdrop: EditorBackdrop?
 
     public init(
         id:          UUID,
@@ -49,7 +52,8 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
         field:       ModelField                    = .generic,
         model:       CompartmentalModel,
         variants:    [String: CompartmentalModel]  = [:],
-        visuals:     [String: CompartmentVisuals]  = [:]
+        visuals:     [String: CompartmentVisuals]  = [:],
+        backdrop:    EditorBackdrop?               = nil
     ) {
         self.id          = id
         self.name        = name
@@ -58,6 +62,7 @@ public struct ModelDocument: Identifiable, Hashable, Codable, Sendable {
         self.model       = model
         self.variants    = variants
         self.visuals     = visuals
+        self.backdrop    = backdrop
     }
 
     /// A blank document with no nuclides, compartments, or connections.

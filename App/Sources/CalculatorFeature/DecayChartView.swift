@@ -2,7 +2,7 @@ import AppDomain
 import Charts
 import Domain
 import SwiftUI
-import UIComponents
+import Vitral
 
 // MARK: - DecayChartContent (pure)
 
@@ -38,14 +38,14 @@ struct DecayChartContent: View {
             } else if isCalculating {
                 VStack(spacing: 14) {
                     ProgressView()
-                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
+                    Text("Calculating…").font(.callout).foregroundStyle(.inkMuted)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = error, series.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.title).foregroundStyle(.orange)
-                    Text(err).font(.callout).foregroundStyle(.secondary)
+                        .font(.title).foregroundStyle(.warning)
+                    Text(err).font(.callout).foregroundStyle(.inkMuted)
                         .multilineTextAlignment(.center)
                     remedyButtons.padding(.top, 6)
                 }
@@ -58,9 +58,9 @@ struct DecayChartContent: View {
                     }
                     VStack(spacing: 12) {
                         Image(systemName: "waveform.path.ecg")
-                            .font(.system(size: 48)).foregroundStyle(.quaternary)
+                            .font(.system(size: 48)).foregroundStyle(.inkFaint)
                         Text("Tap Calculate to run the solver")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.inkMuted)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -73,7 +73,7 @@ struct DecayChartContent: View {
                     // A stopped run: its valid part below, the reason and the fixes above it.
                     if let err = error {
                         VStack(alignment: .leading, spacing: 8) {
-                            GBanner(tone: .warn, systemImage: "exclamationmark.triangle", message: err)
+                            Banner(Text(err), style: .warning)
                             remedyButtons
                         }
                         .padding(.horizontal, 10).padding(.top, 8)
@@ -92,19 +92,19 @@ struct DecayChartContent: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.warning)
                 Text("Model cannot be calculated")
                     .font(.headline)
             }
-            Divider()
+            Hairline()
             ForEach(errorIssues.indices, id: \.self) { i in
                 issueRow(errorIssues[i])
             }
             if !nonErrorIssues.isEmpty {
-                Divider()
+                Hairline()
                 Text("Also:")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.inkMuted)
                 ForEach(nonErrorIssues.indices, id: \.self) { i in
                     issueRow(nonErrorIssues[i])
                 }
@@ -127,11 +127,11 @@ struct DecayChartContent: View {
     private func issueRow(_ issue: CompartmentalModel.ValidationIssue) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: issue.systemImageName)
-                .font(.system(size: 13))
+                .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .frame(width: 18)
             Text(issue.issueDescription)
-                .font(.system(size: 12.5))
+                .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -158,8 +158,14 @@ struct DecayChartContent: View {
 
     private var remedyButtonList: some View {
         ForEach(remedies, id: \.self) { remedy in
-            GButton(remedy.title, tone: remedy == remedies.first ? .accent : .neutral, size: .sm) { onRemedy(remedy) }
-                .fixedSize()
+            Group {
+                if remedy == remedies.first {
+                    ButtonPrimary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                } else {
+                    ButtonSecondary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                }
+            }
+            .fixedSize()
         }
     }
 
@@ -176,13 +182,13 @@ struct DecayChartContent: View {
                     xStart: .value(lingo.timeUnit.displayName, xPosition(stop)),
                     xEnd: .value(lingo.timeUnit.displayName, xPosition(Double(finalDay)))
                 )
-                .foregroundStyle(Color.secondary.opacity(0.12))
+                .foregroundStyle(Color(ColorToken.ink.opacity(0.07)))
                 RuleMark(x: .value(lingo.timeUnit.displayName, xPosition(stop)))
-                    .foregroundStyle(Color.orange)
+                    .foregroundStyle(Color(.warning))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .annotation(position: .trailing, alignment: .top, spacing: 4) {
                         if let stoppedLabel {
-                            Text(stoppedLabel).font(.caption2).foregroundStyle(.orange).fixedSize()
+                            Text(stoppedLabel).font(.caption2).foregroundStyle(.warning).fixedSize()
                         }
                     }
             }
@@ -261,10 +267,10 @@ struct DecayChartContent: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(series) { s in
-                    GChip(
-                        color: Color(hue: s.tint.hue / 360, saturation: 0.65, brightness: 0.62),
-                        label: s.name,
-                        isActive: s.isVisible
+                    SeriesChip(
+                        colour: Color(hue: s.tint.hue / 360, saturation: 0.65, brightness: 0.62),
+                        name: s.name,
+                        isShown: s.isVisible
                     ) { onToggleSeries(s.id) }
                 }
             }
@@ -299,5 +305,30 @@ struct DecayChartContent: View {
         let lo = Int(floor(log10(min)))
         let hi = Int(ceil(log10(max)))
         return (lo...hi).map { Double($0) }
+    }
+}
+
+/// A series in the chart's legend: its line's colour, its name, faded while hidden. Tap to show or
+/// hide it.
+private struct SeriesChip: View {
+    let colour: Color
+    let name: String
+    let isShown: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Pill(isActive: false, action: onToggle) {
+            HStack(spacing: Space.small) {
+                Capsule().fill(colour).frame(width: 18, height: 4)
+                Text(name)
+                    .font(.controlSmall)
+                    .foregroundStyle(isShown ? .ink : .inkFaint)
+            }
+            .padding(.leading, Space.small)
+            .padding(.trailing, Space.medium)
+            .frame(height: Size.controlSmall)
+        }
+        .opacity(isShown ? 1 : 0.5)
+        .accessibilityAddTraits(isShown ? .isSelected : [])
     }
 }

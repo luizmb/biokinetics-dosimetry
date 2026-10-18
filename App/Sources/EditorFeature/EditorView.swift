@@ -2,7 +2,7 @@ import AppDomain
 import Domain
 import SwiftRexArchitecture
 import SwiftUI
-import UIComponents
+import Vitral
 
 // MARK: - EditorView (container)
 
@@ -75,6 +75,11 @@ public struct EditorView: View {
             set: { viewStore.dispatch(.updateField($0)) }
         )
 
+        let backdropBinding = Binding(
+            get: { viewStore.state.backdrop.value },
+            set: { viewStore.dispatch(.updateBackdrop($0)) }
+        )
+
         // Nuclide field bindings — one entry per nuclide in the document.
         let nuclideBindings: [NuclideEditBinding] = viewStore.state.nuclides.value.map { n in
             NuclideEditBinding(
@@ -96,6 +101,8 @@ public struct EditorView: View {
             documentName:        documentNameBinding,
             documentDescription: documentDescriptionBinding,
             field:               fieldBinding,
+            backdrop:            backdropBinding,
+            resolvedBackdrop:    viewStore.state.resolvedBackdrop.value,
             lingo:               viewStore.state.lingo.value,
             halfLife:           viewStore.state.halfLife,
             nuclides:           viewStore.state.nuclides.value,
@@ -164,6 +171,9 @@ struct EditorContent: View {
     var documentName:        Binding<String>
     var documentDescription: Binding<String>
     var field:               Binding<ModelField>
+    /// The model's own backdrop (`nil` for its field's), and the one shown.
+    var backdrop:            Binding<EditorBackdrop?>
+    let resolvedBackdrop:    EditorBackdrop
     let lingo: FieldLingo
     let halfLife: Double
     let nuclides: [EditorFeature.NuclideRow]
@@ -237,7 +247,8 @@ struct EditorContent: View {
 
     var body: some View {
         ZStack {
-            GlassAppBackground()
+            // Graph paper is the canvas's own, sliding with it; any other backdrop sits behind.
+            if resolvedBackdrop != .graphPaper { Backdrop(resolvedBackdrop.style) } else { Backdrop() }
             if isCompact { compactLayout } else { regularLayout }
         }
         .navigationTitle(documentName.wrappedValue)
@@ -263,7 +274,7 @@ struct EditorContent: View {
                 )
                 .frame(width: 264)
                 .transition(.move(edge: .leading).combined(with: .opacity))
-                GlassVDivider()
+                Hairline(.vertical)
             }
 
             ZStack(alignment: .top) {
@@ -272,7 +283,8 @@ struct EditorContent: View {
                     .ignoresSafeArea(edges: .vertical)
 
                 if let text = linkingBannerText {
-                    GlassLinkingBanner(message: text, onCancel: onCancelLinking)
+                    Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
+                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
                         .padding(.top, 16)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -290,11 +302,13 @@ struct EditorContent: View {
             }
 
             if isRightPanelVisible {
-                GlassVDivider()
+                Hairline(.vertical)
                 EditorInspectorPanel(
                     documentName: documentName,
                     documentDescription: documentDescription,
                     field: field,
+                    backdrop: backdrop,
+                    resolvedBackdrop: resolvedBackdrop,
                     lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,
@@ -348,7 +362,8 @@ struct EditorContent: View {
             EdgeFade(.bottom)
 
             if let text = linkingBannerText {
-                GlassLinkingBanner(message: text, onCancel: onCancelLinking)
+                Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
+                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
                     .padding(.top, 12)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(), value: text)
@@ -367,6 +382,7 @@ struct EditorContent: View {
     private var canvas: some View {
         CompartmentCanvasView(
             compartments: compartments, links: links,
+            drawsGraphPaper: resolvedBackdrop == .graphPaper,
             selectedCompartmentId: selectedCompartmentId,
             selectedLinkIndex: selectedLinkIndex,
             showKValues: showKValues,
@@ -403,31 +419,31 @@ struct EditorContent: View {
     private var compactBottomToolbar: some View {
         GlassEffectContainer(spacing: 9) {
         HStack(spacing: 9) {
-            GPill(intensity: 0.8) {
+            Pill {
                 Button { onAddCompartment(.steel) } label: {
                     Label("Compartment", systemImage: "plus.square")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: linkingBannerText != nil ? 1.0 : 0.8) {
+            Pill(isActive: linkingBannerText != nil) {
                 Button {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
                     Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: 0.8) {
+            Pill {
                 Button { modelListSheet.wrappedValue = true } label: {
                     Label("Model", systemImage: "list.bullet")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -454,6 +470,8 @@ struct EditorContent: View {
                     documentName: documentName,
                     documentDescription: documentDescription,
                     field: field,
+                    backdrop: backdrop,
+                    resolvedBackdrop: resolvedBackdrop,
                     lingo: lingo,
                     nuclides: nuclides,
                     compartments: compartments,
@@ -534,7 +552,7 @@ struct EditorContent: View {
 
     private var canvasToolbar: some View {
         HStack(spacing: 8) {
-            GPill(intensity: 0.85) {
+            Pill {
                 Menu {
                     ForEach(CompartmentTint.allCases, id: \.self) { tint in
                         Button { onAddCompartment(tint) } label: {
@@ -543,19 +561,19 @@ struct EditorContent: View {
                     }
                 } label: {
                     Label("Compartment", systemImage: "plus.square")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .font(TypeToken.detail.weight(.semibold))
+                        .foregroundStyle(.ink)
                         .lineLimit(1)
                         .fixedSize()
                         .padding(.horizontal, 15).frame(height: 44)
                 }
             }
-            GPill(intensity: linkingBannerText != nil ? 1.0 : 0.85) {
+            Pill(isActive: linkingBannerText != nil) {
                 Button {
                     if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
                 } label: {
                     Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
                         .lineLimit(1)
                         .fixedSize()
@@ -563,10 +581,10 @@ struct EditorContent: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            GPill(intensity: showKValues ? 1.0 : 0.85) {
+            Pill(isActive: showKValues) {
                 Button(action: onToggleKValues) {
                     Text("K")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(TypeToken.detail.weight(.bold))
                         .foregroundStyle(showKValues ? Color.accentColor : .primary)
                         .padding(.horizontal, 15).frame(height: 44)
                 }

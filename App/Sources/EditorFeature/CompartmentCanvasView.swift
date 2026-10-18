@@ -1,6 +1,6 @@
 import AppDomain
 import SwiftUI
-import UIComponents
+import Vitral
 
 // MARK: - CompartmentCanvasView (pure)
 
@@ -16,6 +16,8 @@ import UIComponents
 struct CompartmentCanvasView: View {
     let compartments: [EditorFeature.CompartmentRow]
     let links:        [EditorFeature.LinkRow]
+    /// Draws the graph paper, sliding with the canvas; otherwise the backdrop behind shows.
+    let drawsGraphPaper: Bool
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
     let showKValues: Bool
@@ -64,14 +66,15 @@ struct CompartmentCanvasView: View {
             ZStack {
             // ── Graph paper — outside the pinch image and drawn at the pinch in progress, so a
             // zoom-out never shows past its edge (it's one cheap drawing, no glass) ──
-            GlassBackdrop(
+            if drawsGraphPaper {
+            Backdrop(.grid(
                 origin: CGPoint(
                     x: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).x - hw) * pinchScale + hw + pinchOffset.x,
                     y: (screenPt(.zero, hw: hw, hh: hh, s: s, ox: ox, oy: oy).y - hh) * pinchScale + hh + pinchOffset.y
                 ),
                 scale: s * pinchScale
-            )
-            .allowsHitTesting(false)
+            ))
+            }
             ZStack {
 
                 // ── Intake arrows — bold arrows from above for intake compartments ──
@@ -80,7 +83,7 @@ struct CompartmentCanvasView: View {
                     let sp  = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
                     let len = sz.height * 0.55 * s          // ~half compartment height
                     let tail = CGPoint(x: sp.x, y: sp.y - sz.height/2*s - len)
-                    let intakeColor = Color(hex: 0x34C759)
+                    let intakeColor = Color(.success)
 
                     // Shaft
                     Path { p in
@@ -101,7 +104,7 @@ struct CompartmentCanvasView: View {
                             .font(.system(size: 9, weight: .semibold, design: .monospaced))
                             .foregroundStyle(intakeColor)
                             .padding(.horizontal, 4).padding(.vertical, 1)
-                            .background(.regularMaterial, in: Capsule())
+                            .background(Color(.selectedSurface), in: Capsule())
                             .position(x: sp.x + sz.width/2*s*0.5 + 10,
                                       y: (tail.y + sp.y - sz.height/2*s) / 2)
                             .allowsHitTesting(false)
@@ -149,9 +152,9 @@ struct CompartmentCanvasView: View {
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
                         .foregroundStyle(selectedLinkIndex == link.id
                                          ? link.fromTint.indicator(dark: isDark)
-                                         : Color.secondary)
+                                         : Color(.inkMuted))
                         .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(.regularMaterial, in: Capsule())
+                        .background(Color(.selectedSurface), in: Capsule())
                         .position(x: mid.x, y: mid.y - 12)
                         .allowsHitTesting(false)
                 }
@@ -363,8 +366,8 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        .glassEffect(.clear.tint(isDragging ? Color.white.opacity(dark ? 0.25 : 0.55) : glassTint), in: shape)
-        .glassEffectTransition(.identity)
+        // The system's clear glass (it bends what's behind), barely tinted with the compartment's colour, with a hint of Aqua's gloss and glow.
+        .finish(.glass(GlassToken(.clear, tint: glassTint)).with(.glow, .gloss, strength: 0.2), in: shape)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
@@ -384,10 +387,12 @@ private struct CompartmentNode: View {
         .padding(.horizontal, 8)
     }
 
-    /// No border: the glass edge is the outline. Selection and linking show as a deeper tint.
-    private var glassTint: Color {
-        if isLinkingTarget, !comp.isSelected { return Color.accentColor.opacity(0.25) }
-        return comp.tint.indicator(dark: dark).opacity(comp.isSelected ? 0.35 : 0.1)
+    /// No border: the glass edge is the outline. Selection, linking and dragging show as a
+    /// deeper tint.
+    private var glassTint: ColorToken {
+        isDragging ? ColorToken.fixedWhite.opacity(dark ? 0.25 : 0.55)
+            : isLinkingTarget && !comp.isSelected ? ColorToken.accent.opacity(0.25)
+            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.22 : 0.04)
     }
 
     private func dot(_ c: Color) -> some View {

@@ -5,8 +5,6 @@ let package = Package(
     name: "BiokineticsDosimetryApp",
     platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
-        .library(name: "Style",              targets: ["Style"]),
-        .library(name: "UIComponents",       targets: ["UIComponents"]),
         .library(name: "AppDomain",          targets: ["AppDomain"]),
         .library(name: "HomeFeature",        targets: ["HomeFeature"]),
         .library(name: "EditorFeature",      targets: ["EditorFeature"]),
@@ -21,21 +19,9 @@ let package = Package(
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
+        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.1.2"),
     ],
     targets: [
-
-        // MARK: - Design system (previously a standalone DesignSystem package)
-
-        .target(
-            name: "Style",
-            path: "Sources/Style"
-        ),
-
-        .target(
-            name: "UIComponents",
-            dependencies: ["Style"],
-            path: "Sources/UIComponents"
-        ),
 
         // MARK: - Shared visual + domain types used by all feature targets
 
@@ -45,7 +31,7 @@ let package = Package(
                 .product(name: "Domain",   package: "biokinetics-dosimetry"),
                 .product(name: "FP",       package: "FP"),
                 .product(name: "FPMacros", package: "FP"),
-                "Style",
+                .product(name: "Vitral", package: "Vitral"),
             ]
         ),
 
@@ -61,7 +47,7 @@ let package = Package(
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "SwiftRex",              package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
-                "UIComponents",
+                .product(name: "Vitral",                package: "Vitral"),
             ]
         ),
 
@@ -73,7 +59,7 @@ let package = Package(
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.ReactiveConcurrency",    package: "SwiftRex"),
-                "UIComponents",
+                .product(name: "Vitral",                package: "Vitral"),
             ]
         ),
 
@@ -87,7 +73,7 @@ let package = Package(
                 .product(name: "SwiftRex",                package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture",   package: "SwiftRex"),
                 .product(name: "SwiftRex.ReactiveConcurrency",    package: "SwiftRex"),
-                "UIComponents",
+                .product(name: "Vitral",                package: "Vitral"),
             ]
         ),
 
@@ -112,7 +98,7 @@ let package = Package(
                 .product(name: "FPMacros",              package: "FP"),
                 .product(name: "Core",                  package: "NetworkTools"),
                 .product(name: "XMLCoder",              package: "XMLCoder"),
-                "UIComponents",
+                .product(name: "Vitral",                package: "Vitral"),
             ]
         ),
 

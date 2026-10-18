@@ -1,7 +1,7 @@
 import AppDomain
 import SwiftRexArchitecture
 import SwiftUI
-import UIComponents
+import Vitral
 import UniformTypeIdentifiers
 
 // MARK: - HomeView (container — thin SwiftRex wrapper)
@@ -73,15 +73,13 @@ struct HomeContent: View {
         ZStack {
             // The editor's graph paper, fixed while the cards scroll over it: the glass has lines
             // to bend, and Home and the editor share a look.
-            GlassBackdrop()
+            Backdrop()
                 .ignoresSafeArea()
             GeometryReader { geo in
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 0) {
                         if let msg = importErrorMessage {
-                            GBanner(tone: .danger,
-                                    systemImage: "exclamationmark.triangle",
-                                    message: msg)
+                            Banner(Text(msg), style: .error)
                                 .padding(.horizontal, isCompact ? 16 : 36)
                                 .padding(.bottom, 8)
                         }
@@ -166,7 +164,7 @@ struct HomeContent: View {
                 // One glass card per model, apart from each other.
                 VStack(spacing: 14) {
                     ForEach(cards) { card in
-                        GCard(cornerRadius: 22) {
+                        Panel(cornerRadius: 22, padding: 0) {
                             HomeListRow(
                                 card: card,
                                 onEdit:      { onEdit(card.document) },
@@ -216,15 +214,15 @@ struct HomeContent: View {
                 ZStack {
                     Circle()
                         .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6]))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.inkFaint)
                         .frame(width: 60, height: 60)
                     Image(systemName: "plus")
                         .font(.system(size: 22, weight: .light))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.inkMuted)
                 }
                 Text("New blank model")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .font(TypeToken.title.weight(.semibold))
+                    .foregroundStyle(.inkMuted)
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: big ? 220 : 132)
@@ -236,14 +234,14 @@ struct HomeContent: View {
                     )
                     .foregroundStyle(
                         colorScheme == .dark
-                            ? Color.white.opacity(0.22)
-                            : Color.black.opacity(0.20)
+                            ? Color(ColorToken.fixedWhite.opacity(0.22))
+                            : Color(ColorToken.fixedBlack.opacity(0.20))
                     )
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(
                         colorScheme == .dark
-                            ? Color.white.opacity(0.03)
-                            : Color.white.opacity(0.28)
+                            ? Color(ColorToken.fixedWhite.opacity(0.03))
+                            : Color(ColorToken.fixedWhite.opacity(0.28))
                     )
             }
         }
@@ -256,8 +254,8 @@ struct HomeContent: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Loading documents…")
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
+                .font(TypeToken.body)
+                .foregroundStyle(.inkMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -267,12 +265,12 @@ struct HomeContent: View {
         VStack(spacing: 12) {
             ProgressView()
             Text("Loading…")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
+                .font(TypeToken.detail)
+                .foregroundStyle(.inkMuted)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 164)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassSurface(.regular, cornerRadius: Radius.card)
     }
 }
 
@@ -286,18 +284,17 @@ private struct HomeListRow: View {
     var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 10) {
-                SwatchCluster(tints: card.tints)
+                SwatchStack(card.tints.map(\.indicatorToken))
                 Spacer()
                 if card.halfLife > 0 {
                     HalfLifeTag {
                         Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundStyle(g.muted)
+                            .font(TypeToken.detail.weight(.semibold))
+                            .foregroundStyle(Color(.inkMuted))
                             .padding(.horizontal, 11)
                             .frame(height: 26)
                     }
@@ -309,12 +306,12 @@ private struct HomeListRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.name)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(TypeToken.title)
                     .tracking(-0.3)
                 if !card.description.isEmpty {
                     Text(card.description)
-                        .font(.system(size: 14.5))
-                        .foregroundStyle(g.muted)
+                        .font(TypeToken.detail)
+                        .foregroundStyle(Color(.inkMuted))
                 }
                 HStack(spacing: 16) {
                     countStat(systemImage: "square.stack.3d.up", n: card.compartmentCount)
@@ -325,16 +322,16 @@ private struct HomeListRow: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
 
-            GlassDivider()
+            Hairline()
 
             HStack(spacing: 0) {
                 actionBtn("Edit",      systemImage: "pencil",           accent: true,  action: onEdit)
-                GlassVDivider().frame(height: 26)
+                Hairline(.vertical).frame(height: 26)
                 actionBtn("Calculate", systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
-                GlassVDivider().frame(height: 26)
+                Hairline(.vertical).frame(height: 26)
                 actionBtn("",          systemImage: "doc.on.doc",        accent: false, action: onDuplicate)
                     .frame(width: 52)
-                GlassVDivider().frame(height: 26)
+                Hairline(.vertical).frame(height: 26)
                 actionBtn("",          systemImage: "trash",             accent: false, danger: true, action: onDelete)
                     .frame(width: 52)
             }
@@ -351,12 +348,12 @@ private struct HomeListRow: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .medium))
-                if !label.isEmpty { Text(label).font(.system(size: 15.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8) }
+                    .font(TypeToken.detail.weight(.medium))
+                if !label.isEmpty { Text(label).font(TypeToken.bodyStrong).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
-                             ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
-                             : g.accent)
+                             ? Color(.danger)
+                             : Color(.accent))
             .frame(maxWidth: label.isEmpty ? nil : .infinity)
             .frame(height: 46)
             .contentShape(Rectangle())
@@ -366,8 +363,8 @@ private struct HomeListRow: View {
 
     private func countStat(systemImage: String, n: Int) -> some View {
         Label("\(n)", systemImage: systemImage)
-            .font(.system(size: 13.5))
-            .foregroundStyle(g.faint)
+            .font(TypeToken.detail)
+            .foregroundStyle(Color(.inkFaint))
     }
 }
 
@@ -381,23 +378,19 @@ private struct HomeModelCard: View {
     var onDelete:    () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.glassTokens) private var g
 
     var body: some View {
-        GCard(cornerRadius: 20, intensity: 0.55,
-              tint: colorScheme == .dark
-                    ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.40)
-                    : Color.white.opacity(0.50)) {
+        Panel(cornerRadius: 20, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 // Swatches + half-life
                 HStack {
-                    SwatchCluster(tints: card.tints)
+                    SwatchStack(card.tints.map(\.indicatorToken))
                     Spacer()
                     if card.halfLife > 0 {
                         HalfLifeTag {
                             Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
-                                .font(.system(size: 12.5, weight: .semibold))
-                                .foregroundStyle(g.muted)
+                                .font(TypeToken.detail.weight(.semibold))
+                                .foregroundStyle(Color(.inkMuted))
                                 .padding(.horizontal, 11)
                                 .frame(height: 26)
                         }
@@ -409,36 +402,36 @@ private struct HomeModelCard: View {
                 // Name + description + counts
                 VStack(alignment: .leading, spacing: 4) {
                     Text(card.name)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(TypeToken.title)
                         .tracking(-0.3)
                     if !card.description.isEmpty {
                         Text(card.description)
-                            .font(.system(size: 14.5))
-                            .foregroundStyle(g.muted)
+                            .font(TypeToken.detail)
+                            .foregroundStyle(Color(.inkMuted))
                             .lineLimit(4)
                     }
                     HStack(spacing: 16) {
                         Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
                         Label("\(card.connectionCount)", systemImage: "arrow.triangle.branch")
                     }
-                    .font(.system(size: 13.5))
-                    .foregroundStyle(g.faint)
+                    .font(TypeToken.detail)
+                    .foregroundStyle(Color(.inkFaint))
                     .padding(.top, 8)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
-                GlassDivider()
+                Hairline()
 
                 // Action row
                 HStack(spacing: 0) {
                     gridActionBtn("Edit",      systemImage: "pencil",            action: onEdit)
-                    GlassVDivider().frame(height: 26)
+                    Hairline(.vertical).frame(height: 26)
                     gridActionBtn("Calculate", systemImage: "waveform.path.ecg", action: onCalculate)
-                    GlassVDivider().frame(height: 26)
+                    Hairline(.vertical).frame(height: 26)
                     gridActionBtn("",          systemImage: "doc.on.doc",         action: onDuplicate)
                         .frame(width: 48)
-                    GlassVDivider().frame(height: 26)
+                    Hairline(.vertical).frame(height: 26)
                     gridActionBtn("",          systemImage: "trash", danger: true, action: onDelete)
                         .frame(width: 48)
                 }
@@ -454,16 +447,16 @@ private struct HomeModelCard: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 7) {
-                Image(systemName: systemImage).font(.system(size: 13, weight: .medium))
+                Image(systemName: systemImage).font(TypeToken.detail.weight(.medium))
                 if !label.isEmpty {
-                    Text(label).font(.system(size: 14.5, weight: .semibold))
+                    Text(label).font(TypeToken.detail.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
             }
             .foregroundStyle(danger
-                             ? (colorScheme == .dark ? Color(hex: 0xFF7A6B) : Color(hex: 0xE0402E))
-                             : g.accent)
+                             ? Color(.danger)
+                             : Color(.accent))
             .frame(maxWidth: label.isEmpty ? nil : .infinity)
             .frame(height: 44)
             .contentShape(Rectangle())
