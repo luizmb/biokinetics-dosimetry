@@ -1,5 +1,5 @@
 {
-  "originHash" : "c3e47c8aca619c12c0cffe7dd0e126a91beee1c6c7996aeefc0ffc8dc08422f6",
+  "originHash" : "15c572b1c34598549f0eb4e0426806bb89af22e4aadde3f9308549e1510a972a",
   "pins" : [
     {
       "identity" : "fp",
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/Vitral.git",
       "state" : {
-        "revision" : "203f1b46a69c73dee5736d09d5f9c4934439530b",
-        "version" : "0.1.1"
+        "revision" : "dba98d756316d2563df1946555a91d722807fb73",
+        "version" : "0.1.2"
       }
     },
     {

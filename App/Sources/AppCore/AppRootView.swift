@@ -35,6 +35,6 @@ public struct AppRootView: View, Routable {
                 }
         }
         // Buttons are clear glass under Aqua's gloss and glow; the main action keeps the accent.
-        .controlFinish(.glass(.clear).gel)
+        .controlFinish(.glass(.clear).gel(0.25))
     }
 }

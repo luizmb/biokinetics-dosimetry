@@ -366,8 +366,8 @@ private struct CompartmentNode: View {
         }
         .frame(width: size.width * scale, height: size.height * scale)
         .clipShape(shape)
-        // Clear glass tinted with the compartment's colour, lit from below and rimmed like a gel.
-        .finish(.glass(GlassToken(.clear, tint: glassTint)).with(.glow, .rim), in: shape)
+        // Sheer glass (nothing behind blurred) in the compartment's colour, lit from below and rimmed like a gel.
+        .finish(.glass(GlassToken(.sheer, tint: glassTint)).with(.glow, .rim, strength: 0.7), in: shape)
         .animation(.easeOut(duration: 0.2), value: isDragging)
     }
 
@@ -392,7 +392,7 @@ private struct CompartmentNode: View {
     private var glassTint: ColorToken {
         isDragging ? ColorToken.fixedWhite.opacity(dark ? 0.25 : 0.55)
             : isLinkingTarget && !comp.isSelected ? ColorToken.accent.opacity(0.25)
-            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.35 : 0.1)
+            : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.35 : 0.16)
     }
 
     private func dot(_ c: Color) -> some View {

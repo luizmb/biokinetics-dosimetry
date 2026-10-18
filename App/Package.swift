@@ -19,7 +19,7 @@ let package = Package(
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
-        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.1.1"),
+        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.1.2"),
     ],
     targets: [
 
