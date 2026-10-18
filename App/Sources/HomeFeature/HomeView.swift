@@ -1,6 +1,7 @@
 import AppDomain
 import SwiftRexArchitecture
 import SwiftUI
+import Localization
 import Vitral
 import UniformTypeIdentifiers
 
@@ -118,12 +119,12 @@ struct HomeContent: View {
             CreditsSheet(onDismiss: { isCreditsSheetPresented = false })
         }
         // The system's large title and glass toolbar: the list scrolls under real glass.
-        .navigationTitle("Biokinetics")
-        .navigationSubtitle("& Dosimetry")
+        .navigationTitle(L.Home.title)
+        .navigationSubtitle(L.Home.subtitle)
         .toolbar {
             ToolbarItem(placement: .barLeading) {
                 Button(action: onOpenCredits) { Image(systemName: "info.circle") }
-                    .accessibilityLabel("About")
+                    .accessibilityLabel(L.Home.about)
             }
             ToolbarItem(placement: .barTrailing) {
                 Button(action: onOpenFilePicker) { Label("Import", systemImage: "doc.badge.arrow.up") }
@@ -133,7 +134,7 @@ struct HomeContent: View {
             ToolbarSpacer(.fixed, placement: .barTrailing)
             ToolbarItem(placement: .barTrailing) {
                 // The main action: prominent glass, the rest regular.
-                Button(action: onOpenCreationSheet) { Label("New", systemImage: "plus") }
+                Button(action: onOpenCreationSheet) { Label(L.Home.new, systemImage: "plus") }
                     .buttonStyle(.glassProminent)
                     .tint(.accentColor)
             }
@@ -220,7 +221,7 @@ struct HomeContent: View {
                         .font(.system(size: 22, weight: .light))
                         .foregroundStyle(.inkMuted)
                 }
-                Text("New blank model")
+                Text(L.Home.newBlankModel)
                     .font(TypeToken.title.weight(.semibold))
                     .foregroundStyle(.inkMuted)
             }
@@ -253,7 +254,7 @@ struct HomeContent: View {
     private var loadingSpinner: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text("Loading documents…")
+            Text(L.Home.loadingDocuments)
                 .font(TypeToken.body)
                 .foregroundStyle(.inkMuted)
         }
@@ -264,7 +265,7 @@ struct HomeContent: View {
     private var loadingSpinnerCard: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text("Loading…")
+            Text(L.Common.loading)
                 .font(TypeToken.detail)
                 .foregroundStyle(.inkMuted)
         }
@@ -292,7 +293,7 @@ private struct HomeListRow: View {
                 Spacer()
                 if card.halfLife > 0 {
                     HalfLifeTag {
-                        Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
+                        (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(card.field.lingo.timeUnit.label)))
                             .font(TypeToken.detail.weight(.semibold))
                             .foregroundStyle(Color(.inkMuted))
                             .padding(.horizontal, 11)
@@ -325,21 +326,22 @@ private struct HomeListRow: View {
             Hairline()
 
             HStack(spacing: 0) {
-                actionBtn("Edit",      systemImage: "pencil",           accent: true,  action: onEdit)
+                actionBtn(L.Common.edit,      systemImage: "pencil",           accent: true,  action: onEdit)
                 Hairline(.vertical).frame(height: 26)
-                actionBtn("Calculate", systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
+                actionBtn(L.Calc.calculate, systemImage: "waveform.path.ecg", accent: true,  action: onCalculate)
                 Hairline(.vertical).frame(height: 26)
-                actionBtn("",          systemImage: "doc.on.doc",        accent: false, action: onDuplicate)
+                actionBtn(nil,          systemImage: "doc.on.doc",        accent: false, action: onDuplicate)
                     .frame(width: 52)
                 Hairline(.vertical).frame(height: 26)
-                actionBtn("",          systemImage: "trash",             accent: false, danger: true, action: onDelete)
+                actionBtn(nil,          systemImage: "trash",             accent: false, danger: true, action: onDelete)
                     .frame(width: 52)
             }
         }
     }
 
+    /// - Parameter label: `nil` for an icon alone (the delete button, which VoiceOver names).
     private func actionBtn(
-        _ label: String,
+        _ label: LocalizedStringKey?,
         systemImage: String,
         accent: Bool,
         danger: Bool = false,
@@ -349,16 +351,17 @@ private struct HomeListRow: View {
             HStack(spacing: 7) {
                 Image(systemName: systemImage)
                     .font(TypeToken.detail.weight(.medium))
-                if !label.isEmpty { Text(label).font(TypeToken.bodyStrong).lineLimit(1).minimumScaleFactor(0.8) }
+                if let label { Text(label).font(TypeToken.bodyStrong).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
                              ? Color(.danger)
                              : Color(.accent))
-            .frame(maxWidth: label.isEmpty ? nil : .infinity)
+            .frame(maxWidth: label == nil ? nil : .infinity)
             .frame(height: 46)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel(Text(label ?? L.Common.delete))
     }
 
     private func countStat(systemImage: String, n: Int) -> some View {
@@ -388,7 +391,7 @@ private struct HomeModelCard: View {
                     Spacer()
                     if card.halfLife > 0 {
                         HalfLifeTag {
-                            Text("\(card.field.lingo.halfLifeLabel) \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) \(card.field.lingo.timeUnit.label)")
+                            (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(card.field.lingo.timeUnit.label)))
                                 .font(TypeToken.detail.weight(.semibold))
                                 .foregroundStyle(Color(.inkMuted))
                                 .padding(.horizontal, 11)
@@ -425,22 +428,23 @@ private struct HomeModelCard: View {
 
                 // Action row
                 HStack(spacing: 0) {
-                    gridActionBtn("Edit",      systemImage: "pencil",            action: onEdit)
+                    gridActionBtn(L.Common.edit,      systemImage: "pencil",            action: onEdit)
                     Hairline(.vertical).frame(height: 26)
-                    gridActionBtn("Calculate", systemImage: "waveform.path.ecg", action: onCalculate)
+                    gridActionBtn(L.Calc.calculate, systemImage: "waveform.path.ecg", action: onCalculate)
                     Hairline(.vertical).frame(height: 26)
-                    gridActionBtn("",          systemImage: "doc.on.doc",         action: onDuplicate)
+                    gridActionBtn(nil,          systemImage: "doc.on.doc",         action: onDuplicate)
                         .frame(width: 48)
                     Hairline(.vertical).frame(height: 26)
-                    gridActionBtn("",          systemImage: "trash", danger: true, action: onDelete)
+                    gridActionBtn(nil,          systemImage: "trash", danger: true, action: onDelete)
                         .frame(width: 48)
                 }
             }
         }
     }
 
+    /// - Parameter label: `nil` for an icon alone (the delete button, which VoiceOver names).
     private func gridActionBtn(
-        _ label: String,
+        _ label: LocalizedStringKey?,
         systemImage: String,
         danger: Bool = false,
         action: @escaping () -> Void
@@ -448,7 +452,7 @@ private struct HomeModelCard: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: systemImage).font(TypeToken.detail.weight(.medium))
-                if !label.isEmpty {
+                if let label {
                     Text(label).font(TypeToken.detail.weight(.semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -457,11 +461,12 @@ private struct HomeModelCard: View {
             .foregroundStyle(danger
                              ? Color(.danger)
                              : Color(.accent))
-            .frame(maxWidth: label.isEmpty ? nil : .infinity)
+            .frame(maxWidth: label == nil ? nil : .infinity)
             .frame(height: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel(Text(label ?? L.Common.delete))
     }
 }
 

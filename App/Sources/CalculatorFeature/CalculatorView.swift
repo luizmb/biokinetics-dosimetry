@@ -2,6 +2,7 @@ import AppDomain
 import Domain
 import SwiftRexArchitecture
 import SwiftUI
+import Localization
 import Vitral
 
 private extension Array where Element == CompartmentalModel.ValidationIssue {
@@ -92,6 +93,7 @@ public struct CalculatorView: View {
             logXLabel:            viewStore.state.logXLabel,
             logYLabel:            viewStore.state.logYLabel,
             durationWarningMessage: viewStore.state.durationWarningMessage,
+            fasterChoiceHint: viewStore.state.fasterChoiceHint,
             validationIssues:     viewStore.state.validationIssues.value,
             hints: SolverHints(
                 integrationStepHint: viewStore.state.integrationStepHint,
@@ -132,20 +134,21 @@ struct CalculatorContent: View {
     let reportRows: [CalculatorFeature.ReportRow]
     let compartmentNames: [String]
     let isCalculating: Bool
-    let error: String?
+    let error: LocalizedStringResource?
     let isParamPanelVisible: Bool
     let durationWarning: BiokineticsSimulationPlan.DurationWarning
     let estimatedDurationLabel: String
     let solverShortName: String
-    let calculateButtonTitle: String
-    let logXLabel: String
-    let logYLabel: String
-    let durationWarningMessage: String?
+    let calculateButtonTitle: LocalizedStringResource
+    let logXLabel: LocalizedStringResource
+    let logYLabel: LocalizedStringResource
+    let durationWarningMessage: LocalizedStringResource?
+    let fasterChoiceHint: LocalizedStringResource?
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let hints: SolverHints
     let remedies: [CalculatorFeature.Remedy]
     let stoppedAtDay: Double?
-    let stoppedLabel: String?
+    let stoppedLabel: LocalizedStringResource?
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
 
@@ -188,6 +191,7 @@ struct CalculatorContent: View {
                     validationIssues: validationIssues,
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
+                    fasterChoiceHint: fasterChoiceHint,
                     durationWarningTone: bannerTone(durationWarning),
                     hints: hints,
                     onSetSolver: onSetSolver,
@@ -239,7 +243,7 @@ struct CalculatorContent: View {
             .padding(.horizontal, 12)
             // Clear of the floating tab bar.
             .padding(.bottom, 16)
-            .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
+            .tabItem { Label(L.Calc.chart, systemImage: "waveform.path.ecg") }
             .tag(CalculatorFeature.CalcView.chart)
 
             // Report tab
@@ -247,7 +251,7 @@ struct CalculatorContent: View {
                 reportRows: reportRows, compartmentNames: compartmentNames,
                 lingo: lingo, isCompact: true
             )
-            .tabItem { Label("Report", systemImage: "tablecells") }
+            .tabItem { Label(L.Calc.report, systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
 
             // Parameters tab: the list scrolls under the Calculate button, which floats on it as
@@ -260,6 +264,7 @@ struct CalculatorContent: View {
                     validationIssues: validationIssues,
                     calculateButtonTitle: calculateButtonTitle,
                     durationWarningMessage: durationWarningMessage,
+                    fasterChoiceHint: fasterChoiceHint,
                     durationWarningTone: bannerTone(durationWarning),
                     hints: hints,
                     showCalculateButton: false,
@@ -273,12 +278,12 @@ struct CalculatorContent: View {
             .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0) {
                 if let msg = durationWarningMessage {
-                    Banner(Text(msg), style: bannerTone(durationWarning))
+                    Banner(estimateText(msg, fasterChoiceHint), style: bannerTone(durationWarning))
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
                 }
                 ButtonPrimary(
-                    LocalizedStringKey(calculateButtonTitle),
+                    Text(calculateButtonTitle),
                     icon: Image(systemName: "play.fill"),
                     size: .large,
                     fillsWidth: true,
@@ -294,7 +299,7 @@ struct CalculatorContent: View {
                 .padding(.top, 10)
             }
             }
-            .tabItem { Label("Parameters", systemImage: "slider.horizontal.3") }
+            .tabItem { Label(L.Calc.parameters, systemImage: "slider.horizontal.3") }
             .tag(CalculatorFeature.CalcView.parameters)
         }
     }
@@ -335,7 +340,7 @@ struct CalculatorContent: View {
             }
             .padding(.horizontal, isCompact ? 12 : 16)
             .padding(.bottom, isCompact ? 0 : 4)
-            .tabItem { Label("Chart", systemImage: "waveform.path.ecg") }
+            .tabItem { Label(L.Calc.chart, systemImage: "waveform.path.ecg") }
             .tag(CalculatorFeature.CalcView.chart)
 
             // Report tab
@@ -343,7 +348,7 @@ struct CalculatorContent: View {
                 reportRows: reportRows, compartmentNames: compartmentNames,
                 lingo: lingo, isCompact: isCompact
             )
-            .tabItem { Label("Report", systemImage: "tablecells") }
+            .tabItem { Label(L.Calc.report, systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
         }
     }
@@ -372,7 +377,7 @@ struct CalculatorContent: View {
                             preview: SharePreview(csv.documentName + ".csv",
                                                   image: Image(systemName: "tablecells"))
                         ) {
-                            Label("Export CSV", systemImage: "tablecells")
+                            Label(L.Calc.exportCSV, systemImage: "tablecells")
                         }
                     }
                     if let pdf = pdfExportInput {
@@ -381,7 +386,7 @@ struct CalculatorContent: View {
                             preview: SharePreview(pdf.documentName + ".pdf",
                                                   image: Image(systemName: "doc.richtext"))
                         ) {
-                            Label("Export PDF", systemImage: "doc.richtext")
+                            Label(L.Calc.exportPDF, systemImage: "doc.richtext")
                         }
                     }
                 } label: {
@@ -393,7 +398,7 @@ struct CalculatorContent: View {
 
     // MARK: - Helpers
 
-    private func logPill(_ label: String, binding: Binding<Bool>) -> some View {
+    private func logPill(_ label: LocalizedStringResource, binding: Binding<Bool>) -> some View {
         Pill(isActive: binding.wrappedValue, action: { binding.wrappedValue.toggle() }) {
             Text(label)
                 .font(TypeToken.detail.weight(.semibold))
@@ -410,4 +415,9 @@ struct CalculatorContent: View {
         }
     }
 
+}
+
+/// A slow estimate, and after it what would be quicker when something would.
+func estimateText(_ estimate: LocalizedStringResource, _ hint: LocalizedStringResource?) -> Text {
+    hint.map { Text(estimate) + Text(verbatim: ". ") + Text($0) } ?? Text(estimate)
 }

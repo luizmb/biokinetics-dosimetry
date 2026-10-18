@@ -2,6 +2,7 @@ import AppDomain
 import Charts
 import Domain
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - DecayChartContent (pure)
@@ -9,7 +10,7 @@ import Vitral
 struct DecayChartContent: View {
     let series: [CalculatorFeature.Series]
     let isCalculating: Bool
-    let error: String?
+    let error: LocalizedStringResource?
     let logX: Bool
     let logY: Bool
     let finalDay: Int
@@ -18,7 +19,7 @@ struct DecayChartContent: View {
     var remedies: [CalculatorFeature.Remedy] = []
     /// Set when `series` is a stopped run's: the chart greys out what comes after.
     var stoppedAtDay: Double? = nil
-    var stoppedLabel: String? = nil
+    var stoppedLabel: LocalizedStringResource? = nil
     var onToggleSeries: (String) -> Void
     var onRemedy: (CalculatorFeature.Remedy) -> Void = { _ in }
 
@@ -38,7 +39,7 @@ struct DecayChartContent: View {
             } else if isCalculating {
                 VStack(spacing: 14) {
                     ProgressView()
-                    Text("Calculating…").font(.callout).foregroundStyle(.inkMuted)
+                    Text(L.Common.calculating).font(.callout).foregroundStyle(.inkMuted)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let err = error, series.isEmpty {
@@ -59,7 +60,7 @@ struct DecayChartContent: View {
                     VStack(spacing: 12) {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: 48)).foregroundStyle(.inkFaint)
-                        Text("Tap Calculate to run the solver")
+                        Text(L.Calc.tapCalculate)
                             .font(.callout).foregroundStyle(.inkMuted)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -93,7 +94,7 @@ struct DecayChartContent: View {
             HStack(spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.warning)
-                Text("Model cannot be calculated")
+                Text(L.Calc.cannotCalculate)
                     .font(.headline)
             }
             Hairline()
@@ -102,7 +103,7 @@ struct DecayChartContent: View {
             }
             if !nonErrorIssues.isEmpty {
                 Hairline()
-                Text("Also:")
+                Text(L.Calc.also)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.inkMuted)
                 ForEach(nonErrorIssues.indices, id: \.self) { i in
@@ -130,7 +131,7 @@ struct DecayChartContent: View {
                 .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .frame(width: 18)
-            Text(issue.issueDescription)
+            Text(issue.text)
                 .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .fixedSize(horizontal: false, vertical: true)
@@ -160,9 +161,9 @@ struct DecayChartContent: View {
         ForEach(remedies, id: \.self) { remedy in
             Group {
                 if remedy == remedies.first {
-                    ButtonPrimary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                    ButtonPrimary(remedy.title, size: .small) { onRemedy(remedy) }
                 } else {
-                    ButtonSecondary(LocalizedStringKey(remedy.title), size: .small) { onRemedy(remedy) }
+                    ButtonSecondary(remedy.title, size: .small) { onRemedy(remedy) }
                 }
             }
             .fixedSize()
@@ -179,11 +180,11 @@ struct DecayChartContent: View {
             // axis still spans the run that was asked for.
             if let stop = stoppedAtDay {
                 RectangleMark(
-                    xStart: .value(lingo.timeUnit.displayName, xPosition(stop)),
-                    xEnd: .value(lingo.timeUnit.displayName, xPosition(Double(finalDay)))
+                    xStart: .value(L.domain(lingo.timeUnit.displayName), xPosition(stop)),
+                    xEnd: .value(L.domain(lingo.timeUnit.displayName), xPosition(Double(finalDay)))
                 )
                 .foregroundStyle(Color(ColorToken.ink.opacity(0.07)))
-                RuleMark(x: .value(lingo.timeUnit.displayName, xPosition(stop)))
+                RuleMark(x: .value(L.domain(lingo.timeUnit.displayName), xPosition(stop)))
                     .foregroundStyle(Color(.warning))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .annotation(position: .trailing, alignment: .top, spacing: 4) {
@@ -196,10 +197,10 @@ struct DecayChartContent: View {
                 let pts = transformedPoints(s.points)
                 ForEach(pts.indices, id: \.self) { idx in
                     LineMark(
-                        x: .value(lingo.timeUnit.displayName, pts[idx].x),
-                        y: .value("Activity", pts[idx].y)
+                        x: .value(L.domain(lingo.timeUnit.displayName), pts[idx].x),
+                        y: .value(L.Calc.activity, pts[idx].y)
                     )
-                    .foregroundStyle(by: .value("Compartment", s.name))
+                    .foregroundStyle(by: .value(L.Common.compartment, s.name))
                     .interpolationMethod(.monotone)
                 }
             }
@@ -224,7 +225,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(pow(10, v))) \(lingo.timeUnit.label)").font(.caption2)
+                        (Text(verbatim: "\(Int(pow(10, v))) ") + Text(L.domain(lingo.timeUnit.label))).font(.caption2)
                     }
                 }
             }
@@ -233,7 +234,7 @@ struct DecayChartContent: View {
                 AxisGridLine(); AxisTick()
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text("\(Int(v)) \(lingo.timeUnit.label)").font(.caption2)
+                        (Text(verbatim: "\(Int(v)) ") + Text(L.domain(lingo.timeUnit.label))).font(.caption2)
                     }
                 }
             }

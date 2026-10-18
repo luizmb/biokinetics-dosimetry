@@ -2,10 +2,10 @@ import Domain
 import Foundation
 
 public extension CompartmentalModel {
-    func asModelDocument(id: UUID) -> ModelDocument {
+    func asModelDocument(id: UUID, name: String) -> ModelDocument {
         ModelDocument(
             id: id,
-            name: "Imported CSV Model",
+            name: name,
             description: "",
             model: self,
             visuals: defaultVisuals(for: self)

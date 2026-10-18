@@ -198,7 +198,7 @@ struct CalculatorFeatureBehaviorTests {
         }
         let vs = CalculatorFeature.mapState(env)(s.state)
         #expect(vs.remedies == [.useAutomaticBudget, .useBirchall])
-        #expect(vs.error?.hasPrefix("RK45 stopped at day") == true)
+        #expect(vs.error.map { String(localized: $0) }?.hasPrefix("RK45 stopped at day") == true)
     }
 
     /// What ran before the stop becomes the results, marked as partial: the chart, the report
@@ -220,7 +220,7 @@ struct CalculatorFeatureBehaviorTests {
         #expect(vs.reportRows.count == 2)
         #expect(vs.csvExportInput?.note?.hasPrefix("Partial run: stopped at") == true)
         #expect(vs.pdfExportInput?.note == vs.csvExportInput?.note)
-        #expect(vs.error?.contains("the results cover the days it reached") == true)
+        #expect(vs.error.map { String(localized: $0) }?.contains("the results cover the days it reached") == true)
     }
 
     @Test func aStopWithNothingComputedHasNoResults() {
@@ -255,7 +255,7 @@ struct CalculatorFeatureBehaviorTests {
         state.solver = .rungeKutta4(stepSize: 50)
         let vs = CalculatorFeature.mapState(env)(state)
         #expect(vs.integrationStepIsUnstable)
-        #expect(vs.integrationStepHint?.hasPrefix("Stable below") == true)
+        #expect(vs.integrationStepHint.map { String(localized: $0) }?.hasPrefix("Stable below") == true)
         state.solver = .rungeKutta4(stepSize: 0.01)
         #expect(!CalculatorFeature.mapState(env)(state).integrationStepIsUnstable)
     }
@@ -266,7 +266,7 @@ struct CalculatorFeatureBehaviorTests {
         state.solver = .rungeKutta45(tolerance: 1e-13, budget: .automatic)
         let automatic = CalculatorFeature.mapState(env)(state)
         #expect(automatic.stepBudgetWarning == nil)
-        #expect(automatic.stepBudgetHint?.hasPrefix("This model needs about") == true)
+        #expect(automatic.stepBudgetHint.map { String(localized: $0) }?.hasPrefix("This model needs about") == true)
         state.finalDay = 1_000_000
         state.solver = .rungeKutta45(tolerance: 1e-13, budget: .manual(stepsPerDay: 0))
         #expect(CalculatorFeature.mapState(env)(state).stepBudgetWarning != nil)
@@ -326,10 +326,10 @@ struct CalculatorFeatureBehaviorTests {
 
     @Test func solverFailuresReadAsAdvice() {
         let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
-        #expect(CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format)
+        #expect(String(localized: CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format))
             == "An RK4 step of 1.0000 d is unstable for this model. Use a step below 0.063 d, or Birchall.")
-        #expect(CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 10_000, partial: []), format: format)
-            == "RK45 stopped at day 835.9 of 1001 after 10000 steps. Raise the step budget, or use Birchall.")
+        #expect(String(localized: CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 900, partial: []), format: format))
+            == "RK45 stopped at day 835.9 of 1001 after 900 steps. Raise the step budget, or use Birchall.")
     }
 
     @Test func setFinalDayWithValidValueUpdatesDirectly() {

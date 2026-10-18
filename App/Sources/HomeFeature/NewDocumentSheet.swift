@@ -1,5 +1,6 @@
 import AppDomain
 import SwiftUI
+import Localization
 import Vitral
 
 struct NewDocumentSheet: View {
@@ -19,16 +20,16 @@ struct NewDocumentSheet: View {
                 Backdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        SectionLabel("Field")
+                        SectionLabel(L.Common.field)
                         Panel(cornerRadius: 16, padding: 0) {
                             VStack(spacing: 0) {
                                 ForEach(Array(ModelField.allCases.enumerated()), id: \.1) { idx, f in
                                     if idx > 0 { Hairline() }
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(f.lingo.fieldName)
+                                            Text(L.domain(f.lingo.fieldName))
                                                 .font(TypeToken.body)
-                                            Text("\(f.lingo.substanceName) · \(f.lingo.intakeLabel) · \(f.lingo.eliminationLabel)")
+                                            (Text(L.domain(f.lingo.substanceName)) + Text(verbatim: " · ") + Text(L.domain(f.lingo.intakeLabel)) + Text(verbatim: " · ") + Text(L.domain(f.lingo.eliminationLabel)))
                                                 .font(TypeToken.sectionLabel.weight(.regular))
                                                 .foregroundStyle(Color(.inkFaint))
                                         }
@@ -47,26 +48,26 @@ struct NewDocumentSheet: View {
                         }
                         .padding(.bottom, 24)
 
-                        SectionLabel("Name")
-                        FieldText("Model name", text: $name)
+                        SectionLabel(L.Common.name)
+                        FieldText(L.Common.modelName, text: $name)
                         .padding(.bottom, 8)
 
-                        Text("You can rename the model and change its field at any time from the editor.")
+                        Text(L.Home.renameHint)
                             .font(.caption)
                             .foregroundStyle(Color(.inkFaint))
                             .padding(.horizontal, 4)
 
                         if restorableSampleCount > 0 {
-                            SectionLabel("Sample models")
+                            SectionLabel(L.Home.sampleModels)
                                 .padding(.top, 28)
                             ButtonSecondary(
-                                restorableSampleCount == 1 ? "Restore 1 sample model" : "Restore \(restorableSampleCount) sample models",
+                                L.Home.restoreSamples(restorableSampleCount),
                                 icon: Image(systemName: "arrow.counterclockwise"),
                                 size: .medium,
                                 fillsWidth: true,
                                 action: onRestoreSampleModels
                             )
-                            Text("Brings back the sample models you deleted. Samples you edited stay as they are.")
+                            Text(L.Home.restoreSamplesHint)
                                 .font(.caption)
                                 .foregroundStyle(Color(.inkFaint))
                                 .padding(.horizontal, 4)
@@ -78,14 +79,14 @@ struct NewDocumentSheet: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationTitle("New Model")
+            .navigationTitle(L.Home.newModel)
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(L.Common.cancel, action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create", action: onConfirm)
+                    Button(L.Common.create, action: onConfirm)
                         .fontWeight(.semibold)
                 }
             }

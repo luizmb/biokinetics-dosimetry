@@ -13,21 +13,26 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "biokinetics-dosimetry", path: ".."),
-        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
+        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "feature/localized-resource-leaf", traits: ["ReactiveConcurrency"]),
         .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "2.0.0"),
         .package(url: "https://github.com/luizmb/FP.git", from: "3.0.0"),
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
-        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.2.4"),
+        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.2.6"),
     ],
     targets: [
 
         // MARK: - Shared visual + domain types used by all feature targets
 
+        // Every string on screen, by token (generated from the app's Localizable.xcstrings by
+        // Scripts/GenerateStrings.swift).
+        .target(name: "Localization"),
+
         .target(
             name: "AppDomain",
             dependencies: [
+                "Localization",
                 .product(name: "Domain",   package: "biokinetics-dosimetry"),
                 .product(name: "FP",       package: "FP"),
                 .product(name: "FPMacros", package: "FP"),
@@ -40,6 +45,7 @@ let package = Package(
         .target(
             name: "HomeFeature",
             dependencies: [
+                "Localization",
                 "AppDomain",
                 .product(name: "Domain",                package: "biokinetics-dosimetry"),
                 .product(name: "Parser",                package: "biokinetics-dosimetry"),
@@ -54,6 +60,7 @@ let package = Package(
         .target(
             name: "EditorFeature",
             dependencies: [
+                "Localization",
                 "AppDomain",
                 .product(name: "Domain",                  package: "biokinetics-dosimetry"),
                 .product(name: "SwiftRex",                package: "SwiftRex"),
@@ -66,6 +73,7 @@ let package = Package(
         .target(
             name: "CalculatorFeature",
             dependencies: [
+                "Localization",
                 "AppDomain",
                 .product(name: "Domain",                  package: "biokinetics-dosimetry"),
                 .product(name: "Solver",                  package: "biokinetics-dosimetry"),
@@ -82,6 +90,7 @@ let package = Package(
         .target(
             name: "AppCore",
             dependencies: [
+                "Localization",
                 "AppDomain",
                 "HomeFeature",
                 "EditorFeature",

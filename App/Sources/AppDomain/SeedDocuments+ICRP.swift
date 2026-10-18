@@ -50,7 +50,7 @@ private func uranium234(idFor: @Sendable (String) -> UUID) -> ModelDocument {
         ("uli", "Upper Large Intestine (ULI)",     false, false, false, 0),
         ("lli", "Lower Large Intestine (LLI)",     false, false, false, 0),
         ("fae", "Faeces",                          false, false, true,  0),
-        ("urn", "Urina",                           true,  false, true,  0),
+        ("urn", "Urine",                           true,  false, true,  0),
         // Lung — fast-dissolving fraction
         ("ai1", "AI1",    false, true,  false, 0.0159),
         ("ai2", "AI2",    false, true,  false, 0.0318),

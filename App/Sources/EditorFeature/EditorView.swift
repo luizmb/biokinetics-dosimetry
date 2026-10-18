@@ -2,6 +2,7 @@ import AppDomain
 import Domain
 import SwiftRexArchitecture
 import SwiftUI
+import Localization
 import Vitral
 
 // MARK: - EditorView (container)
@@ -192,8 +193,8 @@ struct EditorContent: View {
     let isLeftPanelVisible: Bool
     let isRightPanelVisible: Bool
     let showKValues: Bool
-    let linkingBannerText: String?
-    let selectionFooterLabel: String?
+    let linkingBannerText: LocalizedStringResource?
+    let selectionFooterLabel: LocalizedStringResource?
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let canvasOffsetX: Double
     let canvasOffsetY: Double
@@ -284,7 +285,7 @@ struct EditorContent: View {
 
                 if let text = linkingBannerText {
                     Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
-                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
+                    .trailing { Button(L.Common.cancel, action: onCancelLinking).font(.bodyStrong) }
                         .padding(.top, 16)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -363,7 +364,7 @@ struct EditorContent: View {
 
             if let text = linkingBannerText {
                 Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
-                    .trailing { Button("Cancel", action: onCancelLinking).font(.bodyStrong) }
+                    .trailing { Button(L.Common.cancel, action: onCancelLinking).font(.bodyStrong) }
                     .padding(.top, 12)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(), value: text)
@@ -421,7 +422,7 @@ struct EditorContent: View {
         HStack(spacing: 9) {
             Pill {
                 Button { onAddCompartment(.steel) } label: {
-                    Label("Compartment", systemImage: "plus.square")
+                    Label(L.Common.compartment, systemImage: "plus.square")
                         .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
@@ -441,7 +442,7 @@ struct EditorContent: View {
             }
             Pill {
                 Button { modelListSheet.wrappedValue = true } label: {
-                    Label("Model", systemImage: "list.bullet")
+                    Label(L.Common.model, systemImage: "list.bullet")
                         .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(.ink)
                         .padding(.horizontal, 16).frame(height: 46)
@@ -456,14 +457,13 @@ struct EditorContent: View {
     // MARK: - Inspector sheet (iPhone)
 
     private var inspectorSheetContent: some View {
-        let title: String = {
-            if let id = selectedCompartmentId {
-                return compartments.first(where: { $0.id == id })?.name ?? "Inspector"
-            } else if let idx = selectedLinkIndex {
-                return "K\(idx + 1)"
-            }
-            return "Document"
-        }()
+        let title: Text = if let id = selectedCompartmentId {
+            compartments.first(where: { $0.id == id }).map { Text(verbatim: $0.name) } ?? Text(L.Common.inspector)
+        } else if let idx = selectedLinkIndex {
+            Text(verbatim: "K\(idx + 1)")
+        } else {
+            Text(L.Common.document)
+        }
         return NavigationStack {
             ScrollView {
                 EditorInspectorPanel(
@@ -511,7 +511,7 @@ struct EditorContent: View {
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { inspectorSheet.wrappedValue = false }
+                    Button(L.Common.done) { inspectorSheet.wrappedValue = false }
                 }
             }
         }
@@ -536,11 +536,11 @@ struct EditorContent: View {
                     else if let idx = selectedLinkIndex { onDeleteLink(idx) }
                 }
             )
-            .navigationTitle("Model")
+            .navigationTitle(L.Common.model)
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { modelListSheet.wrappedValue = false }
+                    Button(L.Common.done) { modelListSheet.wrappedValue = false }
                 }
             }
         }
@@ -560,7 +560,7 @@ struct EditorContent: View {
                         }
                     }
                 } label: {
-                    Label("Compartment", systemImage: "plus.square")
+                    Label(L.Common.compartment, systemImage: "plus.square")
                         .font(TypeToken.detail.weight(.semibold))
                         .foregroundStyle(.ink)
                         .lineLimit(1)
