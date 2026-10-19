@@ -1,5 +1,5 @@
 {
-  "originHash" : "6ba7ebada02ab48911a5a05d5fe32bfb3fa47317a3189f89e46cc66956103567",
+  "originHash" : "83cb32f55df8fdb4e885d5c6ef8962f0944a0f0ddeebf715902088895e85ca43",
   "pins" : [
     {
       "identity" : "fp",
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SwiftRex/SwiftRex.git",
       "state" : {
-        "branch" : "feature/localized-resource-leaf",
-        "revision" : "efb7d508fdbabff36180ea2f109313b9b7099590"
+        "branch" : "main",
+        "revision" : "3700d334862fb401a6a40098bf4f8c4345e183f6"
       }
     },
     {
