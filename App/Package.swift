@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "biokinetics-dosimetry", path: ".."),
-        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "feature/localized-resource-leaf", traits: ["ReactiveConcurrency"]),
+        .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
         .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "2.0.0"),
         .package(url: "https://github.com/luizmb/FP.git", from: "3.0.0"),
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
