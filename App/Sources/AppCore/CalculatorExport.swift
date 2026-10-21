@@ -11,14 +11,14 @@ public let generateCalculatorCSV: @Sendable (CalculatorExportData) -> DeferredTa
         var lines: [String] = []
 
         // Header row
-        let header = ([String(localized: L.Resource.Common.time(L.domainString(input.lingo.timeUnit.label)))] + input.compartmentNames)
+        let header = ([String(localized: L.Resource.Common.time(L.domainString(input.units.time.symbol)))] + input.compartmentNames)
             .map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
             .joined(separator: ",")
         lines.append(header)
 
         // Data rows — full Double precision
         for row in input.rows {
-            let timeStr = String(format: "%.6g", row.day)
+            let timeStr = String(format: "%.6g", row.time)
             let values  = row.values.map { String(format: "%.9e", $0) }
             lines.append(([timeStr] + values).joined(separator: ","))
         }
@@ -80,7 +80,7 @@ private func drawReportPage(input: CalculatorExportData, bounds: CGRect) {
     headerBg.setFill()
     UIBezierPath(rect: CGRect(x: margin, y: y, width: pageW, height: 18)).fill()
 
-    let headers = [String(localized: L.Resource.Common.time(L.domainString(input.lingo.timeUnit.label)))] + input.compartmentNames
+    let headers = [String(localized: L.Resource.Common.time(L.domainString(input.units.time.symbol)))] + input.compartmentNames
     for (i, name) in headers.enumerated() {
         let truncated = name.count > 14 ? String(name.prefix(12)) + "…" : name
         drawTextInRect(truncated,
@@ -101,7 +101,7 @@ private func drawReportPage(input: CalculatorExportData, bounds: CGRect) {
             UIColor.systemGray6.setFill()
             UIBezierPath(rect: CGRect(x: margin, y: y, width: pageW, height: 11)).fill()
         }
-        let timeStr = String(format: "%.4g", row.day)
+        let timeStr = String(format: "%.4g", row.time)
         drawTextInRect(timeStr,
                        rect: CGRect(x: xForCol(0), y: y, width: colW(0), height: 11),
                        font: rowFont, color: .label, align: .left)

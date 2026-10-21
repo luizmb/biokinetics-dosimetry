@@ -853,6 +853,60 @@
         }
       }
     },
+    "Add compartment": {
+      "comment": "L.Editor.addCompartment",
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add compartment"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar compartimento"
+          }
+        },
+        "es-ES": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir compartimento"
+          }
+        },
+        "de-DE": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kompartiment hinzufügen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj kompartment"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un compartiment"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi compartimento"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加隔室"
+          }
+        }
+      }
+    },
     "Add reverse transfer": {
       "comment": "L.Editor.addReverseTransfer",
       "extractionState": "manual",
@@ -1177,56 +1231,56 @@
         }
       }
     },
-    "An RK4 step of %@ d is unstable for this model. Use a step below %@ d, or Birchall.": {
+    "An RK4 step of %@ %@ is unstable for this model. Use a step below %@ %@, or Birchall.": {
       "comment": "L.Calc.unstableStep",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "An RK4 step of %@ d is unstable for this model. Use a step below %@ d, or Birchall."
+            "value": "An RK4 step of %@ %@ is unstable for this model. Use a step below %@ %@, or Birchall."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um passo de RK4 de %@ d é instável para este modelo. Use um passo abaixo de %@ d, ou o Birchall."
+            "value": "Um passo de RK4 de %@ %@ é instável para este modelo. Use um passo abaixo de %@ %@, ou o Birchall."
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un paso de RK4 de %@ d es inestable para este modelo. Usa un paso inferior a %@ d, o Birchall."
+            "value": "Un paso de RK4 de %@ %@ es inestable para este modelo. Usa un paso inferior a %@ %@, o Birchall."
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein RK4-Schritt von %@ d ist für dieses Modell instabil. Verwende einen Schritt unter %@ d oder Birchall."
+            "value": "Ein RK4-Schritt von %@ %@ ist für dieses Modell instabil. Verwende einen Schritt unter %@ %@ oder Birchall."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Krok RK4 równy %@ d jest dla tego modelu niestabilny. Użyj kroku poniżej %@ d albo metody Birchalla."
+            "value": "Krok RK4 równy %@ %@ jest dla tego modelu niestabilny. Użyj kroku poniżej %@ %@ albo metody Birchalla."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un pas RK4 de %@ j est instable pour ce modèle. Utilisez un pas inférieur à %@ j, ou Birchall."
+            "value": "Un pas RK4 de %@ %@ est instable pour ce modèle. Utilisez un pas inférieur à %@ %@, ou Birchall."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un passo RK4 di %@ g è instabile per questo modello. Usa un passo inferiore a %@ g, oppure Birchall."
+            "value": "Un passo RK4 di %@ %@ è instabile per questo modello. Usa un passo inferiore a %@ %@, oppure Birchall."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "对此模型，%@ 天的 RK4 步长不稳定。请使用小于 %@ 天的步长，或改用 Birchall。"
+            "value": "对此模型，%@ %@ 的 RK4 步长不稳定。请使用小于 %@ %@ 的步长，或改用 Birchall。"
           }
         }
       }
@@ -9817,60 +9871,6 @@
         }
       }
     },
-    "MODEL": {
-      "comment": "L.Editor.compartmentsAndTransfers",
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODEL"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODELO"
-          }
-        },
-        "es-ES": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODELO"
-          }
-        },
-        "de-DE": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODELL"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODEL"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODÈLE"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MODELLO"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "模型"
-          }
-        }
-      }
-    },
     "MSc Thesis, IPEN‑CNEN/SP / Universidade de São Paulo, 2011": {
       "comment": "L.Credits.claroThesis",
       "extractionState": "manual",
@@ -10573,60 +10573,6 @@
         }
       }
     },
-    "Model properties": {
-      "comment": "L.Editor.modelProperties",
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model properties"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Propriedades do modelo"
-          }
-        },
-        "es-ES": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Propiedades del modelo"
-          }
-        },
-        "de-DE": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modelleigenschaften"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Właściwości modelu"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Propriétés du modèle"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Proprietà del modello"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "模型属性"
-          }
-        }
-      }
-    },
     "Morphine": {
       "comment": "Sample model text",
       "extractionState": "manual",
@@ -11167,6 +11113,60 @@
         }
       }
     },
+    "New transfer": {
+      "comment": "L.Editor.newTransfer",
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New transfer"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova transferência"
+          }
+        },
+        "es-ES": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva transferencia"
+          }
+        },
+        "de-DE": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Transfer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nowy transfer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau transfert"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuovo trasferimento"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新转移"
+          }
+        }
+      }
+    },
     "No %@ — tap + to add one": {
       "comment": "L.Editor.noSubstances",
       "extractionState": "manual",
@@ -11383,56 +11383,56 @@
         }
       }
     },
-    "Now tap the destination compartment": {
-      "comment": "L.Editor.tapDestination",
+    "Nothing selected": {
+      "comment": "L.Editor.nothingSelected",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now tap the destination compartment"
+            "value": "Nothing selected"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Agora toque no compartimento de destino"
+            "value": "Nada selecionado"
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ahora toca el compartimento de destino"
+            "value": "Nada seleccionado"
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tippe jetzt auf das Zielkompartiment"
+            "value": "Nichts ausgewählt"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Teraz stuknij kompartment docelowy"
+            "value": "Nic nie zaznaczono"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Touchez maintenant le compartiment de destination"
+            "value": "Aucune sélection"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ora tocca il compartimento di destinazione"
+            "value": "Nessuna selezione"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "现在轻点目标房室"
+            "value": "未选择任何内容"
           }
         }
       }
@@ -12571,6 +12571,60 @@
         }
       }
     },
+    "Pick a compartment or a transfer in the model, then Edit.": {
+      "comment": "L.Editor.pickSomethingToEdit",
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a compartment or a transfer in the model, then Edit."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um compartimento ou uma transferência no modelo e toque em Editar."
+          }
+        },
+        "es-ES": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige un compartimento o una transferencia en el modelo y pulsa Editar."
+          }
+        },
+        "de-DE": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle im Modell ein Kompartiment oder einen Transfer und tippe auf Bearbeiten."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz kompartment lub transfer w modelu, a potem Edytuj."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez un compartiment ou un transfert dans le modèle, puis Modifier."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli un compartimento o un trasferimento nel modello, poi Modifica."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在模型中选择一个隔室或转移，然后点按“编辑”。"
+          }
+        }
+      }
+    },
     "Plasma": {
       "comment": "Sample model text",
       "extractionState": "manual",
@@ -12787,218 +12841,218 @@
         }
       }
     },
-    "RK45 could not take a step at day %@. Use Birchall for this model.": {
+    "RK45 could not take a step at %@ %@. Use Birchall for this model.": {
       "comment": "L.Calc.underflow",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 could not take a step at day %@. Use Birchall for this model."
+            "value": "RK45 could not take a step at %@ %@. Use Birchall for this model."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O RK45 não conseguiu avançar no dia %@. Use o Birchall para este modelo."
+            "value": "O RK45 não conseguiu avançar em %@ %@. Use o Birchall para este modelo."
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 no pudo avanzar en el día %@. Usa Birchall para este modelo."
+            "value": "RK45 no pudo avanzar en %@ %@. Usa Birchall para este modelo."
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 konnte an Tag %@ keinen Schritt machen. Verwende für dieses Modell Birchall."
+            "value": "RK45 konnte bei %@ %@ keinen Schritt machen. Verwende für dieses Modell Birchall."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 nie mogła wykonać kroku w dniu %@. Użyj dla tego modelu metody Birchalla."
+            "value": "RK45 nie mogła wykonać kroku przy %@ %@. Użyj dla tego modelu metody Birchalla."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 n’a pas pu avancer au jour %@. Utilisez Birchall pour ce modèle."
+            "value": "RK45 n’a pas pu avancer à %@ %@. Utilisez Birchall pour ce modèle."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 non è riuscito ad avanzare al giorno %@. Usa Birchall per questo modello."
+            "value": "RK45 non è riuscito ad avanzare a %@ %@. Usa Birchall per questo modello."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 无法在第 %@ 天前进一步。此模型请改用 Birchall。"
+            "value": "RK45 无法在 %@ %@ 处前进一步。此模型请改用 Birchall。"
           }
         }
       }
     },
-    "RK45 could not take a step at day %@; the results cover the days before it. Use Birchall for this model.": {
+    "RK45 could not take a step at %@ %@; the results cover the time before it. Use Birchall for this model.": {
       "comment": "L.Calc.underflowPartial",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 could not take a step at day %@; the results cover the days before it. Use Birchall for this model."
+            "value": "RK45 could not take a step at %@ %@; the results cover the time before it. Use Birchall for this model."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O RK45 não conseguiu avançar no dia %@; os resultados cobrem os dias anteriores. Use o Birchall para este modelo."
+            "value": "O RK45 não conseguiu avançar em %@ %@; os resultados cobrem o período anterior. Use o Birchall para este modelo."
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 no pudo avanzar en el día %@; los resultados cubren los días anteriores. Usa Birchall para este modelo."
+            "value": "RK45 no pudo avanzar en %@ %@; los resultados cubren el periodo anterior. Usa Birchall para este modelo."
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 konnte an Tag %@ keinen Schritt machen; die Ergebnisse reichen bis davor. Verwende für dieses Modell Birchall."
+            "value": "RK45 konnte bei %@ %@ keinen Schritt machen; die Ergebnisse reichen bis davor. Verwende für dieses Modell Birchall."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 nie mogła wykonać kroku w dniu %@; wyniki obejmują dni wcześniejsze. Użyj dla tego modelu metody Birchalla."
+            "value": "RK45 nie mogła wykonać kroku przy %@ %@; wyniki obejmują wcześniejszy okres. Użyj dla tego modelu metody Birchalla."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 n’a pas pu avancer au jour %@ ; les résultats couvrent les jours précédents. Utilisez Birchall pour ce modèle."
+            "value": "RK45 n’a pas pu avancer à %@ %@ ; les résultats couvrent la période précédente. Utilisez Birchall pour ce modèle."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 non è riuscito ad avanzare al giorno %@; i risultati coprono i giorni precedenti. Usa Birchall per questo modello."
+            "value": "RK45 non è riuscito ad avanzare a %@ %@; i risultati coprono il periodo precedente. Usa Birchall per questo modello."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 无法在第 %@ 天前进一步；结果涵盖此前的天数。此模型请改用 Birchall。"
+            "value": "RK45 无法在 %@ %@ 处前进一步；结果涵盖此前的时段。此模型请改用 Birchall。"
           }
         }
       }
     },
-    "RK45 stopped at day %@ of %@ after %lld steps. Raise the step budget, or use Birchall.": {
+    "RK45 stopped at %@ of %@ %@ after %lld steps. Raise the step budget, or use Birchall.": {
       "comment": "L.Calc.budgetExhausted",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 stopped at day %@ of %@ after %lld steps. Raise the step budget, or use Birchall."
+            "value": "RK45 stopped at %@ of %@ %@ after %lld steps. Raise the step budget, or use Birchall."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O RK45 parou no dia %@ de %@ após %lld passos. Aumente o orçamento de passos, ou use o Birchall."
+            "value": "O RK45 parou em %@ de %@ %@ após %lld passos. Aumente o orçamento de passos, ou use o Birchall."
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 se detuvo en el día %@ de %@ tras %lld pasos. Aumenta el presupuesto de pasos, o usa Birchall."
+            "value": "RK45 se detuvo en %@ de %@ %@ tras %lld pasos. Aumenta el presupuesto de pasos, o usa Birchall."
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 hat an Tag %@ von %@ nach %lld Schritten angehalten. Erhöhe das Schrittbudget oder verwende Birchall."
+            "value": "RK45 hat bei %@ von %@ %@ nach %lld Schritten angehalten. Erhöhe das Schrittbudget oder verwende Birchall."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 zatrzymała się w dniu %@ z %@ po %lld krokach. Zwiększ budżet kroków albo użyj metody Birchalla."
+            "value": "RK45 zatrzymała się na %@ z %@ %@ po %lld krokach. Zwiększ budżet kroków albo użyj metody Birchalla."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 s’est arrêté au jour %@ sur %@ après %lld pas. Augmentez le budget de pas, ou utilisez Birchall."
+            "value": "RK45 s’est arrêté à %@ sur %@ %@ après %lld pas. Augmentez le budget de pas, ou utilisez Birchall."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 si è fermato al giorno %@ su %@ dopo %lld passi. Aumenta il budget di passi, oppure usa Birchall."
+            "value": "RK45 si è fermato a %@ su %@ %@ dopo %lld passi. Aumenta il budget di passi, oppure usa Birchall."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 在第 %@ 天（共 %@ 天）运行 %lld 步后停止。请提高步数预算，或改用 Birchall。"
+            "value": "RK45 在 %@ / %@ %@ 处运行 %lld 步后停止。请提高步数预算，或改用 Birchall。"
           }
         }
       }
     },
-    "RK45 stopped at day %@ of %@ after %lld steps; the results cover the days it reached. Raise the step budget, or use Birchall.": {
+    "RK45 stopped at %@ of %@ %@ after %lld steps; the results cover the time it reached. Raise the step budget, or use Birchall.": {
       "comment": "L.Calc.budgetExhaustedPartial",
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 stopped at day %@ of %@ after %lld steps; the results cover the days it reached. Raise the step budget, or use Birchall."
+            "value": "RK45 stopped at %@ of %@ %@ after %lld steps; the results cover the time it reached. Raise the step budget, or use Birchall."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O RK45 parou no dia %@ de %@ após %lld passos; os resultados cobrem os dias alcançados. Aumente o orçamento de passos, ou use o Birchall."
+            "value": "O RK45 parou em %@ de %@ %@ após %lld passos; os resultados cobrem o período alcançado. Aumente o orçamento de passos, ou use o Birchall."
           }
         },
         "es-ES": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 se detuvo en el día %@ de %@ tras %lld pasos; los resultados cubren los días alcanzados. Aumenta el presupuesto de pasos, o usa Birchall."
+            "value": "RK45 se detuvo en %@ de %@ %@ tras %lld pasos; los resultados cubren el periodo alcanzado. Aumenta el presupuesto de pasos, o usa Birchall."
           }
         },
         "de-DE": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 hat an Tag %@ von %@ nach %lld Schritten angehalten; die Ergebnisse reichen bis zu diesem Tag. Erhöhe das Schrittbudget oder verwende Birchall."
+            "value": "RK45 hat bei %@ von %@ %@ nach %lld Schritten angehalten; die Ergebnisse reichen bis dorthin. Erhöhe das Schrittbudget oder verwende Birchall."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 zatrzymała się w dniu %@ z %@ po %lld krokach; wyniki obejmują osiągnięte dni. Zwiększ budżet kroków albo użyj metody Birchalla."
+            "value": "RK45 zatrzymała się na %@ z %@ %@ po %lld krokach; wyniki obejmują osiągnięty okres. Zwiększ budżet kroków albo użyj metody Birchalla."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 s’est arrêté au jour %@ sur %@ après %lld pas ; les résultats couvrent les jours atteints. Augmentez le budget de pas, ou utilisez Birchall."
+            "value": "RK45 s’est arrêté à %@ sur %@ %@ après %lld pas ; les résultats couvrent la période atteinte. Augmentez le budget de pas, ou utilisez Birchall."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 si è fermato al giorno %@ su %@ dopo %lld passi; i risultati coprono i giorni raggiunti. Aumenta il budget di passi, oppure usa Birchall."
+            "value": "RK45 si è fermato a %@ su %@ %@ dopo %lld passi; i risultati coprono il periodo raggiunto. Aumenta il budget di passi, oppure usa Birchall."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "RK45 在第 %@ 天（共 %@ 天）运行 %lld 步后停止；结果涵盖已到达的天数。请提高步数预算，或改用 Birchall。"
+            "value": "RK45 在 %@ / %@ %@ 处运行 %lld 步后停止；结果涵盖已到达的时段。请提高步数预算，或改用 Birchall。"
           }
         }
       }
@@ -13915,60 +13969,6 @@
         }
       }
     },
-    "Selected · %@": {
-      "comment": "L.Editor.selected",
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selected · %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecionado · %@"
-          }
-        },
-        "es-ES": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seleccionado · %@"
-          }
-        },
-        "de-DE": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgewählt · %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaznaczono · %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sélectionné · %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selezionato · %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已选择 · %@"
-          }
-        }
-      }
-    },
     "Semigroup": {
       "comment": "L.Calc.semigroup",
       "extractionState": "manual",
@@ -14127,6 +14127,60 @@
           "stringUnit": {
             "state": "translated",
             "value": "发送"
+          }
+        }
+      }
+    },
+    "Show the rates on the arrows": {
+      "comment": "L.Editor.showRatesOnArrows",
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the rates on the arrows"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar as taxas nas setas"
+          }
+        },
+        "es-ES": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar las tasas en las flechas"
+          }
+        },
+        "de-DE": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raten an den Pfeilen zeigen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż stałe na strzałkach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les taux sur les flèches"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra le costanti sulle frecce"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在箭头上显示速率"
           }
         }
       }
@@ -15531,60 +15585,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "轻点“计算”以运行求解器"
-          }
-        }
-      }
-    },
-    "Tap the source compartment": {
-      "comment": "L.Editor.tapSource",
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap the source compartment"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toque no compartimento de origem"
-          }
-        },
-        "es-ES": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toca el compartimento de origen"
-          }
-        },
-        "de-DE": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tippe auf das Ausgangskompartiment"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stuknij kompartment źródłowy"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Touchez le compartiment source"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tocca il compartimento di origine"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轻点源房室"
           }
         }
       }

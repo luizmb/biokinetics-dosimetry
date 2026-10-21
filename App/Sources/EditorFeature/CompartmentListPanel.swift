@@ -5,79 +5,104 @@ import Vitral
 
 // MARK: - EditorModelListPanel (pure)
 
+/// The left panel's second page: what the model is made of. Tapping a row picks it (and shows
+/// it on the canvas); the picked row offers Edit, which opens the inspector on it, and Delete.
+/// New compartments and transfers are added here too.
 struct EditorModelListPanel: View {
     let lingo: FieldLingo
+    let units: WorkingUnits
     let nuclides: [EditorFeature.NuclideRow]
     let compartments: [EditorFeature.CompartmentRow]
     let links: [EditorFeature.LinkRow]
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
-    let selectionFooterLabel: LocalizedStringResource?
     var onSelectCompartment: (String?) -> Void
     var onSelectLink: (Int?) -> Void
-    var onDeleteSelected: () -> Void
+    var onEditCompartment: (String) -> Void
+    var onEditLink: (Int) -> Void
+    var onDeleteCompartment: (String) -> Void
+    var onDeleteLink: (Int) -> Void
+    var onAddCompartment: () -> Void
+    var onAddTransfer: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
     @Environment(\.accent) private var accent
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text(L.Editor.compartmentsAndTransfers)
-                    .font(TypeToken.sectionLabel)
-                    .kerning(0.6)
-                    .foregroundStyle(Color(.inkFaint))
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 10)
-
-            Hairline()
-
-            ScrollViewReader { proxy in
-                GlassList {
-                    if nuclides.count > 1 {
-                        ForEach(nuclides) { nuclide in
-                            let comps = compartments.filter { $0.nuclideId == nuclide.id }
-                            GlassSection(LocalizedStringKey(nuclide.name), trailing: { halfLifeLabel(nuclide) }) {
-                                ForEach(comps) { comp in
-                                    compartmentRow(comp, proxy: proxy)
-                                }
-                            }
-                        }
-                    } else {
-                        GlassSection(L.Common.compartments) {
-                            ForEach(compartments) { comp in
-                                compartmentRow(comp, proxy: proxy)
+        ScrollViewReader { proxy in
+            GlassList {
+                if nuclides.count > 1 {
+                    ForEach(nuclides) { nuclide in
+                        let comps = compartments.filter { $0.nuclideId == nuclide.id }
+                        GlassSection(LocalizedStringKey(nuclide.name), trailing: { halfLifeLabel(nuclide) }) {
+                            ForEach(comps) { comp in
+                                compartmentRow(comp)
                             }
                         }
                     }
-
-                    GlassSection(L.Common.transfers) {
-                        ForEach(links) { link in
-                            linkRow(link)
+                    GlassSection {
+                        addRow(L.Editor.addCompartment, action: onAddCompartment)
+                    }
+                } else {
+                    GlassSection(L.Common.compartments) {
+                        ForEach(compartments) { comp in
+                            compartmentRow(comp)
                         }
+                        addRow(L.Editor.addCompartment, action: onAddCompartment)
                     }
                 }
-                .onChange(of: selectedCompartmentId) { _, id in
-                    if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
-                }
-                .onChange(of: selectedLinkIndex) { _, idx in
-                    if let idx { withAnimation { proxy.scrollTo("link-\(idx)", anchor: .center) } }
+
+                GlassSection(L.Common.transfers) {
+                    ForEach(links) { link in
+                        linkRow(link)
+                    }
+                    addRow(L.Editor.addTransfer, action: onAddTransfer)
                 }
             }
-
-            // Delete footer
-            if selectionFooterLabel != nil {
-                Hairline()
-                deleteFooter
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
+            .onChange(of: selectedCompartmentId) { _, id in
+                if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
+            }
+            .onChange(of: selectedLinkIndex) { _, idx in
+                if let idx { withAnimation { proxy.scrollTo("link-\(idx)", anchor: .center) } }
             }
         }
-        .animation(.spring(response: 0.2, dampingFraction: 0.9), value: selectionFooterLabel)
+    }
+
+    /// A row that adds one more of something.
+    private func addRow(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: "plus.circle")
+                .font(TypeToken.bodyStrong)
+                .foregroundStyle(Color(.accent, scheme: colorScheme))
+                .frame(maxWidth: .infinity, minHeight: Size.hitTarget, alignment: .leading)
+                .padding(.horizontal, Space.large)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    /// Edit and Delete, on the picked row only.
+    private func rowActions(edit: @escaping () -> Void, delete: @escaping () -> Void) -> some View {
+        HStack(spacing: Space.medium) {
+            Button(action: edit) {
+                Image(systemName: "pencil")
+                    .font(TypeToken.bodyStrong)
+                    .foregroundStyle(Color(.accent, scheme: colorScheme))
+                    .frame(width: Size.hitTarget, height: Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(L.Common.edit))
+            Button(role: .destructive, action: delete) {
+                Image(systemName: "trash")
+                    .font(TypeToken.bodyStrong)
+                    .foregroundStyle(.danger)
+                    .frame(width: Size.hitTarget, height: Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(L.Common.delete))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Nuclide header
@@ -85,16 +110,13 @@ struct EditorModelListPanel: View {
     @ViewBuilder
     private func halfLifeLabel(_ nuclide: EditorFeature.NuclideRow) -> some View {
         if nuclide.halfLife > 0 {
-            (Text(L.domain(lingo.halfLifeLabel)) + Text(verbatim: " \(nuclide.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(lingo.timeUnit.label)))
+            (Text(L.domain(lingo.halfLifeLabel)) + Text(verbatim: " \(nuclide.halfLifeShortText) ") + Text(L.domain(units.time.symbol)))
         }
     }
 
     // MARK: - Compartment row
 
-    private func compartmentRow(
-        _ comp: EditorFeature.CompartmentRow,
-        proxy: ScrollViewProxy
-    ) -> some View {
+    private func compartmentRow(_ comp: EditorFeature.CompartmentRow) -> some View {
         let isSelected = selectedCompartmentId == comp.id
         return HStack(spacing: 10) {
             Circle()
@@ -115,14 +137,18 @@ struct EditorModelListPanel: View {
                 }
             }
             Spacer()
+            if isSelected {
+                rowActions(edit: { onEditCompartment(comp.id) }, delete: { onDeleteCompartment(comp.id) })
+            }
         }
-        .padding(.horizontal, Space.large)
+        .padding(.leading, Space.large)
+        .padding(.trailing, isSelected ? Space.small : Space.large)
         .frame(minHeight: Size.hitTarget)
         // The selection washes over the row's glass rather than replacing it.
-        .background(isSelected ? Color(accent.base.opacity(0.14)) : Color.clear)
+        .background(isSelected ? Color(accent.base.opacity(0.14), scheme: colorScheme) : Color.clear)
         .contentShape(Rectangle())
         .id(comp.id)
-        .onTapGesture { onSelectCompartment(comp.id) }
+        .onTapGesture { onSelectCompartment(isSelected ? nil : comp.id) }
     }
 
     // MARK: - Link row
@@ -140,38 +166,22 @@ struct EditorModelListPanel: View {
                 .font(TypeToken.detail)
                 .lineLimit(1)
             Spacer()
-            Text(link.rate.scientificString)
-                .font(TypeToken.codeSmall)
-                .foregroundStyle(.inkFaint)
+            if isSelected {
+                rowActions(edit: { onEditLink(link.id) }, delete: { onDeleteLink(link.id) })
+            } else {
+                Text(verbatim: link.rateText)
+                    .font(TypeToken.codeSmall)
+                    .foregroundStyle(.inkFaint)
+            }
         }
-        .padding(.horizontal, Space.large)
+        .padding(.leading, Space.large)
+        .padding(.trailing, isSelected ? Space.small : Space.large)
         .frame(minHeight: Size.hitTarget)
         // The selection washes over the row's glass rather than replacing it.
-        .background(isSelected ? Color(accent.base.opacity(0.14)) : Color.clear)
+        .background(isSelected ? Color(accent.base.opacity(0.14), scheme: colorScheme) : Color.clear)
         .contentShape(Rectangle())
         .id("link-\(link.id)")
-        .onTapGesture { onSelectLink(link.id) }
-    }
-
-    // MARK: - Delete footer
-
-    private var deleteFooter: some View {
-        HStack {
-            if let label = selectionFooterLabel {
-                Label(label, systemImage: selectedCompartmentId != nil ? "square.fill" : "arrow.forward")
-                    .font(.caption)
-                    .foregroundStyle(.inkMuted)
-                    .lineLimit(1)
-            }
-            Spacer()
-            Button(role: .destructive, action: onDeleteSelected) {
-                Label(L.Common.delete, systemImage: "trash")
-                    .font(.caption.weight(.medium))
-            }
-            .buttonStyle(.borderless)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .onTapGesture { onSelectLink(isSelected ? nil : link.id) }
     }
 
     // MARK: - Flag chip
@@ -186,12 +196,3 @@ struct EditorModelListPanel: View {
     }
 }
 
-// MARK: - Double formatting
-
-extension Double {
-    var scientificString: String {
-        let exp = self == 0 ? 0 : Int(floor(log10(abs(self))))
-        let m = self == 0 ? 0.0 : self / pow(10, Double(exp))
-        return String(format: "%.2fe%+03d", m, exp)
-    }
-}

@@ -3,6 +3,7 @@
 /// Use these in unit tests and SwiftUI previews instead of inline
 /// `DataDecoderFactory` implementations.
 #if DEBUG
+import AppDomain
 import Core       // DataDecoderFactory, DataDecoder, Convert
 import Foundation // DecodingError
 import Parser     // IpenXmlModel
@@ -17,7 +18,14 @@ public extension HomeModule.Environment {
     /// Use in tests or previews that need to observe a successful import result
     /// without providing real XML bytes.
     static func alwaysSucceed(importing model: IpenXmlModel) -> HomeModule.Environment {
-        HomeModule.Environment(xmlDecoder: AlwaysSucceedsFactory(model: model), jsonDecoder: AlwaysFailsFactory())
+        HomeModule.Environment(
+            xmlDecoder:  AlwaysSucceedsFactory(model: model),
+            jsonDecoder: AlwaysFailsFactory(),
+            newId:       { mockID },
+            seedId:      { _ in mockID },
+            formatDouble: { v, dp in String(format: "%.\(dp)f", v) },
+            formatInteger: { String($0) }
+        )
     }
 
     static var alwaysSucceed: HomeModule.Environment {
@@ -27,19 +35,30 @@ public extension HomeModule.Environment {
     static var alwaysFails: HomeModule.Environment {
         HomeModule.Environment(
             xmlDecoder:  AlwaysFailsFactory(),
-            jsonDecoder: AlwaysFailsFactory()
+            jsonDecoder: AlwaysFailsFactory(),
+            newId:       { mockID },
+            seedId:      { _ in mockID },
+            formatDouble: { v, dp in String(format: "%.\(dp)f", v) },
+            formatInteger: { String($0) }
         )
     }
 
     static func fails(error: DecodingError) -> HomeModule.Environment {
         HomeModule.Environment(
             xmlDecoder:  AlwaysFailsFactory(error: error),
-            jsonDecoder: AlwaysFailsFactory(error: error)
+            jsonDecoder: AlwaysFailsFactory(error: error),
+            newId:       { mockID },
+            seedId:      { _ in mockID },
+            formatDouble: { v, dp in String(format: "%.\(dp)f", v) },
+            formatInteger: { String($0) }
         )
     }
 }
 
 // MARK: - Private helpers
+
+/// The mocks' identity: one, made from bytes. A mock that makes documents makes them all with it.
+private let mockID = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x42))
 
 private struct AlwaysFailsFactory: DataDecoderFactory, Sendable {
     var error: DecodingError = .dataCorrupted(.init(codingPath: [], debugDescription: "mock failure"))

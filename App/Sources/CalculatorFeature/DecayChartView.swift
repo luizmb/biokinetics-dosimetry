@@ -13,17 +13,23 @@ struct DecayChartContent: View {
     let error: LocalizedStringResource?
     let logX: Bool
     let logY: Bool
-    let finalDay: Int
-    let lingo: FieldLingo
+    let duration: Int
+    let units: WorkingUnits
     let validationIssues: [CompartmentalModel.ValidationIssue]
     var remedies: [CalculatorFeature.Remedy] = []
     /// Set when `series` is a stopped run's: the chart greys out what comes after.
-    var stoppedAtDay: Double? = nil
+    var stoppedAt: Double? = nil
     var stoppedLabel: LocalizedStringResource? = nil
     var onToggleSeries: (String) -> Void
     var onRemedy: (CalculatorFeature.Remedy) -> Void = { _ in }
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
+    /// Each issue's text, in step with `validationIssues`, and the axes' marks: written where the
+    /// view state is made.
+    let validationIssueTexts: [LocalizedStringResource]
+    let xTicks: [CalculatorFeature.AxisTick]
+    let yTicks: [CalculatorFeature.AxisTick]
 
     private var errorIssues: [CompartmentalModel.ValidationIssue] {
         validationIssues.filter { $0.severity == .error }
@@ -131,7 +137,7 @@ struct DecayChartContent: View {
                 .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .frame(width: 18)
-            Text(issue.text)
+            Text(validationIssues.firstIndex(of: issue).map { validationIssueTexts[$0] } ?? "")
                 .font(TypeToken.detail)
                 .foregroundStyle(tintFor(issue.severity))
                 .fixedSize(horizontal: false, vertical: true)
@@ -178,14 +184,14 @@ struct DecayChartContent: View {
         Chart {
             // Past the stop nothing was computed: grey it out to the end of the horizon, so the
             // axis still spans the run that was asked for.
-            if let stop = stoppedAtDay {
+            if let stop = stoppedAt {
                 RectangleMark(
-                    xStart: .value(L.domain(lingo.timeUnit.displayName), xPosition(stop)),
-                    xEnd: .value(L.domain(lingo.timeUnit.displayName), xPosition(Double(finalDay)))
+                    xStart: .value(L.domain(units.time.displayName), xPosition(stop)),
+                    xEnd: .value(L.domain(units.time.displayName), xPosition(Double(duration)))
                 )
-                .foregroundStyle(Color(ColorToken.ink.opacity(0.07)))
-                RuleMark(x: .value(L.domain(lingo.timeUnit.displayName), xPosition(stop)))
-                    .foregroundStyle(Color(.warning))
+                .foregroundStyle(Color(ColorToken.ink.opacity(0.07), scheme: colorScheme))
+                RuleMark(x: .value(L.domain(units.time.displayName), xPosition(stop)))
+                    .foregroundStyle(Color(.warning, scheme: colorScheme))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .annotation(position: .trailing, alignment: .top, spacing: 4) {
                         if let stoppedLabel {
@@ -197,7 +203,7 @@ struct DecayChartContent: View {
                 let pts = transformedPoints(s.points)
                 ForEach(pts.indices, id: \.self) { idx in
                     LineMark(
-                        x: .value(L.domain(lingo.timeUnit.displayName), pts[idx].x),
+                        x: .value(L.domain(units.time.displayName), pts[idx].x),
                         y: .value(L.Calc.activity, pts[idx].y)
                     )
                     .foregroundStyle(by: .value(L.Common.compartment, s.name))
@@ -220,22 +226,11 @@ struct DecayChartContent: View {
 
     @AxisContentBuilder
     private var xAxisContent: some AxisContent {
-        if logX {
-            AxisMarks(values: logTicks(min: 0.1, max: Double(finalDay))) { value in
-                AxisGridLine(); AxisTick()
-                AxisValueLabel {
-                    if let v = value.as(Double.self) {
-                        (Text(verbatim: "\(Int(pow(10, v))) ") + Text(L.domain(lingo.timeUnit.label))).font(.caption2)
-                    }
-                }
-            }
-        } else {
-            AxisMarks { value in
-                AxisGridLine(); AxisTick()
-                AxisValueLabel {
-                    if let v = value.as(Double.self) {
-                        (Text(verbatim: "\(Int(v)) ") + Text(L.domain(lingo.timeUnit.label))).font(.caption2)
-                    }
+        AxisMarks(values: xTicks.map(\.value)) { value in
+            AxisGridLine(); AxisTick()
+            AxisValueLabel {
+                if let v = value.as(Double.self), let tick = xTicks.first(where: { $0.value == v }) {
+                    (Text(verbatim: tick.label + " ") + Text(L.domain(units.time.symbol))).font(.caption2)
                 }
             }
         }
@@ -243,22 +238,11 @@ struct DecayChartContent: View {
 
     @AxisContentBuilder
     private var yAxisContent: some AxisContent {
-        if logY {
-            AxisMarks(values: logTicks(min: 1e-6, max: 1.0)) { value in
-                AxisGridLine(); AxisTick()
-                AxisValueLabel {
-                    if let v = value.as(Double.self) {
-                        Text("10^\(Int(v))").font(.caption2)
-                    }
-                }
-            }
-        } else {
-            AxisMarks { value in
-                AxisGridLine(); AxisTick()
-                AxisValueLabel {
-                    if let v = value.as(Double.self) {
-                        Text(v.formatted(.number.precision(.fractionLength(2)))).font(.caption2)
-                    }
+        AxisMarks(values: yTicks.map(\.value)) { value in
+            AxisGridLine(); AxisTick()
+            AxisValueLabel {
+                if let v = value.as(Double.self), let tick = yTicks.first(where: { $0.value == v }) {
+                    Text(verbatim: tick.label).font(.caption2)
                 }
             }
         }
@@ -295,18 +279,13 @@ struct DecayChartContent: View {
     /// rounding noise around zero, so a long run's tail flickered across it.
     private func transformedPoints(_ raw: [CalculatorFeature.SeriesPoint]) -> [ChartPoint] {
         raw.compactMap { pt in
-            let x: Double = logX ? (pt.day > 0 ? log10(pt.day) : log10(0.1)) : pt.day
+            let x: Double = logX ? (pt.time > 0 ? log10(pt.time) : log10(0.1)) : pt.time
             let y: Double = logY ? log10(max(pt.value, Self.logFloor)) : pt.value
             guard x.isFinite && y.isFinite else { return nil }
             return ChartPoint(x: x, y: y)
         }
     }
 
-    private func logTicks(min: Double, max: Double) -> [Double] {
-        let lo = Int(floor(log10(min)))
-        let hi = Int(ceil(log10(max)))
-        return (lo...hi).map { Double($0) }
-    }
 }
 
 /// A series in the chart's legend: its line's colour, its name, faded while hidden. Tap to show or

@@ -18,10 +18,13 @@ public enum CalculatorFeature {
 
     public struct State: Sendable, Equatable {
         public var document: ModelDocument = .empty
+        /// The screen's traits, from the world through the app's state (see `DeviceTraits`).
+        public var traits: DeviceTraits = .initial
         /// The variant key to use for calculation (nil = base model).
         public var selectedVariant: String? = nil
         public var solver: SolverMethod = .birchall(composition: .perTime)
-        public var finalDay: Int = 200
+        /// Days run, in days like everything the state holds; shown in the field's time unit.
+        public var finalDay: Double = 200
         /// Days between reported rows. Independent of the solver: RK4's integration step lives in
         /// `solver`, and RK45 picks its own.
         public var stepSize:     Double = 1.0
@@ -51,6 +54,10 @@ public enum CalculatorFeature {
         public init(document: ModelDocument) {
             self.init()
             self.document = document
+            // The defaults are 200 and 1 of whatever unit the field works in: 200 days, 200 hours.
+            let time = document.field.units.time.iso
+            finalDay = time.reverseGet(200)
+            stepSize = time.reverseGet(1)
             visibleSeriesIds = Set(document.model.compartments.filter(\.follow).map(\.id))
         }
     }
@@ -97,7 +104,8 @@ public enum CalculatorFeature {
         case solveFailed(SolveError)
         case applyRemedy(Remedy)
         case setSolver(SolverMethod)
-        case setFinalDay(Int)
+        /// The duration, in the field's time unit.
+        case setDuration(Int)
         case setStepSize(Double)
         case setStepSizeText(String)
         case setTolerance(Double)
@@ -123,22 +131,32 @@ public enum CalculatorFeature {
         public var solve:        @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> Publisher<[[Double]], Error>
         public var formatDouble: @Sendable (Double, Int) -> String
         public var parseDouble:  @Sendable (String) -> Double?
+        public var formatScientific: @Sendable (Double, Int) -> String
+        public var formatInteger: @Sendable (Int) -> String
+        public var formatSignificant: @Sendable (Double) -> String
 
         public init(
             solve:        @escaping @Sendable (BiokineticsSimulationPlan, CompartmentalModel) -> Publisher<[[Double]], Error>,
-            formatDouble: @escaping @Sendable (Double, Int) -> String = { v, dp in String(format: "%.\(dp)f", v) },
-            parseDouble:  @escaping @Sendable (String) -> Double?     = { Double($0) }
+            formatDouble: @escaping @Sendable (Double, Int) -> String,
+            parseDouble:  @escaping @Sendable (String) -> Double?,
+            formatScientific: @escaping @Sendable (Double, Int) -> String,
+            formatInteger: @escaping @Sendable (Int) -> String,
+            formatSignificant: @escaping @Sendable (Double) -> String
         ) {
             self.solve        = solve
             self.formatDouble = formatDouble
             self.parseDouble  = parseDouble
+            self.formatScientific = formatScientific
+            self.formatInteger = formatInteger
+            self.formatSignificant = formatSignificant
         }
     }
 
     // MARK: - ViewModel
 
+        /// A point of a series, its time in the field's time unit.
         public struct SeriesPoint: Sendable, Equatable {
-            public var day: Double
+            public var time: Double
             public var value: Double
         }
         public struct Series: Identifiable, Sendable, Equatable {
@@ -150,13 +168,26 @@ public enum CalculatorFeature {
         }
         public struct ReportRow: Identifiable, Sendable, Equatable {
             public var id: Int  // step index
-            public var day: Double
+            /// In the field's time unit.
+            public var time: Double
             public var values: [Double]
+            /// The row as the table shows it, written by the world where the view state is made.
+            public var timeText: String
+            public var valueTexts: [String]
+        }
+
+        /// A mark on one of the chart's axes: where it sits (in the axis's own terms, an exponent on
+        /// a log axis) and what it says, written by the world.
+        public struct AxisTick: Sendable, Equatable {
+            public var value: Double
+            public var label: String
         }
 
         public struct ViewState: Sendable, Equatable {
             public var documentName: String = ""
             public var lingo: FieldLingo = ModelField.generic.lingo
+            /// The units every time and rate below is in: the field's.
+            public var units: WorkingUnits = ModelField.generic.units
             public var halfLife: Double = 0
             public var compartmentNames: [String] = []
             /// Sorted variant keys available for this document (empty = no variants).
@@ -164,7 +195,8 @@ public enum CalculatorFeature {
             /// The variant key currently selected for calculation (nil = base model).
             public var selectedVariant: String? = nil
             public var solver: SolverMethod = .birchall(composition: .perTime)
-            public var finalDay: Int = 200
+            /// The duration, in the field's time unit.
+            public var duration: Int = 200
             public var stepSizeText:  String = "1"
             public var integrationStepText: String = "0.01"
             public var toleranceText: String = "1e-13"
@@ -177,12 +209,14 @@ public enum CalculatorFeature {
             public var stepBudgetHint: LocalizedStringResource? = nil
             /// A manual cap below that need: roughly where the run will stop.
             public var stepBudgetWarning: LocalizedStringResource? = nil
-            /// The `.automatic` budget, per day: what Manual starts from.
+            /// The `.automatic` budget, per day (the solver's unit, passed back as is): what Manual
+            /// starts from.
             public var automaticStepsPerDay: Int = 0
             /// Fixes offered with a failed run.
             public var remedies: [Remedy] = []
-            /// Set when the results are a stopped run's: where the chart's valid part ends.
-            public var stoppedAtDay: Double? = nil
+            /// Set when the results are a stopped run's: where the chart's valid part ends, in the
+            /// field's time unit.
+            public var stoppedAt: Double? = nil
             /// "Stopped at day 41.3", for the marker on the chart.
             public var stoppedLabel: LocalizedStringResource? = nil
             public var series: [Series] = []
@@ -218,13 +252,26 @@ public enum CalculatorFeature {
             public var csvExportInput: CSVExportInput? = nil
             /// Non-nil when results are available — carries data for lazy PDF generation.
             public var pdfExportInput: PDFExportInput? = nil
+
+            /// The screen's appearance, read off the state's traits here, in the projection.
+            public var colorScheme: ColorScheme
+            /// A narrow (or short) screen, read off the state's traits here.
+            public var isCompact: Bool
+            /// Each validation issue's text, in step with `validationIssues`.
+            public var validationIssueTexts: [LocalizedStringResource] = []
+            /// The chart's axis marks, chosen and written here rather than by the chart.
+            public var xTicks: [AxisTick] = []
+            public var yTicks: [AxisTick] = []
+            /// The duration as the stepper shows it, and each step it offers as VoiceOver says it.
+            public var durationText: String = ""
+            public var durationStepTexts: [Int: String] = [:]
         }
 
         public enum ViewAction: Sendable {
             case calculate
             case selectVariant(String?)
             case setSolver(SolverMethod)
-            case setFinalDay(Int)
+            case setDuration(Int)
             case setStepSize(Double)
             case setStepSizeText(String)
             case setTolerance(Double)
@@ -246,6 +293,11 @@ public enum CalculatorFeature {
     public static let mapState = Reader<Environment, @MainActor @Sendable (State) -> ViewState> { env in { state in
         let doc = state.document
         let compartments = doc.model.compartments.filter { $0.follow }
+        // The state and the solver count in days; the screen in the field's units.
+        let units = doc.field.units
+        let time = units.time.iso.get
+        let rate = units.rate.iso.get
+        let duration = Int(time(state.finalDay).rounded())
 
         var series: [Series] = []
         if let results = state.results {
@@ -253,13 +305,18 @@ public enum CalculatorFeature {
             series = compartments.enumerated().compactMap { globalIdx, comp -> Series? in
                 let compIdx = doc.model.compartments.firstIndex { $0.id == comp.id } ?? globalIdx
                 let points = displayTrajectory.enumerated().map { stepIdx, row -> SeriesPoint in
-                    SeriesPoint(day: Double(stepIdx) * state.stepSize, value: compIdx < row.count ? row[compIdx] : 0)
+                    SeriesPoint(time: time(Double(stepIdx) * state.stepSize), value: compIdx < row.count ? row[compIdx] : 0)
                 }
                 let tint = doc.visuals[comp.id]?.tint ?? .steel
                 let visible = state.visibleSeriesIds.isEmpty || state.visibleSeriesIds.contains(comp.id)
                 return Series(id: comp.id, name: comp.name, tint: tint,
                                         points: points, isVisible: visible)
             }
+        }
+
+        let issues = doc.model.validationIssues.filter { issue in
+            if case .missingHalfLife = issue { return doc.field == .nuclear }
+            return true
         }
 
         // Only tracked compartments in report — same filter as chart
@@ -269,14 +326,16 @@ public enum CalculatorFeature {
         let reportRows: [ReportRow] = (state.results ?? []).enumerated().map { idx, row in
             ReportRow(
                 id: idx,
-                day: Double(idx) * state.stepSize,
-                values: trackedIndices.map { $0 < row.count ? row[$0] : 0 }
+                time: time(Double(idx) * state.stepSize),
+                values: trackedIndices.map { $0 < row.count ? row[$0] : 0 },
+                timeText: env.formatDouble(time(Double(idx) * state.stepSize), 0),
+                valueTexts: trackedIndices.map { env.formatScientific($0 < row.count ? row[$0] : 0, 9) }
             )
         }
 
         let plan = BiokineticsSimulationPlan(
             step: state.stepSize,
-            final: Double(state.finalDay),
+            final: state.finalDay,
             solver: state.solver
         )
         let n = doc.model.compartments.count
@@ -284,24 +343,24 @@ public enum CalculatorFeature {
         let limits = (state.selectedVariant.flatMap { doc.variants[$0] } ?? doc.model).solverLimits
         let estimatedSeconds = plan.estimatedDuration(compartmentCount: n, rk45StepsPerDay: limits.rk45StepsPerDay)
         let durationWarning = plan.durationWarning(compartmentCount: n, rk45StepsPerDay: limits.rk45StepsPerDay)
-        let unit = doc.field.lingo.timeUnit.label
+        let unit = units.time.symbol
         let integrationStepIsUnstable: Bool = if case let .rungeKutta4(h) = state.solver { h >= limits.rk4StableStep } else { false }
         let integrationStepHint: LocalizedStringResource? = if case .rungeKutta4 = state.solver {
-            L.Resource.Calc.stableBelow(env.formatDouble(limits.rk4StableStep, 3), unit)
+            L.Resource.Calc.stableBelow(env.formatDouble(time(limits.rk4StableStep), 3), unit)
         } else { nil }
-        let stoppedAtDay: Double? = (state.results?.isEmpty == false) ? state.solveFailure?.stoppedAtDay : nil
-        let partialNote: String? = stoppedAtDay.map {
-            String(localized: L.Resource.Calc.partialRun(env.formatDouble($0, 1), "\(state.finalDay)", unit))
+        let stoppedAt: Double? = ((state.results?.isEmpty == false) ? state.solveFailure?.stoppedAtDay : nil).map(time)
+        let partialNote: String? = stoppedAt.map {
+            String(localized: L.Resource.Calc.partialRun(env.formatDouble($0, 1), env.formatDouble(Double(duration), 0), unit))
         }
-        let neededSteps = Int(limits.rk45StepsPerDay.rounded(.up))
+        let neededSteps = Int(rate(limits.rk45StepsPerDay).rounded(.up))
         let stepBudgetHint: LocalizedStringResource? = if case .rungeKutta45 = state.solver {
             neededSteps == 1
                 ? L.Resource.Calc.needsStepsOne(env.formatDouble(Double(neededSteps), 0), unit)
                 : L.Resource.Calc.needsStepsOther(env.formatDouble(Double(neededSteps), 0), unit)
         } else { nil }
         let stepBudgetWarning: LocalizedStringResource? = if case let .rungeKutta45(_, .manual(cap)) = state.solver {
-            limits.stoppingDay(stepsPerDay: cap, days: Double(state.finalDay)).map {
-                L.Resource.Calc.willStopAround("\(cap)", unit, unit, env.formatDouble($0, 0))
+            limits.stoppingDay(stepsPerDay: cap, days: state.finalDay).map {
+                L.Resource.Calc.willStopAround(env.formatDouble(rate(Double(cap)).rounded(.up), 0), unit, unit, env.formatDouble(time($0), 0))
             }
         } else { nil }
         let estimatedDurationLabel = Self.formatDuration(estimatedSeconds)
@@ -338,12 +397,13 @@ public enum CalculatorFeature {
         return ViewState(
             documentName: doc.name,
             lingo: doc.field.lingo,
+            units: units,
             halfLife: doc.halfLife,
             compartmentNames: compartments.map(\.name),
             variants: doc.variants.keys.sorted(),
             selectedVariant: state.selectedVariant,
             solver: state.solver,
-            finalDay: state.finalDay,
+            duration: duration,
             stepSizeText:  state.stepSizeText,
             integrationStepText: state.integrationStepText,
             toleranceText: state.toleranceText,
@@ -354,12 +414,12 @@ public enum CalculatorFeature {
             stepBudgetWarning: stepBudgetWarning,
             automaticStepsPerDay: limits.automaticStepsPerDay,
             remedies: state.solveFailure.map { Remedy.for($0, solver: state.solver) } ?? [],
-            stoppedAtDay: stoppedAtDay,
-            stoppedLabel: stoppedAtDay.map { L.Resource.Calc.stoppedAt(env.formatDouble($0, 1), unit) },
+            stoppedAt: stoppedAt,
+            stoppedLabel: stoppedAt.map { L.Resource.Calc.stoppedAt(env.formatDouble($0, 1), unit) },
             series: series,
             reportRows: reportRows,
             isCalculating: state.isCalculating,
-            error: state.solveFailure.map { message(for: $0, format: env.formatDouble) }
+            error: state.solveFailure.map { message(for: $0, format: env.formatDouble, units: units) }
                 ?? state.error.map { LocalizedStringResource(String.LocalizationValue($0)) },
             logX: state.logX,
             logY: state.logY,
@@ -373,22 +433,32 @@ public enum CalculatorFeature {
             logYLabel: logYLabel,
             durationWarningMessage: durationWarningMessage,
             fasterChoiceHint: fasterChoiceHint,
-            validationIssues: doc.model.validationIssues.filter { issue in
-                if case .missingHalfLife = issue { return doc.field == .nuclear }
-                return true
-            },
+            validationIssues: issues,
             csvExportInput: reportRows.isEmpty ? nil : CSVExportInput(
-                documentName: doc.name, lingo: doc.field.lingo,
+                documentName: doc.name, lingo: doc.field.lingo, units: units,
                 compartmentNames: compartments.map(\.name),
-                rows: reportRows.map { ($0.day, $0.values) },
+                rows: reportRows.map { ($0.time, $0.values) },
                 note: partialNote
             ),
             pdfExportInput: reportRows.isEmpty ? nil : PDFExportInput(
-                documentName: doc.name, lingo: doc.field.lingo,
+                documentName: doc.name, lingo: doc.field.lingo, units: units,
                 compartmentNames: compartments.map(\.name),
-                rows: reportRows.map { ($0.day, $0.values) },
+                rows: reportRows.map { ($0.time, $0.values) },
                 note: partialNote
-            )
+            ),
+            colorScheme: state.traits.isDark ? .dark : .light,
+            isCompact: state.traits.isCompactWidth,
+            validationIssueTexts: issues.map { $0.text(env.formatSignificant) },
+            xTicks: state.logX
+                ? decades(from: 0.1, to: Double(duration)).map { AxisTick(value: $0, label: env.formatInteger(Int(pow(10, $0)))) }
+                : niceTicks(upTo: Double(duration)).map { AxisTick(value: $0, label: env.formatInteger(Int($0))) },
+            yTicks: state.logY
+                ? decades(from: 1e-6, to: 1).map { AxisTick(value: $0, label: "10^" + env.formatInteger(Int($0))) }
+                : niceTicks(upTo: series.filter(\.isVisible).flatMap(\.points).map(\.value).max() ?? 1).map {
+                    AxisTick(value: $0, label: env.formatDouble($0, 2))
+                },
+            durationText: env.formatInteger(duration),
+            durationStepTexts: Dictionary(uniqueKeysWithValues: [1, 20].map { ($0, env.formatInteger($0)) })
         )
     } }
 
@@ -409,7 +479,7 @@ public enum CalculatorFeature {
         case .calculate:                .calculate
         case .selectVariant(let k):     .selectVariant(k)
         case .setSolver(let s):         .setSolver(s)
-        case .setFinalDay(let d):       .setFinalDay(d)
+        case .setDuration(let d):       .setDuration(d)
         case .setStepSize(let s):       .setStepSize(s)
         case .setStepSizeText(let t):   .setStepSizeText(t)
         case .setTolerance(let t):      .setTolerance(t)
@@ -433,7 +503,9 @@ public enum CalculatorFeature {
 
     public static func behavior() -> Behavior<Action, State, Environment> {
         .handle { action, context in
-            switch action {
+            // Typed and shown in the field's units, held in days.
+            let units = (context.stateBefore ?? State()).document.field.units
+            return switch action {
             case .load(let doc):
                 .reduce { state in
                     state.document = doc
@@ -473,16 +545,20 @@ public enum CalculatorFeature {
                 .produce { _ in .just(.calculate) }
             case .setSolver(let s):
                 // Picking a method resets its parameters to the ones it carries, fields included.
-                .reduce { state in
-                    state.solver = s
-                    if case let .rungeKutta45(tolerance, _) = s { state.toleranceText = Self.scientific(tolerance) }
-                }
+                .reduce { $0.solver = s }
                 .produce { ctx in
-                    guard case let .rungeKutta4(h) = s else { return .empty }
-                    return .just(.integrationStepResolved(h, ctx.environment.formatDouble(h, 4)))
+                    // The fields' text is written where the world's formatter runs, never in a reducer.
+                    switch s {
+                    case let .rungeKutta4(h):
+                        return .just(.integrationStepResolved(h, ctx.environment.formatDouble(units.time.iso.get(h), 4)))
+                    case let .rungeKutta45(tolerance, _):
+                        return .just(.toleranceResolved(tolerance, Self.scientific(tolerance, ctx.environment)))
+                    default:
+                        return .empty
+                    }
                 }
-            case .setFinalDay(let d):
-                .reduce { $0.finalDay = max(1, d) }
+            case .setDuration(let d):
+                .reduce { $0.finalDay = units.time.iso.reverseGet(Double(max(1, d))) }
             case .setStepSize(let s):
                 .produce { ctx in
                     let v = max(0.001, s)
@@ -495,7 +571,7 @@ public enum CalculatorFeature {
                     // "", "0" and "0,", and clamping those wrote "0,001000" back under the cursor.
                     // The value follows only text that reads as one in range.
                     if let v = ctx.environment.parseDouble(t) ?? Double(t), v >= 0.001 {
-                        return .just(.stepSizeResolved(v, t))
+                        return .just(.stepSizeResolved(units.time.iso.reverseGet(v), t))
                     }
                     return .just(.stepSizeResolved(0, t))
                 }
@@ -503,9 +579,9 @@ public enum CalculatorFeature {
                 .reduce { $0.stepSize = v > 0 ? v : $0.stepSize; $0.stepSizeText = t }
 
             case .setTolerance(let t):
-                .produce { _ in
+                .produce { ctx in
                     let v = max(1e-14, min(1e-2, t))
-                    return .just(.toleranceResolved(v, Self.scientific(v)))
+                    return .just(.toleranceResolved(v, Self.scientific(v, ctx.environment)))
                 }
             case .setToleranceText(let text):
                 .produce { ctx in
@@ -528,7 +604,7 @@ public enum CalculatorFeature {
                 .produce { ctx in
                     let t = text.trimmingCharacters(in: .whitespaces)
                     if let v = ctx.environment.parseDouble(t) ?? Double(t), v > 0 {
-                        return .just(.integrationStepResolved(v, t))
+                        return .just(.integrationStepResolved(units.time.iso.reverseGet(v), t))
                     }
                     return .just(.integrationStepResolved(0, t))
                 }
@@ -542,14 +618,15 @@ public enum CalculatorFeature {
                     if case let .rungeKutta45(tolerance, _) = state.solver {
                         state.solver = .rungeKutta45(tolerance: tolerance, budget: budget)
                     }
-                    if case let .manual(cap) = budget { state.manualStepsText = "\(cap)" }
+                    if case let .manual(cap) = budget { state.manualStepsText = "\(Int(units.rate.iso.get(Double(cap)).rounded(.up)))" }
                 }
             case .setManualStepsText(let text):
                 .reduce { state in
                     state.manualStepsText = text
                     if let cap = Int(text.trimmingCharacters(in: .whitespaces)), cap > 0,
                        case let .rungeKutta45(tolerance, .manual) = state.solver {
-                        state.solver = .rungeKutta45(tolerance: tolerance, budget: .manual(stepsPerDay: cap))
+                        let perDay = Int(units.rate.iso.reverseGet(Double(cap)).rounded())
+                        state.solver = .rungeKutta45(tolerance: tolerance, budget: .manual(stepsPerDay: perDay))
                     }
                 }
             case .commitField(let field):
@@ -596,7 +673,7 @@ public enum CalculatorFeature {
         let model = state.selectedVariant.flatMap { doc.variants[$0] } ?? doc.model
         let plan = BiokineticsSimulationPlan(
             step: state.stepSize,
-            final: Double(state.finalDay),
+            final: state.finalDay,
             solver: state.solver
         )
         return .reduce { $0.isCalculating = true; $0.error = nil; $0.solveFailure = nil }
@@ -619,13 +696,17 @@ public enum CalculatorFeature {
         context: PreReducerContext<State>
     ) -> Reaction<Action, State, Environment> {
         let state = context.stateBefore ?? State()
+        let units = state.document.field.units
         return .produce { ctx in
-            let format = { (value: Double) in Self.trimmed(ctx.environment.formatDouble(value, 6)) }
+            let format = { (days: Double) in Self.trimmed(ctx.environment.formatDouble(units.time.iso.get(days), 6)) }
             let text: String? = switch field {
             case .reportEvery: format(state.stepSize)
             case .integrationStep: if case let .rungeKutta4(h) = state.solver { format(h) } else { nil }
-            case .tolerance: if case let .rungeKutta45(tolerance, _) = state.solver { Self.scientific(tolerance) } else { nil }
-            case .manualSteps: if case let .rungeKutta45(_, .manual(cap)) = state.solver { "\(cap)" } else { nil }
+            case .tolerance: if case let .rungeKutta45(tolerance, _) = state.solver { Self.scientific(tolerance, ctx.environment) } else { nil }
+            case .manualSteps:
+                if case let .rungeKutta45(_, .manual(cap)) = state.solver {
+                    ctx.environment.formatInteger(Int(units.rate.iso.get(Double(cap)).rounded(.up)))
+                } else { nil }
             }
             return text.map { .just(.fieldFormatted(field, $0)) } ?? .empty
         }
@@ -638,26 +719,52 @@ public enum CalculatorFeature {
         return String(withoutZeros.drop { $0 == "." || $0 == "," }.reversed())
     }
 
-    /// "1e-13": tolerances span orders of magnitude, so they're shown by exponent.
-    static func scientific(_ value: Double) -> String {
-        String(format: "%.0e", value).replacingOccurrences(of: "e-0", with: "e-")
+    /// "1e-13": tolerances span orders of magnitude, so they're shown by exponent, written by the
+    /// world's formatter (called where effects run).
+    static func scientific(_ value: Double, _ environment: Environment) -> String {
+        environment.formatScientific(value, 0).replacingOccurrences(of: "e-0", with: "e-")
     }
 
-    /// What a solver that couldn't finish tells the user, with numbers in their locale.
-    public static func message(for error: SolveError, format: (Double, Int) -> String) -> LocalizedStringResource {
-        switch error {
+    /// What a solver that couldn't finish tells the user, with numbers in their locale and times in
+    /// the field's unit (the solver reports days).
+    public static func message(
+        for error: SolveError,
+        format: (Double, Int) -> String,
+        units: WorkingUnits
+    ) -> LocalizedStringResource {
+        func time(_ days: Double, _ places: Int) -> String { format(units.time.iso.get(days), places) }
+        let unit = units.time.symbol
+        return switch error {
         case let .unstableStep(step, limit):
-            L.Resource.Calc.unstableStep(format(step, 4), format(limit, 3))
+            L.Resource.Calc.unstableStep(time(step, 4), unit, time(limit, 3), unit)
         case let .stepBudgetExhausted(reached, final, steps, partial):
             partial.isEmpty
-                ? L.Resource.Calc.budgetExhausted(format(reached, 1), format(final, 0), steps)
-                : L.Resource.Calc.budgetExhaustedPartial(format(reached, 1), format(final, 0), steps)
+                ? L.Resource.Calc.budgetExhausted(time(reached, 1), time(final, 0), unit, steps)
+                : L.Resource.Calc.budgetExhaustedPartial(time(reached, 1), time(final, 0), unit, steps)
         case let .stepUnderflow(day, partial):
             partial.isEmpty
-                ? L.Resource.Calc.underflow(format(day, 1))
-                : L.Resource.Calc.underflowPartial(format(day, 1))
+                ? L.Resource.Calc.underflow(time(day, 1), unit)
+                : L.Resource.Calc.underflowPartial(time(day, 1), unit)
         }
     }
 
     public typealias Content = CalculatorView
+}
+
+// MARK: - Axis marks
+
+/// Each power of ten from `low` to `high`, as its exponent: the marks of a log axis.
+private func decades(from low: Double, to high: Double) -> [Double] {
+    (Int(floor(log10(low))) ... Int(ceil(log10(high)))).map(Double.init)
+}
+
+/// Round-numbered marks from zero to `high`, about five of them, a step of 1, 2 or 5 times a power
+/// of ten.
+private func niceTicks(upTo high: Double) -> [Double] {
+    guard high > 0, high.isFinite else { return [0] }
+    let rough = high / 5
+    let magnitude = pow(10, floor(log10(rough)))
+    let normalised = rough / magnitude
+    let step = (normalised < 1.5 ? 1 : normalised < 3 ? 2 : normalised < 7 ? 5 : 10) * magnitude
+    return (0 ... Int((high / step).rounded(.down))).map { Double($0) * step }
 }

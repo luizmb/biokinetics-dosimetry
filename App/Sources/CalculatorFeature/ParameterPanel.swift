@@ -14,7 +14,7 @@ private extension Array where Element == CompartmentalModel.ValidationIssue {
 // Created in the @BoundTo container; pure views consume them directly.
 
 struct ParameterBindings {
-    var finalDay:             Binding<Int>
+    var duration:             Binding<Int>
     var stepSizeText:         Binding<String>             // days between reported rows
     var integrationStepText:  Binding<String>             // RK4's h
     var toleranceText:        Binding<String>
@@ -43,7 +43,7 @@ struct ParameterContent: View {
     var paramBindings: ParameterBindings
 
     // Read-only display state.
-    let lingo:        FieldLingo
+    let units: WorkingUnits
     let variants:     [String]
     let solver:       SolverMethod
     let isCalculating: Bool
@@ -58,6 +58,10 @@ struct ParameterContent: View {
     // One-way callbacks for actions that involve more than a simple value swap.
     var onSetSolver:  (SolverMethod) -> Void   // sets method + resets associated params
     var onCalculate:  () -> Void
+    /// The screen's appearance, and the final day and its steps as they read, from the view state.
+    let colorScheme: ColorScheme
+    let durationText: String
+    let durationStepTexts: [Int: String]
 
 
     private let algorithms: [(name: String, method: SolverMethod)] = [
@@ -118,23 +122,28 @@ struct ParameterContent: View {
                         .padding(.bottom, 18)
                     }
 
-                    SectionLabel(L.Calc.duration(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
+                    SectionLabel(L.Calc.duration(L.domainString(units.time.symbol))).padding(.horizontal, 18)
                     StepperJump(
-                        value: paramBindings.finalDay,
+                        value: paramBindings.duration,
                         coarse: 20,
-                        decreaseLabel: { [unit = L.domainString(lingo.timeUnit.label)] in Text(L.Calc.minus("\($0)", unit)) },
-                        increaseLabel: { [unit = L.domainString(lingo.timeUnit.label)] in Text(L.Calc.plus("\($0)", unit)) }
+                        format: { [durationText] _ in Text(verbatim: durationText) },
+                        decreaseLabel: { [durationStepTexts, unit = L.domainString(units.time.symbol)] in
+                            Text(L.Calc.minus(durationStepTexts[$0] ?? "", unit))
+                        },
+                        increaseLabel: { [durationStepTexts, unit = L.domainString(units.time.symbol)] in
+                            Text(L.Calc.plus(durationStepTexts[$0] ?? "", unit))
+                        }
                     )
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
 
-                    SectionLabel(L.Calc.reportEvery(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
+                    SectionLabel(L.Calc.reportEvery(L.domainString(units.time.symbol))).padding(.horizontal, 18)
                     FieldText("", text: paramBindings.stepSizeText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.reportEvery) }
                         .padding(.horizontal, 18)
                         .padding(.bottom, 18)
 
                     if case .rungeKutta4 = solver {
-                        SectionLabel(L.Calc.integrationStep(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18)
+                        SectionLabel(L.Calc.integrationStep(L.domainString(units.time.symbol))).padding(.horizontal, 18)
                         FieldText("", text: paramBindings.integrationStepText, keyboard: .decimal, isMonospaced: true) { paramBindings.onCommitField(.integrationStep) }
                             .padding(.horizontal, 18)
                         fieldNote(hints.integrationStepHint, tone: hints.integrationStepIsUnstable ? .red : nil)
@@ -160,7 +169,7 @@ struct ParameterContent: View {
                         )
                         .padding(.horizontal, 18)
                         if case .manual = budget.wrappedValue {
-                            SectionLabel(L.Calc.maxSteps(L.domainString(lingo.timeUnit.label))).padding(.horizontal, 18).padding(.top, 12)
+                            SectionLabel(L.Calc.maxSteps(L.domainString(units.time.symbol))).padding(.horizontal, 18).padding(.top, 12)
                             FieldText("", text: paramBindings.manualStepsText, keyboard: .integer, isMonospaced: true) { paramBindings.onCommitField(.manualSteps) }
                                 .padding(.horizontal, 18)
                         }
@@ -203,7 +212,7 @@ struct ParameterContent: View {
         if let text {
             Text(text)
                 .font(.footnote)
-                .foregroundStyle(tone ?? Color(.inkMuted))
+                .foregroundStyle(tone ?? Color(.inkMuted, scheme: colorScheme))
                 .padding(.horizontal, 22)
                 .padding(.top, 6)
                 .padding(.bottom, 18)
@@ -227,8 +236,9 @@ struct ParameterContent: View {
 struct ReportContent: View {
     let reportRows: [CalculatorFeature.ReportRow]
     let compartmentNames: [String]
-    let lingo: FieldLingo
+    let units: WorkingUnits
     let isCompact: Bool
+
 
 
     var body: some View {
@@ -253,9 +263,9 @@ struct ReportContent: View {
                         Section {
                             ForEach(reportRows) { row in
                                 HStack(spacing: 0) {
-                                    timeCell(row.day.formatted(.number.precision(.fractionLength(0))))
-                                    ForEach(Array(row.values.enumerated()), id: \.0) { _, val in
-                                        dataCell(String(format: "%.9e", val))
+                                    timeCell(row.timeText)
+                                    ForEach(Array(row.valueTexts.enumerated()), id: \.0) { _, text in
+                                        dataCell(text)
                                     }
                                 }
                                 Hairline()
@@ -263,7 +273,7 @@ struct ReportContent: View {
                         } header: {
                             VStack(spacing: 0) {
                                 HStack(spacing: 0) {
-                                    timeHeaderCell(L.Common.time(L.domainString(lingo.timeUnit.label)))
+                                    timeHeaderCell(L.Common.time(L.domainString(units.time.symbol)))
                                     ForEach(Array(compartmentNames.enumerated()), id: \.0) { _, name in headerCell(name) }
                                 }
                                 Hairline()

@@ -21,9 +21,18 @@ import Vitral
 public struct AppRootView: View, Routable {
     @OwnedStore var viewStore: ViewStore<AppAction, AppState>
     public let router: AppRouter
+    /// The scheme the app is drawn in, made from the state's traits by the projection below. Its
+    /// own store, so a change of appearance wakes the shell and nothing else.
+    @OwnedStore var shell: ViewStore<AppAction, ShellState>
 
     init(store: any StoreType<AppAction, AppState>, router: AppRouter) {
         _viewStore = OwnedStore(wrappedValue: store.viewStore())
+        _shell = OwnedStore(
+            wrappedValue: store
+                .projection(action: { (action: AppAction) in action }, state: ShellState.init)
+                .buffer()
+                .viewStore()
+        )
         self.router = router
     }
 
@@ -36,5 +45,17 @@ public struct AppRootView: View, Routable {
         }
         // Buttons are clear glass under Aqua's gloss and glow; the main action keeps the accent.
         .controlFinish(.glass(.clear).sheen(.aqua(0.25)))
+        // The scheme everything below is drawn in, Vitral's tokens and SwiftUI's own controls
+        // alike, from the state.
+        .scheme(shell.state.scheme.value)
+    }
+}
+
+/// What the shell reads, and nothing else: the scheme its projection makes of the state's traits.
+struct ShellState: Equatable {
+    var scheme: ColorScheme
+
+    init(_ state: AppState) {
+        scheme = state.traits.isDark ? .dark : .light
     }
 }
