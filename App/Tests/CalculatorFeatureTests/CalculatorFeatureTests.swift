@@ -18,6 +18,12 @@ struct CalculatorFeatureBehaviorTests {
     // MARK: - Test fixtures
 
     private let doc = ModelDocument.validation
+    /// The same model, in a field that works in hours.
+    private var pharmacology: ModelDocument {
+        var document = ModelDocument.validation
+        document.field = .pharmacology
+        return document
+    }
     private let mockResults: [[Double]] = [
         [1.0, 0.0, 0.0],
         [0.905, 0.090, 0.005],
@@ -148,10 +154,15 @@ struct CalculatorFeatureBehaviorTests {
         #expect(s.state.integrationStepText == env.formatDouble(0.5, 4))
     }
 
-    @Test func setSolverToRungeKutta45() {
-        store().dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8, budget: .automatic))) {
+    @Test func setSolverToRungeKutta45() async {
+        let s = store()
+        s.dispatch(.setSolver(.rungeKutta45(tolerance: 1e-8, budget: .automatic))) {
             $0.solver = .rungeKutta45(tolerance: 1e-8, budget: .automatic)
-            $0.toleranceText = "1e-8"
+        }
+        // The tolerance's text is written by the world's formatter, in the effect.
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.toleranceResolved) { _, state in
+            state.toleranceText = "1e-8"
         }
     }
 
@@ -198,7 +209,7 @@ struct CalculatorFeatureBehaviorTests {
         }
         let vs = CalculatorFeature.mapState(env)(s.state)
         #expect(vs.remedies == [.useAutomaticBudget, .useBirchall])
-        #expect(vs.error.map { String(localized: $0) }?.hasPrefix("RK45 stopped at day") == true)
+        #expect(vs.error.map { String(localized: $0) }?.hasPrefix("RK45 stopped at 40.0 of 200 d") == true)
     }
 
     /// What ran before the stop becomes the results, marked as partial: the chart, the report
@@ -215,12 +226,12 @@ struct CalculatorFeatureBehaviorTests {
             $0.results = partial
         }
         let vs = CalculatorFeature.mapState(env)(s.state)
-        #expect(vs.stoppedAtDay == 1.5)
+        #expect(vs.stoppedAt == 1.5)
         #expect(vs.stoppedLabel != nil)
         #expect(vs.reportRows.count == 2)
         #expect(vs.csvExportInput?.note?.hasPrefix("Partial run: stopped at") == true)
         #expect(vs.pdfExportInput?.note == vs.csvExportInput?.note)
-        #expect(vs.error.map { String(localized: $0) }?.contains("the results cover the days it reached") == true)
+        #expect(vs.error.map { String(localized: $0) }?.contains("the results cover the time it reached") == true)
     }
 
     @Test func aStopWithNothingComputedHasNoResults() {
@@ -326,22 +337,70 @@ struct CalculatorFeatureBehaviorTests {
 
     @Test func solverFailuresReadAsAdvice() {
         let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
-        #expect(String(localized: CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format))
+        let days = ModelField.generic.units
+        #expect(String(localized: CalculatorFeature.message(for: .unstableStep(step: 1, stableLimit: 0.0627), format: format, units: days))
             == "An RK4 step of 1.0000 d is unstable for this model. Use a step below 0.063 d, or Birchall.")
-        #expect(String(localized: CalculatorFeature.message(for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 900, partial: []), format: format))
-            == "RK45 stopped at day 835.9 of 1001 after 900 steps. Raise the step budget, or use Birchall.")
+        #expect(String(localized: CalculatorFeature.message(
+            for: .stepBudgetExhausted(reachedDay: 835.9, finalDay: 1001, steps: 900, partial: []), format: format, units: days
+        )) == "RK45 stopped at 835.9 of 1001 d after 900 steps. Raise the step budget, or use Birchall.")
     }
 
-    @Test func setFinalDayWithValidValueUpdatesDirectly() {
-        store().dispatch(.setFinalDay(365)) { $0.finalDay = 365 }
+    /// The solver reports days; a field that works in hours reads hours.
+    @Test func solverFailuresReadInTheFieldsUnit() {
+        let format: (Double, Int) -> String = { value, digits in String(format: "%.\(digits)f", value) }
+        #expect(String(localized: CalculatorFeature.message(
+            for: .stepUnderflow(day: 0.5, partial: []), format: format, units: ModelField.pharmacology.units
+        )) == "RK45 could not take a step at 12.0 h. Use Birchall for this model.")
     }
 
-    @Test func setFinalDayWithZeroClampsToOne() {
-        store().dispatch(.setFinalDay(0)) { $0.finalDay = 1 }
+    @Test func setDurationWithValidValueUpdatesDirectly() {
+        store().dispatch(.setDuration(365)) { $0.finalDay = 365 }
     }
 
-    @Test func setFinalDayWithNegativeClampsToOne() {
-        store().dispatch(.setFinalDay(-10)) { $0.finalDay = 1 }
+    @Test func setDurationWithZeroClampsToOne() {
+        store().dispatch(.setDuration(0)) { $0.finalDay = 1 }
+    }
+
+    @Test func setDurationWithNegativeClampsToOne() {
+        store().dispatch(.setDuration(-10)) { $0.finalDay = 1 }
+    }
+
+    /// A field in hours takes its duration in hours and runs it in days.
+    @Test func setDurationTakesTheFieldsUnit() {
+        store(initial: CalculatorFeature.State(document: pharmacology)).dispatch(.setDuration(48)) { $0.finalDay = 2 }
+    }
+
+    /// The defaults are 200 and 1 of the field's own unit: hours for pharmacology.
+    @Test func defaultsAreInTheFieldsUnit() {
+        let state = CalculatorFeature.State(document: pharmacology)
+        #expect(state.finalDay == 200.0 / 24)
+        #expect(state.stepSize == 1.0 / 24)
+        let vs = CalculatorFeature.mapState(env)(state)
+        #expect(vs.duration == 200)
+        #expect(vs.durationText == "200")
+        #expect(vs.units.time == .hours)
+    }
+
+    /// Typed in hours, held in days.
+    @Test func reportEveryIsTypedInTheFieldsUnit() async {
+        let s = store(initial: CalculatorFeature.State(document: pharmacology))
+        s.dispatch(.setStepSizeText("6"))
+        await s.runEffects()
+        s.receive(CalculatorFeature.Action.prism.stepSizeResolved) { pair, state in
+            #expect(pair.0 == 0.25)
+            state.stepSize = 0.25
+            state.stepSizeText = "6"
+        }
+    }
+
+    /// The report and the chart count in hours: a row a day apart reads 24 h apart.
+    @Test func resultsReadInTheFieldsUnit() {
+        var state = CalculatorFeature.State(document: pharmacology)
+        state.stepSize = 1
+        state.results = [[1, 0], [0.5, 0.5]]
+        let vs = CalculatorFeature.mapState(env)(state)
+        #expect(vs.reportRows.map(\.time) == [0, 24])
+        #expect(vs.series.first?.points.map(\.time) == [0, 24])
     }
 
     // .setStepSize/.setTolerance only produce an effect (clamping + formatting happen via
@@ -538,7 +597,7 @@ struct CalculatorFeatureMapStateTests {
         state.isParamPanelVisible = false
         let vs = CalculatorFeature.mapState(.alwaysFails)(state)
         #expect(vs.solver == .rungeKutta45(tolerance: 1e-8, budget: .automatic))
-        #expect(vs.finalDay == 365)
+        #expect(vs.duration == 365)
         #expect(vs.stepSizeText  == "0.5")
         #expect(vs.toleranceText == "1e-8")
         #expect(vs.logX == false)
@@ -559,7 +618,7 @@ struct CalculatorFeatureMapActionTests {
             .selectVariant(nil),
             .selectVariant("Type F"),
             .setSolver(.birchall(composition: .perTime)),
-            .setFinalDay(100),
+            .setDuration(100),
             .setStepSize(0.5),
             .setTolerance(1e-8),
             .setLogX(false),

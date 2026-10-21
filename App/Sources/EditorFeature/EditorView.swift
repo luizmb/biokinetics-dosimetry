@@ -13,9 +13,29 @@ public struct EditorView: View {
         // All bidirectional field bindings are created here, once, in the container.
         // Each binding's `get` re-reads from the viewModel so it always returns the latest value.
 
+        let modelListBinding = Binding(
+            get: { viewStore.state.isModelListOpen },
+            set: { viewStore.dispatch(.setPanel(.modelList, isOpen: $0)) }
+        )
+
+        let inspectorBinding = Binding(
+            get: { viewStore.state.isInspectorOpen },
+            set: { viewStore.dispatch(.setPanel(.inspector, isOpen: $0)) }
+        )
+
         let inspectorTabBinding = Binding(
             get: { viewStore.state.inspectorTab.value },
             set: { viewStore.dispatch(.setInspectorTab($0)) }
+        )
+
+        let modelTabBinding = Binding(
+            get: { viewStore.state.modelTab.value },
+            set: { viewStore.dispatch(.setModelTab($0)) }
+        )
+
+        let showKValuesBinding = Binding(
+            get: { viewStore.state.showKValues },
+            set: { if $0 != viewStore.state.showKValues { viewStore.dispatch(.toggleKValues) } }
         )
 
         // Compartment field bindings — nil when no compartment is selected.
@@ -26,6 +46,10 @@ public struct EditorView: View {
                 name: Binding(
                     get: { viewStore.state.compartments.value.first { $0.id == id }?.name ?? "" },
                     set: { viewStore.dispatch(.updateCompartmentName(id: id, name: $0)) }
+                ),
+                tint: Binding(
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.tint ?? .steel },
+                    set: { viewStore.dispatch(.updateCompartmentTint(id: id, tint: $0)) }
                 ),
                 follow: Binding(
                     get: { viewStore.state.compartments.value.first { $0.id == id }?.follow ?? false },
@@ -39,9 +63,9 @@ public struct EditorView: View {
                     get: { viewStore.state.compartments.value.first { $0.id == id }?.intake ?? false },
                     set: { viewStore.dispatch(.updateCompartmentIntake(id: id, value: $0)) }
                 ),
-                fraction: Binding(
-                    get: { viewStore.state.compartments.value.first { $0.id == id }?.fraction ?? 0 },
-                    set: { viewStore.dispatch(.updateCompartmentFraction(id: id, fraction: $0)) }
+                fractionText: Binding(
+                    get: { viewStore.state.compartments.value.first { $0.id == id }?.fractionInputText ?? "" },
+                    set: { viewStore.dispatch(.typeNumber(.fraction(compartment: id), $0)) }
                 ),
                 nuclideId: Binding(
                     get: { viewStore.state.compartments.value.first { $0.id == id }?.nuclideId ?? "" },
@@ -54,9 +78,9 @@ public struct EditorView: View {
         let linkBindings: LinkFieldBindings? = viewStore.state.selectedLinkIndex.flatMap { idx in
             guard viewStore.state.links.value.contains(where: { $0.id == idx }) else { return nil }
             return LinkFieldBindings(
-                rate: Binding(
-                    get: { viewStore.state.links.value.first { $0.id == idx }?.rate ?? 0 },
-                    set: { viewStore.dispatch(.updateLinkRate(index: idx, rate: $0)) }
+                rateText: Binding(
+                    get: { viewStore.state.links.value.first { $0.id == idx }?.rateInputText ?? "" },
+                    set: { viewStore.dispatch(.typeNumber(.rate(link: idx), $0)) }
                 )
             )
         }
@@ -93,73 +117,82 @@ public struct EditorView: View {
                     get: { viewStore.state.nuclides.value.first { $0.id == n.id }?.halfLife ?? 0 },
                     set: { viewStore.dispatch(.updateNuclideHalfLife(id: n.id, halfLife: $0)) }
                 ),
+                halfLifeText: Binding(
+                    get: { viewStore.state.nuclides.value.first { $0.id == n.id }?.halfLifeInputText ?? "" },
+                    set: { viewStore.dispatch(.typeNumber(.halfLife(nuclide: n.id), $0)) }
+                ),
                 canDelete: n.canDelete,
                 compartmentCount: n.compartmentCount
             )
         }
 
         return EditorContent(
-            documentName:        documentNameBinding,
+            documentName: documentNameBinding,
             documentDescription: documentDescriptionBinding,
-            field:               fieldBinding,
-            backdrop:            backdropBinding,
-            resolvedBackdrop:    viewStore.state.resolvedBackdrop.value,
-            lingo:               viewStore.state.lingo.value,
-            halfLife:           viewStore.state.halfLife,
-            nuclides:           viewStore.state.nuclides.value,
-            compartments:       viewStore.state.compartments.value,
-            links:              viewStore.state.links.value,
+            field: fieldBinding,
+            backdrop: backdropBinding,
+            resolvedBackdrop: viewStore.state.resolvedBackdrop.value,
+            lingo: viewStore.state.lingo.value,
+            units: viewStore.state.units.value,
+            halfLife: viewStore.state.halfLife,
+            nuclides: viewStore.state.nuclides.value,
+            compartments: viewStore.state.compartments.value,
+            links: viewStore.state.links.value,
             selectedCompartmentId: viewStore.state.selectedCompartmentId,
-            selectedLinkIndex:  viewStore.state.selectedLinkIndex,
-            inspectorTab:       inspectorTabBinding,
+            selectedLinkIndex: viewStore.state.selectedLinkIndex,
+            inspectorTab: inspectorTabBinding,
+            modelTab: modelTabBinding,
+            transferDraft: viewStore.state.transferDraft.value,
             compartmentBindings: compBindings,
-            linkBindings:        linkBindings,
-            nuclideBindings:     nuclideBindings,
-            isLeftPanelVisible:  viewStore.state.isLeftPanelVisible,
-            isRightPanelVisible: viewStore.state.isRightPanelVisible,
-            showKValues:         viewStore.state.showKValues,
-            linkingBannerText:   viewStore.state.linkingBannerText,
-            selectionFooterLabel: viewStore.state.selectionFooterLabel,
-            validationIssues:    viewStore.state.validationIssues.value,
-            canvasOffsetX:      viewStore.state.canvasOffsetX,
-            canvasOffsetY:      viewStore.state.canvasOffsetY,
-            canvasScale:        viewStore.state.canvasScale,
-            pinchScale:              viewStore.state.pinchScale,
-            pinchOffset:              viewStore.state.pinchOffset.value,
+            linkBindings: linkBindings,
+            nuclideBindings: nuclideBindings,
+            layout: viewStore.state.layout.value,
+            isModelListOpen: modelListBinding,
+            isInspectorOpen: inspectorBinding,
+            showKValues: showKValuesBinding,
+            validationIssues: viewStore.state.validationIssues.value,
+            canvasOffsetX: viewStore.state.canvasOffsetX,
+            canvasOffsetY: viewStore.state.canvasOffsetY,
+            canvasScale: viewStore.state.canvasScale,
+            pinchScale: viewStore.state.pinchScale,
+            pinchOffset: viewStore.state.pinchOffset.value,
             compartmentDragOriginId: viewStore.state.compartmentDragOriginId,
-            compartmentDragOriginX:  viewStore.state.compartmentDragOriginX,
-            compartmentDragOriginY:  viewStore.state.compartmentDragOriginY,
-            variants:                viewStore.state.variants.value,
-            editingVariant:          viewStore.state.editingVariant,
-            renamingVariant:         viewStore.state.renamingVariant,
-            variantRenameDraft:      viewStore.binding(.state(\.variantRenameDraft).action(\.setVariantRenameDraft)),
+            compartmentDragOriginX: viewStore.state.compartmentDragOriginX,
+            compartmentDragOriginY: viewStore.state.compartmentDragOriginY,
+            variants: viewStore.state.variants.value,
+            editingVariant: viewStore.state.editingVariant,
+            renamingVariant: viewStore.state.renamingVariant,
+            variantRenameDraft: viewStore.binding(.state(\.variantRenameDraft).action(\.setVariantRenameDraft)),
             onSelectCompartment: { viewStore.dispatch(.selectCompartment($0)) },
-            onSelectLink:        { viewStore.dispatch(.selectLink($0)) },
-            onToggleLeftPanel:   { viewStore.dispatch(.toggleLeftPanel) },
-            onToggleRightPanel:  { viewStore.dispatch(.toggleRightPanel) },
-            onToggleKValues:     { viewStore.dispatch(.toggleKValues) },
-            onBeginLinking:      { viewStore.dispatch(.beginLinking) },
-            onLinkStep:          { viewStore.dispatch(.linkStep($0)) },
-            onCancelLinking:     { viewStore.dispatch(.cancelLinking) },
-            onAddCompartment:    { viewStore.dispatch(.addCompartment($0)) },
+            onSelectLink: { viewStore.dispatch(.selectLink($0)) },
+            onEditCompartment: { viewStore.dispatch(.editCompartment($0)) },
+            onEditLink: { viewStore.dispatch(.editLink($0)) },
+            onBeginTransfer: { viewStore.dispatch(.beginTransfer(from: $0, to: $1)) },
+            onSetTransferFrom: { viewStore.dispatch(.setTransferFrom($0)) },
+            onSetTransferTo: { viewStore.dispatch(.setTransferTo($0)) },
+            onCreateTransfer: { viewStore.dispatch(.createTransfer) },
+            onCancelTransfer: { viewStore.dispatch(.cancelTransfer) },
+            onAddCompartment: { viewStore.dispatch(.addCompartment) },
             onDeleteCompartment: { viewStore.dispatch(.deleteCompartment(id: $0)) },
-            onDeleteLink:        { viewStore.dispatch(.deleteLink(index: $0)) },
-            onMoveCompartment:       { viewStore.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
-            onBeginCompartmentDrag:  { viewStore.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
-            onEndCompartmentDrag:    { viewStore.dispatch(.endCompartmentDrag) },
-            onCanvasTouches:         { viewStore.dispatch(.canvasTouchesChanged($0)) },
-            onEndCanvasTouches:      { viewStore.dispatch(.canvasTouchesEnded) },
-            onSetCanvasTransform:    { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
-            inspectorSheet:          viewStore.binding(.state(\.isInspectorSheetOpen).action(\.setInspectorSheet)),
-            modelListSheet:          viewStore.binding(.state(\.isModelListSheetOpen).action(\.setModelListSheet)),
-            onAddNuclide:            { viewStore.dispatch(.addNuclide) },
-            onDeleteNuclide:         { viewStore.dispatch(.deleteNuclide(id: $0)) },
-            onAddVariant:            { viewStore.dispatch(.addVariant(name: $0)) },
-            onDeleteVariant:         { viewStore.dispatch(.deleteVariant(name: $0)) },
-            onSelectEditingVariant:  { viewStore.dispatch(.selectEditingVariant($0)) },
-            onBeginVariantRename:    { viewStore.dispatch(.beginVariantRename($0)) },
-            onCommitVariantRename:   { viewStore.dispatch(.commitVariantRename) },
-            onCancelVariantRename:   { viewStore.dispatch(.cancelVariantRename) }
+            onDeleteLink: { viewStore.dispatch(.deleteLink(index: $0)) },
+            onMoveCompartment: { viewStore.dispatch(.moveCompartment(id: $0, x: $1, y: $2)) },
+            onBeginCompartmentDrag: { viewStore.dispatch(.beginCompartmentDrag(id: $0, x: $1, y: $2)) },
+            onEndCompartmentDrag: { viewStore.dispatch(.endCompartmentDrag) },
+            onCanvasTouches: { viewStore.dispatch(.canvasTouchesChanged($0)) },
+            onEndCanvasTouches: { viewStore.dispatch(.canvasTouchesEnded) },
+            onSetCanvasTransform: { viewStore.dispatch(.setCanvasTransform(offsetX: $0, offsetY: $1, scale: $2)) },
+            onAddNuclide: { viewStore.dispatch(.addNuclide) },
+            onDeleteNuclide: { viewStore.dispatch(.deleteNuclide(id: $0)) },
+            onAddVariant: { viewStore.dispatch(.addVariant(name: $0)) },
+            onDeleteVariant: { viewStore.dispatch(.deleteVariant(name: $0)) },
+            onSelectEditingVariant: { viewStore.dispatch(.selectEditingVariant($0)) },
+            onBeginVariantRename: { viewStore.dispatch(.beginVariantRename($0)) },
+            onCommitVariantRename: { viewStore.dispatch(.commitVariantRename) },
+            onCancelVariantRename: { viewStore.dispatch(.cancelVariantRename) },
+            colorScheme: viewStore.state.colorScheme.value,
+            validationIssueTexts: viewStore.state.validationIssueTexts.value,
+            validationIssueCountText: viewStore.state.validationIssueCountText,
+            onEndNumberEditing: { viewStore.dispatch(.endNumberEditing) }
         )
         .inlineNavigationTitle()
     }
@@ -169,13 +202,14 @@ public struct EditorView: View {
 
 struct EditorContent: View {
     // MARK: Read-only view state
-    var documentName:        Binding<String>
+    var documentName: Binding<String>
     var documentDescription: Binding<String>
-    var field:               Binding<ModelField>
+    var field: Binding<ModelField>
     /// The model's own backdrop (`nil` for its field's), and the one shown.
-    var backdrop:            Binding<EditorBackdrop?>
-    let resolvedBackdrop:    EditorBackdrop
+    var backdrop: Binding<EditorBackdrop?>
+    let resolvedBackdrop: EditorBackdrop
     let lingo: FieldLingo
+    let units: WorkingUnits
     let halfLife: Double
     let nuclides: [EditorFeature.NuclideRow]
     let compartments: [EditorFeature.CompartmentRow]
@@ -185,16 +219,20 @@ struct EditorContent: View {
 
     // MARK: Bidirectional bindings (created by the container)
     var inspectorTab: Binding<EditorFeature.InspectorTab>
+    var modelTab: Binding<EditorFeature.ModelTab>
+    let transferDraft: EditorFeature.TransferDraft?
     var compartmentBindings: CompartmentFieldBindings?
     var linkBindings: LinkFieldBindings?
     var nuclideBindings: [NuclideEditBinding]
 
+    // MARK: Panels
+    /// How the panels show: from the view state, which reads it off the screen's traits.
+    let layout: EditorFeature.EditorLayout
+    var isModelListOpen: Binding<Bool>
+    var isInspectorOpen: Binding<Bool>
+
     // MARK: Read-only display state
-    let isLeftPanelVisible: Bool
-    let isRightPanelVisible: Bool
-    let showKValues: Bool
-    let linkingBannerText: LocalizedStringResource?
-    let selectionFooterLabel: LocalizedStringResource?
+    var showKValues: Binding<Bool>
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let canvasOffsetX: Double
     let canvasOffsetY: Double
@@ -212,13 +250,14 @@ struct EditorContent: View {
     // MARK: One-way action callbacks
     var onSelectCompartment: (String?) -> Void
     var onSelectLink: (Int?) -> Void
-    var onToggleLeftPanel: () -> Void
-    var onToggleRightPanel: () -> Void
-    var onToggleKValues: () -> Void
-    var onBeginLinking: () -> Void
-    var onLinkStep: (String) -> Void
-    var onCancelLinking: () -> Void
-    var onAddCompartment: (CompartmentTint) -> Void
+    var onEditCompartment: (String) -> Void
+    var onEditLink: (Int) -> Void
+    var onBeginTransfer: (String?, String?) -> Void
+    var onSetTransferFrom: (String?) -> Void
+    var onSetTransferTo: (String?) -> Void
+    var onCreateTransfer: () -> Void
+    var onCancelTransfer: () -> Void
+    var onAddCompartment: () -> Void
     var onDeleteCompartment: (String) -> Void
     var onDeleteLink: (Int) -> Void
     var onMoveCompartment: (String, Double, Double) -> Void
@@ -227,8 +266,6 @@ struct EditorContent: View {
     var onCanvasTouches: (EditorFeature.CanvasTouches) -> Void
     var onEndCanvasTouches: () -> Void
     var onSetCanvasTransform: (Double, Double, Double) -> Void
-    var inspectorSheet: Binding<Bool>
-    var modelListSheet: Binding<Bool>
     var onAddNuclide: () -> Void
     var onDeleteNuclide: (String) -> Void
     var onAddVariant: (String) -> Void
@@ -238,147 +275,48 @@ struct EditorContent: View {
     var onCommitVariantRename: () -> Void
     var onCancelVariantRename: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var hSize
-    @Environment(\.verticalSizeClass) private var vSize
-    /// The phone layout whenever either dimension is compact: a landscape iPhone has regular width
-    /// but not the height for three columns. A real iPad (or an unfolded foldable) is regular both
-    /// ways and gets the panels.
-    private var isCompact: Bool { hSize == .compact || vSize == .compact }
+    /// The screen's appearance, from the view state.
+    let colorScheme: ColorScheme
+    /// Each issue's text, in step with `validationIssues`, and how many there are: written where
+    /// the view state is made.
+    let validationIssueTexts: [LocalizedStringResource]
+    let validationIssueCountText: String
+    /// A number field was left: what it shows is the value again.
+    var onEndNumberEditing: () -> Void
 
     var body: some View {
         ZStack {
             // Graph paper is the canvas's own, sliding with it; any other backdrop sits behind.
             if resolvedBackdrop != .graphPaper { Backdrop(resolvedBackdrop.style) } else { Backdrop() }
-            if isCompact { compactLayout } else { regularLayout }
+            // The panels as the screen allows: beside the canvas on a pad, over it one at a time on
+            // a phone on its side, in a sheet on a phone held upright. Told, never measured.
+            Workspace(mode: layout.workspaceMode, exclusive: layout != .docked, closeLabel: L.Common.close) {
+                canvasArea
+            }
+            .leading(isPresented: isModelListOpen) { modelList }
+            .trailing(isPresented: isInspectorOpen) { inspector }
         }
         .navigationTitle(documentName.wrappedValue)
         .toolbar { toolbarItems }
+        .workspaceToolbar(
+            leading: (isPresented: isModelListOpen, label: L.Common.model),
+            trailing: (isPresented: isInspectorOpen, label: L.Common.inspector)
+        )
     }
 
-    // MARK: - Regular (iPad 3-column)
+    // MARK: - Canvas area
 
-    private var regularLayout: some View {
-        HStack(spacing: 0) {
-            if isLeftPanelVisible {
-                EditorModelListPanel(
-                    lingo: lingo, nuclides: nuclides, compartments: compartments, links: links,
-                    selectedCompartmentId: selectedCompartmentId,
-                    selectedLinkIndex: selectedLinkIndex,
-                    selectionFooterLabel: selectionFooterLabel,
-                    onSelectCompartment: onSelectCompartment,
-                    onSelectLink: onSelectLink,
-                    onDeleteSelected: {
-                        if let id = selectedCompartmentId { onDeleteCompartment(id) }
-                        else if let idx = selectedLinkIndex { onDeleteLink(idx) }
-                    }
-                )
-                .frame(width: 264)
-                .transition(.move(edge: .leading).combined(with: .opacity))
-                Hairline(.vertical)
-            }
-
-            ZStack(alignment: .top) {
-                canvas
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .ignoresSafeArea(edges: .vertical)
-
-                if let text = linkingBannerText {
-                    Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
-                    .trailing { Button(L.Common.cancel, action: onCancelLinking).font(.bodyStrong) }
-                        .padding(.top, 16)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-
-                // Labels where they fit, icons where they don't: never a wrapped "Co m…".
-                VStack {
-                    Spacer()
-                    ViewThatFits(in: .horizontal) {
-                        canvasToolbar.labelStyle(.titleAndIcon)
-                        canvasToolbar.labelStyle(.iconOnly)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 16)
-                }
-            }
-
-            if isRightPanelVisible {
-                Hairline(.vertical)
-                EditorInspectorPanel(
-                    documentName: documentName,
-                    documentDescription: documentDescription,
-                    field: field,
-                    backdrop: backdrop,
-                    resolvedBackdrop: resolvedBackdrop,
-                    lingo: lingo,
-                    nuclides: nuclides,
-                    compartments: compartments,
-                    links: links,
-                    selectedCompartmentId: selectedCompartmentId,
-                    selectedLinkIndex: selectedLinkIndex,
-                    inspectorTab: inspectorTab,
-                    compartmentBindings: compartmentBindings,
-                    linkBindings: linkBindings,
-                    nuclideBindings: nuclideBindings,
-                    validationIssues: validationIssues,
-                    onSelectCompartment: onSelectCompartment,
-                    onSelectLink: onSelectLink,
-                    onBeginLinking: onBeginLinking,
-                    onDeleteSelected: {
-                        if let id = selectedCompartmentId { onDeleteCompartment(id) }
-                        else if let idx = selectedLinkIndex { onDeleteLink(idx) }
-                    },
-                    onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide,
-                    onAddVariant: onAddVariant,
-                    onDeleteVariant: onDeleteVariant,
-                    onSelectEditingVariant: onSelectEditingVariant,
-                    onBeginVariantRename: onBeginVariantRename,
-                    onCommitVariantRename: onCommitVariantRename,
-                    onCancelVariantRename: onCancelVariantRename,
-                    variants: variants,
-                    editingVariant: editingVariant,
-                    renamingVariant: renamingVariant,
-                    variantRenameDraft: variantRenameDraft
-                )
-                .frame(width: 326)
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isLeftPanelVisible)
-        .animation(.spring(response: 0.28, dampingFraction: 0.88), value: isRightPanelVisible)
-        .animation(.spring(), value: linkingBannerText != nil)
-    }
-
-    // MARK: - Compact (iPhone)
-
-    private var compactLayout: some View {
+    private var canvasArea: some View {
         ZStack(alignment: .top) {
-            // Edge to edge: the navigation bar and the bottom buttons are glass over the canvas,
-            // not bars over a flat background.
+            // Edge to edge: the navigation bar is glass over the canvas, not a bar over a flat
+            // background.
             canvas
                 .ignoresSafeArea()
-            // A soft fade where the canvas runs under the navigation bar and the buttons.
+            // A soft fade where the canvas runs under the navigation bar and the home indicator.
             EdgeFade(.top)
             EdgeFade(.bottom)
-
-            if let text = linkingBannerText {
-                Banner(Text(text), style: .custom(foreground: .accent, background: .infoSurface, icon: Image(systemName: "arrow.triangle.branch")))
-                    .trailing { Button(L.Common.cancel, action: onCancelLinking).font(.bodyStrong) }
-                    .padding(.top, 12)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(), value: text)
-            }
-
         }
-        // In the safe area, not on top of it: the system knows the buttons are there, so the fade
-        // and anything else that respects the safe area clears them on any device.
-        .safeAreaInset(edge: .bottom) { compactBottomToolbar }
-        .sheet(isPresented: inspectorSheet) { inspectorSheetContent }
-        .sheet(isPresented: modelListSheet) { modelListSheetContent }
     }
-
-    // MARK: - Canvas (shared)
 
     private var canvas: some View {
         CompartmentCanvasView(
@@ -386,8 +324,7 @@ struct EditorContent: View {
             drawsGraphPaper: resolvedBackdrop == .graphPaper,
             selectedCompartmentId: selectedCompartmentId,
             selectedLinkIndex: selectedLinkIndex,
-            showKValues: showKValues,
-            isLinking: linkingBannerText != nil,
+            showKValues: showKValues.wrappedValue,
             canvasOffsetX: canvasOffsetX, canvasOffsetY: canvasOffsetY,
             canvasScale: canvasScale,
             pinchScale: pinchScale,
@@ -395,201 +332,106 @@ struct EditorContent: View {
             compartmentDragOriginId: compartmentDragOriginId,
             compartmentDragOriginX: compartmentDragOriginX,
             compartmentDragOriginY: compartmentDragOriginY,
-            onSelectCompartment: { id in
-                if linkingBannerText != nil { if let id { onLinkStep(id) } }
-                else {
-                    onSelectCompartment(id)
-                    if isCompact, id != nil { inspectorSheet.wrappedValue = true }
-                }
-            },
-            onSelectLink: { idx in
-                onSelectLink(idx)
-                if isCompact, idx != nil { inspectorSheet.wrappedValue = true }
-            },
+            onSelectCompartment: onSelectCompartment,
+            onSelectLink: onSelectLink,
             onMoveCompartment: onMoveCompartment,
             onBeginCompartmentDrag: onBeginCompartmentDrag,
             onEndCompartmentDrag: onEndCompartmentDrag,
             onCanvasTouches: onCanvasTouches,
             onEndCanvasTouches: onEndCanvasTouches,
-            onSetCanvasTransform: onSetCanvasTransform
+            onSetCanvasTransform: onSetCanvasTransform, colorScheme: colorScheme
         )
     }
 
-    // MARK: - Compact bottom toolbar
+    // MARK: - Panels
 
-    private var compactBottomToolbar: some View {
-        GlassEffectContainer(spacing: 9) {
-        HStack(spacing: 9) {
-            Pill {
-                Button { onAddCompartment(.steel) } label: {
-                    Label(L.Common.compartment, systemImage: "plus.square")
-                        .font(TypeToken.detail.weight(.semibold))
-                        .foregroundStyle(.ink)
-                        .padding(.horizontal, 16).frame(height: 46)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            Pill(isActive: linkingBannerText != nil) {
-                Button {
-                    if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
-                } label: {
-                    Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(TypeToken.detail.weight(.semibold))
-                        .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
-                        .padding(.horizontal, 16).frame(height: 46)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            Pill {
-                Button { modelListSheet.wrappedValue = true } label: {
-                    Label(L.Common.model, systemImage: "list.bullet")
-                        .font(TypeToken.detail.weight(.semibold))
-                        .foregroundStyle(.ink)
-                        .padding(.horizontal, 16).frame(height: 46)
-                }
-                .buttonStyle(PlainButtonStyle())
+    /// The document's settings, and what the model is made of: two pages, one panel.
+    private var modelList: some View {
+        SegmentedPages(selection: modelTab, showsTitles: true) { tab in
+            switch tab {
+            case .document: documentPage
+            case .contents: contentsPage
             }
         }
-        }
-        .padding(.horizontal, 14).padding(.bottom, 8)
     }
 
-    // MARK: - Inspector sheet (iPhone)
+    private var documentPage: some View {
+        EditorDocumentPage(
+            documentName: documentName,
+            documentDescription: documentDescription,
+            field: field,
+            backdrop: backdrop,
+            showKValues: showKValues,
+            lingo: lingo,
+            units: units,
+            nuclideBindings: nuclideBindings,
+            validationIssues: validationIssues,
+            validationIssueTexts: validationIssueTexts,
+            onAddNuclide: onAddNuclide,
+            onDeleteNuclide: onDeleteNuclide,
+            onAddVariant: onAddVariant,
+            onDeleteVariant: onDeleteVariant,
+            onSelectEditingVariant: onSelectEditingVariant,
+            onBeginVariantRename: onBeginVariantRename,
+            onCommitVariantRename: onCommitVariantRename,
+            onCancelVariantRename: onCancelVariantRename,
+            variants: variants,
+            editingVariant: editingVariant,
+            renamingVariant: renamingVariant,
+            variantRenameDraft: variantRenameDraft,
+            colorScheme: colorScheme,
+            onEndNumberEditing: onEndNumberEditing
+        )
+    }
 
-    private var inspectorSheetContent: some View {
-        let title: Text = if let id = selectedCompartmentId {
-            compartments.first(where: { $0.id == id }).map { Text(verbatim: $0.name) } ?? Text(L.Common.inspector)
+    private var contentsPage: some View {
+        EditorModelListPanel(
+            lingo: lingo, units: units, nuclides: nuclides, compartments: compartments, links: links,
+            selectedCompartmentId: selectedCompartmentId,
+            selectedLinkIndex: selectedLinkIndex,
+            onSelectCompartment: onSelectCompartment,
+            onSelectLink: onSelectLink,
+            onEditCompartment: onEditCompartment,
+            onEditLink: onEditLink,
+            onDeleteCompartment: onDeleteCompartment,
+            onDeleteLink: onDeleteLink,
+            onAddCompartment: onAddCompartment,
+            onAddTransfer: { onBeginTransfer(nil, nil) },
+            colorScheme: colorScheme
+        )
+    }
+
+    private var inspector: some View {
+        EditorInspectorPanel(
+            lingo: lingo,
+            units: units,
+            nuclides: nuclides,
+            compartments: compartments,
+            links: links,
+            selectedCompartmentId: selectedCompartmentId,
+            selectedLinkIndex: selectedLinkIndex,
+            transferDraft: transferDraft,
+            inspectorTab: inspectorTab,
+            compartmentBindings: compartmentBindings,
+            linkBindings: linkBindings,
+            onEditCompartment: onEditCompartment,
+            onEditLink: onEditLink,
+            onBeginTransfer: onBeginTransfer,
+            onSetTransferFrom: onSetTransferFrom,
+            onSetTransferTo: onSetTransferTo,
+            onCreateTransfer: onCreateTransfer,
+            onCancelTransfer: onCancelTransfer,
+            onDeleteSelected: deleteSelected,
+            colorScheme: colorScheme,
+            onEndNumberEditing: onEndNumberEditing
+        )
+    }
+
+    private func deleteSelected() {
+        if let id = selectedCompartmentId {
+            onDeleteCompartment(id)
         } else if let idx = selectedLinkIndex {
-            Text(verbatim: "K\(idx + 1)")
-        } else {
-            Text(L.Common.document)
-        }
-        return NavigationStack {
-            ScrollView {
-                EditorInspectorPanel(
-                    documentName: documentName,
-                    documentDescription: documentDescription,
-                    field: field,
-                    backdrop: backdrop,
-                    resolvedBackdrop: resolvedBackdrop,
-                    lingo: lingo,
-                    nuclides: nuclides,
-                    compartments: compartments,
-                    links: links,
-                    selectedCompartmentId: selectedCompartmentId,
-                    selectedLinkIndex: selectedLinkIndex,
-                    inspectorTab: inspectorTab,
-                    compartmentBindings: compartmentBindings,
-                    linkBindings: linkBindings,
-                    nuclideBindings: nuclideBindings,
-                    validationIssues: validationIssues,
-                    onSelectCompartment: onSelectCompartment,
-                    onSelectLink: onSelectLink,
-                    onBeginLinking: onBeginLinking,
-                    onDeleteSelected: {
-                        inspectorSheet.wrappedValue = false
-                        if let id = selectedCompartmentId { onDeleteCompartment(id) }
-                        else if let idx = selectedLinkIndex { onDeleteLink(idx) }
-                    },
-                    onAddNuclide: onAddNuclide,
-                    onDeleteNuclide: onDeleteNuclide,
-                    onAddVariant: onAddVariant,
-                    onDeleteVariant: onDeleteVariant,
-                    onSelectEditingVariant: onSelectEditingVariant,
-                    onBeginVariantRename: onBeginVariantRename,
-                    onCommitVariantRename: onCommitVariantRename,
-                    onCancelVariantRename: onCancelVariantRename,
-                    variants: variants,
-                    editingVariant: editingVariant,
-                    renamingVariant: renamingVariant,
-                    variantRenameDraft: variantRenameDraft
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
-            }
-            .navigationTitle(title)
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L.Common.done) { inspectorSheet.wrappedValue = false }
-                }
-            }
-        }
-        .presentationDetents([.fraction(0.80)])
-        .presentationDragIndicator(.visible)
-    }
-
-    // MARK: - Model list sheet (iPhone)
-
-    private var modelListSheetContent: some View {
-        NavigationStack {
-            EditorModelListPanel(
-                lingo: lingo, nuclides: nuclides, compartments: compartments, links: links,
-                selectedCompartmentId: selectedCompartmentId,
-                selectedLinkIndex: selectedLinkIndex,
-                selectionFooterLabel: selectionFooterLabel,
-                onSelectCompartment: { id in modelListSheet.wrappedValue = false; onSelectCompartment(id) },
-                onSelectLink: { idx in modelListSheet.wrappedValue = false; onSelectLink(idx) },
-                onDeleteSelected: {
-                    modelListSheet.wrappedValue = false
-                    if let id = selectedCompartmentId { onDeleteCompartment(id) }
-                    else if let idx = selectedLinkIndex { onDeleteLink(idx) }
-                }
-            )
-            .navigationTitle(L.Common.model)
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L.Common.done) { modelListSheet.wrappedValue = false }
-                }
-            }
-        }
-        .presentationDetents([.fraction(0.80)])
-        .presentationDragIndicator(.visible)
-    }
-
-    // MARK: - Canvas toolbar (iPad center bottom)
-
-    private var canvasToolbar: some View {
-        HStack(spacing: 8) {
-            Pill {
-                Menu {
-                    ForEach(CompartmentTint.allCases, id: \.self) { tint in
-                        Button { onAddCompartment(tint) } label: {
-                            Label(tint.rawValue.capitalized, systemImage: "square.fill")
-                        }
-                    }
-                } label: {
-                    Label(L.Common.compartment, systemImage: "plus.square")
-                        .font(TypeToken.detail.weight(.semibold))
-                        .foregroundStyle(.ink)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, 15).frame(height: 44)
-                }
-            }
-            Pill(isActive: linkingBannerText != nil) {
-                Button {
-                    if linkingBannerText != nil { onCancelLinking() } else { onBeginLinking() }
-                } label: {
-                    Label("Link", systemImage: "arrow.triangle.branch")
-                        .font(TypeToken.detail.weight(.semibold))
-                        .foregroundStyle(linkingBannerText != nil ? Color.accentColor : .primary)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, 15).frame(height: 44)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            Pill(isActive: showKValues) {
-                Button(action: onToggleKValues) {
-                    Text("K")
-                        .font(TypeToken.detail.weight(.bold))
-                        .foregroundStyle(showKValues ? Color.accentColor : .primary)
-                        .padding(.horizontal, 15).frame(height: 44)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
+            onDeleteLink(idx)
         }
     }
 
@@ -601,44 +443,40 @@ struct EditorContent: View {
             if !validationIssues.isEmpty {
                 let errorCount = validationIssues.filter { $0.severity == .error }.count
                 let tint: Color = errorCount > 0 ? .orange : .yellow
-                Label("\(validationIssues.count)", systemImage: "exclamationmark.triangle.fill")
+                Label { Text(verbatim: validationIssueCountText) } icon: { Image(systemName: "exclamationmark.triangle.fill") }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(tint)
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(tint.opacity(0.12), in: Capsule())
             }
         }
-        ToolbarItemGroup(placement: .platformNavigationTrailing) {
-            if !isCompact {
-                Button(action: onToggleKValues) {
-                    Image(systemName: showKValues ? "eye" : "eye.slash")
-                }
-                .tint(showKValues ? .accentColor : .secondary)
-                panelToggle(side: .leading,  isVisible: isLeftPanelVisible,  action: onToggleLeftPanel)
-                panelToggle(side: .trailing, isVisible: isRightPanelVisible, action: onToggleRightPanel)
-            } else {
-                Button(action: onToggleKValues) {
-                    Image(systemName: showKValues ? "eye" : "eye.slash")
-                }
-                .tint(showKValues ? .accentColor : .secondary)
+    }
+}
 
-                // Document inspector button: clears selection and opens the inspector
-                // in Document mode (shows nuclides + half-life).
-                Button {
-                    onSelectCompartment(nil)   // also clears selectedLinkIndex via reducer
-                    inspectorSheet.wrappedValue = true
-                } label: {
-                    Image(systemName: "doc.text")
-                }
-            }
+extension EditorFeature.EditorLayout {
+    /// The workspace's way of showing the same thing.
+    var workspaceMode: WorkspaceMode {
+        switch self {
+        case .docked: .docked
+        case .floating: .floating
+        case .sheets: .sheet
+        }
+    }
+}
+
+/// The model panel's pages, as their segments show them.
+extension EditorFeature.ModelTab: PageKind {
+    public var icon: Image {
+        switch self {
+        case .document: Image(systemName: "doc.text")
+        case .contents: Image(systemName: "list.bullet")
         }
     }
 
-    private func panelToggle(side: HorizontalEdge, isVisible: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: side == .leading ? "sidebar.left" : "sidebar.right")
-                .symbolVariant(isVisible ? .fill : .none)
+    public var title: LocalizedStringKey {
+        switch self {
+        case .document: L.Common.document
+        case .contents: L.Common.model
         }
-        .tint(isVisible ? .accentColor : .secondary)
     }
 }

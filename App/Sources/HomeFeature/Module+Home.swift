@@ -31,6 +31,8 @@ public enum HomeModule {
         public var draftField: ModelField = .generic
         /// Draft name in the creation sheet.
         public var draftName: String = ""
+        /// The screen's traits, from the world through the app's state (see `DeviceTraits`).
+        public var traits: DeviceTraits = .initial
 
         public init() {}
     }
@@ -80,15 +82,20 @@ public enum HomeModule {
         public var saveDocument:      @Sendable (ModelDocument) -> Result<Void, PersistenceError>
         public var loadAllDocuments:  @Sendable () -> Result<[ModelDocument], PersistenceError>
         public var deleteDocument:    @Sendable (UUID) -> Result<Void, PersistenceError>
+        /// How the view state projection writes numbers: the world's.
+        public var formatDouble:      @Sendable (Double, Int) -> String
+        public var formatInteger:     @Sendable (Int) -> String
 
         public init(
             xmlDecoder:       DataDecoderFactory & Sendable,
             jsonDecoder:      DataDecoderFactory & Sendable,
-            newId:            @escaping @Sendable () -> UUID                                         = { UUID() },
-            seedId:           @escaping @Sendable (String) -> UUID                                  = { _ in UUID() },
+            newId:            @escaping @Sendable () -> UUID,
+            seedId:           @escaping @Sendable (String) -> UUID,
             saveDocument:     @escaping @Sendable (ModelDocument) -> Result<Void, PersistenceError>  = { _ in .success(()) },
             loadAllDocuments: @escaping @Sendable () -> Result<[ModelDocument], PersistenceError>    = { .success([]) },
-            deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>           = { _ in .success(()) }
+            deleteDocument:   @escaping @Sendable (UUID) -> Result<Void, PersistenceError>           = { _ in .success(()) },
+            formatDouble:     @escaping @Sendable (Double, Int) -> String,
+            formatInteger:    @escaping @Sendable (Int) -> String
         ) {
             self.xmlDecoder       = xmlDecoder
             self.jsonDecoder      = jsonDecoder
@@ -97,6 +104,8 @@ public enum HomeModule {
             self.saveDocument     = saveDocument
             self.loadAllDocuments = loadAllDocuments
             self.deleteDocument   = deleteDocument
+            self.formatDouble     = formatDouble
+            self.formatInteger    = formatInteger
         }
     }
 

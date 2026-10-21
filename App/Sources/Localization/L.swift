@@ -24,8 +24,8 @@ public enum L {
         public static var activity: LocalizedStringKey { "Activity" }
         public static var also: LocalizedStringKey { "Also:" }
         public static var birchallHint: LocalizedStringKey { "Birchall is exact for this model." }
-        public static func budgetExhausted(_ a1: String, _ a2: String, _ a3: Int) -> LocalizedStringKey { "RK45 stopped at day \(a1) of \(a2) after \(a3) steps. Raise the step budget, or use Birchall." }
-        public static func budgetExhaustedPartial(_ a1: String, _ a2: String, _ a3: Int) -> LocalizedStringKey { "RK45 stopped at day \(a1) of \(a2) after \(a3) steps; the results cover the days it reached. Raise the step budget, or use Birchall." }
+        public static func budgetExhausted(_ a1: String, _ a2: String, _ a3: String, _ a4: Int) -> LocalizedStringKey { "RK45 stopped at \(a1) of \(a2) \(a3) after \(a4) steps. Raise the step budget, or use Birchall." }
+        public static func budgetExhaustedPartial(_ a1: String, _ a2: String, _ a3: String, _ a4: Int) -> LocalizedStringKey { "RK45 stopped at \(a1) of \(a2) \(a3) after \(a4) steps; the results cover the time it reached. Raise the step budget, or use Birchall." }
         public static var calculate: LocalizedStringKey { "Calculate" }
         public static func calculateWithEstimate(_ a1: String) -> LocalizedStringKey { "Calculate · \(a1)" }
         public static var cannotCalculate: LocalizedStringKey { "Model cannot be calculated" }
@@ -64,9 +64,9 @@ public enum L {
         public static var switchToBirchall: LocalizedStringKey { "Switch to Birchall" }
         public static var tapCalculate: LocalizedStringKey { "Tap Calculate to run the solver" }
         public static var tolerance: LocalizedStringKey { "Tolerance" }
-        public static func underflow(_ a1: String) -> LocalizedStringKey { "RK45 could not take a step at day \(a1). Use Birchall for this model." }
-        public static func underflowPartial(_ a1: String) -> LocalizedStringKey { "RK45 could not take a step at day \(a1); the results cover the days before it. Use Birchall for this model." }
-        public static func unstableStep(_ a1: String, _ a2: String) -> LocalizedStringKey { "An RK4 step of \(a1) d is unstable for this model. Use a step below \(a2) d, or Birchall." }
+        public static func underflow(_ a1: String, _ a2: String) -> LocalizedStringKey { "RK45 could not take a step at \(a1) \(a2). Use Birchall for this model." }
+        public static func underflowPartial(_ a1: String, _ a2: String) -> LocalizedStringKey { "RK45 could not take a step at \(a1) \(a2); the results cover the time before it. Use Birchall for this model." }
+        public static func unstableStep(_ a1: String, _ a2: String, _ a3: String, _ a4: String) -> LocalizedStringKey { "An RK4 step of \(a1) \(a2) is unstable for this model. Use a step below \(a3) \(a4), or Birchall." }
         public static var useAutomaticBudget: LocalizedStringKey { "Use automatic budget" }
         public static var variant: LocalizedStringKey { "Variant" }
         public static func willStopAround(_ a1: String, _ a2: String, _ a3: String, _ a4: String) -> LocalizedStringKey { "At \(a1) per \(a2) it will stop around \(a3) \(a4)." }
@@ -135,6 +135,7 @@ public enum L {
     }
     public enum Editor {
         public static func add(_ a1: String) -> LocalizedStringKey { "Add \(a1)" }
+        public static var addCompartment: LocalizedStringKey { "Add compartment" }
         public static var addReverseTransfer: LocalizedStringKey { "Add reverse transfer" }
         public static var addTransfer: LocalizedStringKey { "Add transfer" }
         public static var addVariant: LocalizedStringKey { "Add variant" }
@@ -142,7 +143,6 @@ public enum L {
         public static var baseModel: LocalizedStringKey { "Base model" }
         public static var color: LocalizedStringKey { "Color" }
         public static func compartmentCount(_ a1: Int) -> LocalizedStringKey { "\(a1) compartments" }
-        public static var compartmentsAndTransfers: LocalizedStringKey { "MODEL" }
         public static var deleteTransfer: LocalizedStringKey { "Delete transfer" }
         public static var description: LocalizedStringKey { "Description" }
         public static var details: LocalizedStringKey { "Details" }
@@ -154,19 +154,19 @@ public enum L {
         public static var inspectorHeading: LocalizedStringKey { "INSPECTOR" }
         public static var issues: LocalizedStringKey { "Issues" }
         public static var jump: LocalizedStringKey { "Jump" }
-        public static var modelProperties: LocalizedStringKey { "Model properties" }
         public static var newCompartment: LocalizedStringKey { "New Compartment" }
         public static func newSubstance(_ a1: String) -> LocalizedStringKey { "New \(a1)" }
+        public static var newTransfer: LocalizedStringKey { "New transfer" }
         public static func noSubstances(_ a1: String) -> LocalizedStringKey { "No \(a1) — tap + to add one" }
+        public static var nothingSelected: LocalizedStringKey { "Nothing selected" }
         public static var optionalDescription: LocalizedStringKey { "Optional description" }
         public static var outbound: LocalizedStringKey { "Outbound" }
+        public static var pickSomethingToEdit: LocalizedStringKey { "Pick a compartment or a transfer in the model, then Edit." }
         public static var rate: LocalizedStringKey { "Rate" }
         public static func rateWithUnit(_ a1: String) -> LocalizedStringKey { "Rate (\(a1))" }
         public static var relationships: LocalizedStringKey { "Relationships" }
         public static var reverseTransfer: LocalizedStringKey { "Reverse transfer" }
-        public static func selected(_ a1: String) -> LocalizedStringKey { "Selected · \(a1)" }
-        public static var tapDestination: LocalizedStringKey { "Now tap the destination compartment" }
-        public static var tapSource: LocalizedStringKey { "Tap the source compartment" }
+        public static var showRatesOnArrows: LocalizedStringKey { "Show the rates on the arrows" }
         public static var to: LocalizedStringKey { "To" }
         public static var track: LocalizedStringKey { "Track" }
         public static var variantName: LocalizedStringKey { "Variant name" }
@@ -266,8 +266,8 @@ public enum L {
             public static var activity: LocalizedStringResource { "Activity" }
             public static var also: LocalizedStringResource { "Also:" }
             public static var birchallHint: LocalizedStringResource { "Birchall is exact for this model." }
-            public static func budgetExhausted(_ a1: String, _ a2: String, _ a3: Int) -> LocalizedStringResource { "RK45 stopped at day \(a1) of \(a2) after \(a3) steps. Raise the step budget, or use Birchall." }
-            public static func budgetExhaustedPartial(_ a1: String, _ a2: String, _ a3: Int) -> LocalizedStringResource { "RK45 stopped at day \(a1) of \(a2) after \(a3) steps; the results cover the days it reached. Raise the step budget, or use Birchall." }
+            public static func budgetExhausted(_ a1: String, _ a2: String, _ a3: String, _ a4: Int) -> LocalizedStringResource { "RK45 stopped at \(a1) of \(a2) \(a3) after \(a4) steps. Raise the step budget, or use Birchall." }
+            public static func budgetExhaustedPartial(_ a1: String, _ a2: String, _ a3: String, _ a4: Int) -> LocalizedStringResource { "RK45 stopped at \(a1) of \(a2) \(a3) after \(a4) steps; the results cover the time it reached. Raise the step budget, or use Birchall." }
             public static var calculate: LocalizedStringResource { "Calculate" }
             public static func calculateWithEstimate(_ a1: String) -> LocalizedStringResource { "Calculate · \(a1)" }
             public static var cannotCalculate: LocalizedStringResource { "Model cannot be calculated" }
@@ -306,9 +306,9 @@ public enum L {
             public static var switchToBirchall: LocalizedStringResource { "Switch to Birchall" }
             public static var tapCalculate: LocalizedStringResource { "Tap Calculate to run the solver" }
             public static var tolerance: LocalizedStringResource { "Tolerance" }
-            public static func underflow(_ a1: String) -> LocalizedStringResource { "RK45 could not take a step at day \(a1). Use Birchall for this model." }
-            public static func underflowPartial(_ a1: String) -> LocalizedStringResource { "RK45 could not take a step at day \(a1); the results cover the days before it. Use Birchall for this model." }
-            public static func unstableStep(_ a1: String, _ a2: String) -> LocalizedStringResource { "An RK4 step of \(a1) d is unstable for this model. Use a step below \(a2) d, or Birchall." }
+            public static func underflow(_ a1: String, _ a2: String) -> LocalizedStringResource { "RK45 could not take a step at \(a1) \(a2). Use Birchall for this model." }
+            public static func underflowPartial(_ a1: String, _ a2: String) -> LocalizedStringResource { "RK45 could not take a step at \(a1) \(a2); the results cover the time before it. Use Birchall for this model." }
+            public static func unstableStep(_ a1: String, _ a2: String, _ a3: String, _ a4: String) -> LocalizedStringResource { "An RK4 step of \(a1) \(a2) is unstable for this model. Use a step below \(a3) \(a4), or Birchall." }
             public static var useAutomaticBudget: LocalizedStringResource { "Use automatic budget" }
             public static var variant: LocalizedStringResource { "Variant" }
             public static func willStopAround(_ a1: String, _ a2: String, _ a3: String, _ a4: String) -> LocalizedStringResource { "At \(a1) per \(a2) it will stop around \(a3) \(a4)." }
@@ -377,6 +377,7 @@ public enum L {
         }
         public enum Editor {
             public static func add(_ a1: String) -> LocalizedStringResource { "Add \(a1)" }
+            public static var addCompartment: LocalizedStringResource { "Add compartment" }
             public static var addReverseTransfer: LocalizedStringResource { "Add reverse transfer" }
             public static var addTransfer: LocalizedStringResource { "Add transfer" }
             public static var addVariant: LocalizedStringResource { "Add variant" }
@@ -384,7 +385,6 @@ public enum L {
             public static var baseModel: LocalizedStringResource { "Base model" }
             public static var color: LocalizedStringResource { "Color" }
             public static func compartmentCount(_ a1: Int) -> LocalizedStringResource { "\(a1) compartments" }
-            public static var compartmentsAndTransfers: LocalizedStringResource { "MODEL" }
             public static var deleteTransfer: LocalizedStringResource { "Delete transfer" }
             public static var description: LocalizedStringResource { "Description" }
             public static var details: LocalizedStringResource { "Details" }
@@ -396,19 +396,19 @@ public enum L {
             public static var inspectorHeading: LocalizedStringResource { "INSPECTOR" }
             public static var issues: LocalizedStringResource { "Issues" }
             public static var jump: LocalizedStringResource { "Jump" }
-            public static var modelProperties: LocalizedStringResource { "Model properties" }
             public static var newCompartment: LocalizedStringResource { "New Compartment" }
             public static func newSubstance(_ a1: String) -> LocalizedStringResource { "New \(a1)" }
+            public static var newTransfer: LocalizedStringResource { "New transfer" }
             public static func noSubstances(_ a1: String) -> LocalizedStringResource { "No \(a1) — tap + to add one" }
+            public static var nothingSelected: LocalizedStringResource { "Nothing selected" }
             public static var optionalDescription: LocalizedStringResource { "Optional description" }
             public static var outbound: LocalizedStringResource { "Outbound" }
+            public static var pickSomethingToEdit: LocalizedStringResource { "Pick a compartment or a transfer in the model, then Edit." }
             public static var rate: LocalizedStringResource { "Rate" }
             public static func rateWithUnit(_ a1: String) -> LocalizedStringResource { "Rate (\(a1))" }
             public static var relationships: LocalizedStringResource { "Relationships" }
             public static var reverseTransfer: LocalizedStringResource { "Reverse transfer" }
-            public static func selected(_ a1: String) -> LocalizedStringResource { "Selected · \(a1)" }
-            public static var tapDestination: LocalizedStringResource { "Now tap the destination compartment" }
-            public static var tapSource: LocalizedStringResource { "Tap the source compartment" }
+            public static var showRatesOnArrows: LocalizedStringResource { "Show the rates on the arrows" }
             public static var to: LocalizedStringResource { "To" }
             public static var track: LocalizedStringResource { "Track" }
             public static var variantName: LocalizedStringResource { "Variant name" }

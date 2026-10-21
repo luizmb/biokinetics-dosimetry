@@ -1,3 +1,4 @@
+import Foundation
 /// DEBUG-only mock factories for `CalculatorFeature.Environment`.
 ///
 /// Use these in unit tests and SwiftUI previews instead of inline closures.
@@ -29,16 +30,16 @@ public extension CalculatorFeature.Environment {
 
     /// Returns plausible exponential-decay curves for every solve request.
     static var alwaysSucceed: CalculatorFeature.Environment {
-        .init(solve: mockSolve)
+        .init(solve: mockSolve, formatDouble: { v, dp in String(format: "%.\(dp)f", v) }, parseDouble: { Double($0) }, formatScientific: { v, dp in String(format: "%.\(dp)e", v) }, formatInteger: { String($0) }, formatSignificant: { String(format: "%.4g", $0) })
     }
 
     /// Returns the provided data for every solve request, ignoring the plan and model.
     static func succeeds(with data: [[Double]]) -> CalculatorFeature.Environment {
-        .init(solve: { _, _ in Publisher.future { .success(data) } })
+        .init(solve: { _, _ in Publisher.future { .success(data) } }, formatDouble: { v, dp in String(format: "%.\(dp)f", v) }, parseDouble: { Double($0) }, formatScientific: { v, dp in String(format: "%.\(dp)e", v) }, formatInteger: { String($0) }, formatSignificant: { String(format: "%.4g", $0) })
     }
 
     static var alwaysFails: CalculatorFeature.Environment {
-        .init(solve: { _, _ in Publisher.future { .success([]) } })
+        .init(solve: { _, _ in Publisher.future { .success([]) } }, formatDouble: { v, dp in String(format: "%.\(dp)f", v) }, parseDouble: { Double($0) }, formatScientific: { v, dp in String(format: "%.\(dp)e", v) }, formatInteger: { String($0) }, formatSignificant: { String(format: "%.4g", $0) })
     }
 
     static var realBirchall: CalculatorFeature.Environment {
@@ -48,7 +49,7 @@ public extension CalculatorFeature.Environment {
                                                solver: .birchall(composition: .perTime)),
                 model: model
             ).map { $0.mapError { $0 as Error } }.eraseToThrowingPublisher()
-        })
+        }, formatDouble: { v, dp in String(format: "%.\(dp)f", v) }, parseDouble: { Double($0) }, formatScientific: { v, dp in String(format: "%.\(dp)e", v) }, formatInteger: { String($0) }, formatSignificant: { String(format: "%.4g", $0) })
     }
 }
 
