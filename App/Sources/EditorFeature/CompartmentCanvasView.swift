@@ -21,7 +21,6 @@ struct CompartmentCanvasView: View {
     let selectedCompartmentId: String?
     let selectedLinkIndex: Int?
     let showKValues: Bool
-    let isLinking:   Bool
     let canvasOffsetX: Double
     let canvasOffsetY: Double
     let canvasScale:   Double
@@ -39,7 +38,8 @@ struct CompartmentCanvasView: View {
     var onEndCanvasTouches:     () -> Void
     var onSetCanvasTransform:   (Double, Double, Double) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
     private var isDark: Bool { colorScheme == .dark }
     private var scale: CGFloat { CGFloat(canvasScale) }
 
@@ -83,7 +83,7 @@ struct CompartmentCanvasView: View {
                     let sp  = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
                     let len = sz.height * 0.55 * s          // ~half compartment height
                     let tail = CGPoint(x: sp.x, y: sp.y - sz.height/2*s - len)
-                    let intakeColor = Color(.success)
+                    let intakeColor = Color(.success, scheme: colorScheme)
 
                     // Shaft
                     Path { p in
@@ -100,11 +100,11 @@ struct CompartmentCanvasView: View {
 
                     // Fraction label
                     if comp.fraction > 0, s >= 0.5 {
-                        Text(comp.fraction.formatted(.number.precision(.fractionLength(2))))
+                        Text(verbatim: comp.fractionText)
                             .font(.system(size: 9, weight: .semibold, design: .monospaced))
                             .foregroundStyle(intakeColor)
                             .padding(.horizontal, 4).padding(.vertical, 1)
-                            .background(Color(.selectedSurface), in: Capsule())
+                            .background(Color(.selectedSurface, scheme: colorScheme), in: Capsule())
                             .position(x: sp.x + sz.width/2*s*0.5 + 10,
                                       y: (tail.y + sp.y - sz.height/2*s) / 2)
                             .allowsHitTesting(false)
@@ -116,7 +116,6 @@ struct CompartmentCanvasView: View {
                         .contentShape(Rectangle())
                         .position(x: sp.x, y: tail.y + len/2)
                         .highPriorityGesture(TapGesture().onEnded {
-                            guard !isLinking else { return }
                             onSelectCompartment(comp.id)
                         })
                 }
@@ -152,9 +151,9 @@ struct CompartmentCanvasView: View {
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
                         .foregroundStyle(selectedLinkIndex == link.id
                                          ? link.fromTint.indicator(dark: isDark)
-                                         : Color(.inkMuted))
+                                         : Color(.inkMuted, scheme: colorScheme))
                         .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(Color(.selectedSurface), in: Capsule())
+                        .background(Color(.selectedSurface, scheme: colorScheme), in: Capsule())
                         .position(x: mid.x, y: mid.y - 12)
                         .allowsHitTesting(false)
                 }
@@ -169,7 +168,6 @@ struct CompartmentCanvasView: View {
                         .contentShape(Rectangle())
                         .position(x: mid.x, y: mid.y)
                         .highPriorityGesture(TapGesture().onEnded {
-                            guard !isLinking else { return }
                             onSelectLink(link.id)
                         })
                 }
@@ -183,8 +181,8 @@ struct CompartmentCanvasView: View {
                     let sz = nodeSize(comp.id)
                     let sp = screenPt(CGPoint(x: comp.x, y: comp.y), hw: hw, hh: hh, s: s, ox: ox, oy: oy)
                     CompartmentNode(
-                        comp: comp, isLinkingTarget: isLinking, size: sz, scale: s,
-                        isDragging: compartmentDragOriginId == comp.id
+                        comp: comp, size: sz, scale: s,
+                        isDragging: compartmentDragOriginId == comp.id, colorScheme: colorScheme
                     )
                         // The node's own rounded shape is its touch area. Attached after
                         // `.position` (which fills the whole canvas) every node competed for every
@@ -250,6 +248,12 @@ struct CompartmentCanvasView: View {
                     }
                     .onEnded { _ in onEndCanvasTouches() }
             )
+            #if os(iOS)
+            // A trackpad's two fingers are not touches: a scroll pans and a pinch zooms, reported
+            // as the touches they stand for, so the reducer's one pan and pinch serves them too.
+            .gesture(TrackpadScroll(viewCenter: CGPoint(x: hw, y: hh), changed: onCanvasTouches, ended: onEndCanvasTouches))
+            .gesture(TrackpadPinch(viewCenter: CGPoint(x: hw, y: hh), changed: onCanvasTouches, ended: onEndCanvasTouches))
+            #endif
             // Simultaneous, so the pinch never waits for a double tap to fail.
             .simultaneousGesture(TapGesture(count: 2).onEnded { onSetCanvasTransform(0, 0, 1) })
         }
@@ -345,14 +349,14 @@ struct CompartmentCanvasView: View {
 
 private struct CompartmentNode: View {
     let comp: EditorFeature.CompartmentRow
-    let isLinkingTarget: Bool
     /// In canvas units.
     let size: CGSize
     let scale: CGFloat
     /// The node being dragged brightens. From the store, so only that node does: the glass's own
     /// `.interactive()` lit every glass shape under the finger.
     let isDragging: Bool
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
     private var dark: Bool { colorScheme == .dark }
 
     /// The glass is cut at the node's on-screen size and only the content inside is scaled: a
@@ -368,7 +372,9 @@ private struct CompartmentNode: View {
         .clipShape(shape)
         // The system's clear glass (it bends what's behind), barely tinted with the compartment's colour, with a hint of Aqua's gloss and glow.
         .finish(.glass(GlassToken(.clear, tint: glassTint)).sheen(gloss: 0.2, glow: 0.2), in: shape)
-        .animation(.easeOut(duration: 0.2), value: isDragging)
+        // No animation on the drag starting: the first move lands in the same update, and an
+        // animated one let the container ease the glass after its edge, which already stood at
+        // the finger: the outline went and the glass caught up a moment later.
     }
 
     private var label: some View {
@@ -387,11 +393,9 @@ private struct CompartmentNode: View {
         .padding(.horizontal, 8)
     }
 
-    /// No border: the glass edge is the outline. Selection, linking and dragging show as a
-    /// deeper tint.
+    /// No border: the glass edge is the outline. Selection and dragging show as a deeper tint.
     private var glassTint: ColorToken {
         isDragging ? ColorToken.fixedWhite.opacity(dark ? 0.25 : 0.55)
-            : isLinkingTarget && !comp.isSelected ? ColorToken.accent.opacity(0.25)
             : comp.tint.indicatorToken.opacity(comp.isSelected ? 0.22 : 0.04)
     }
 
@@ -399,3 +403,82 @@ private struct CompartmentNode: View {
         Circle().fill(c.opacity(0.7)).frame(width: 5, height: 5)
     }
 }
+
+#if os(iOS)
+import UIKit
+
+/// A trackpad's (or a mouse wheel's) scroll, as the one finger it stands for: the finger starts
+/// at the canvas's middle and moves by the scroll, so the reducer pans by it as by a touch. Scrolls
+/// only; a finger on the glass is the canvas's own touches.
+private struct TrackpadScroll: UIGestureRecognizerRepresentable {
+    let viewCenter: CGPoint
+    let changed: (EditorFeature.CanvasTouches) -> Void
+    let ended: () -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let recognizer = UIPanGestureRecognizer()
+        recognizer.allowedScrollTypesMask = .all
+        recognizer.allowedTouchTypes = []
+        return recognizer
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        switch recognizer.state {
+        case .began, .changed:
+            let moved = recognizer.translation(in: recognizer.view)
+            changed(EditorFeature.CanvasTouches(
+                touches: [TrackpadTouch.scroll: EditorFeature.CanvasPoint(x: Double(viewCenter.x + moved.x), y: Double(viewCenter.y + moved.y))],
+                viewCenter: EditorFeature.CanvasPoint(x: Double(viewCenter.x), y: Double(viewCenter.y))
+            ))
+        case .ended, .cancelled, .failed:
+            ended()
+        default:
+            break
+        }
+    }
+}
+
+/// A trackpad's pinch, as the two fingers it stands for: either side of the pointer, as far apart
+/// as the pinch has spread them, so the reducer zooms about the pointer as about a pair of touches.
+/// The trackpad's only; a pinch on the glass is the canvas's own touches.
+private struct TrackpadPinch: UIGestureRecognizerRepresentable {
+    let viewCenter: CGPoint
+    let changed: (EditorFeature.CanvasTouches) -> Void
+    let ended: () -> Void
+
+    /// Half the distance between the two stand-in fingers when the pinch begins.
+    private static let reach = 100.0
+
+    func makeUIGestureRecognizer(context: Context) -> UIPinchGestureRecognizer {
+        let recognizer = UIPinchGestureRecognizer()
+        recognizer.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+        return recognizer
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPinchGestureRecognizer, context: Context) {
+        switch recognizer.state {
+        case .began, .changed:
+            let pointer = context.converter.location(in: .local)
+            let reach = Self.reach * Double(recognizer.scale)
+            changed(EditorFeature.CanvasTouches(
+                touches: [
+                    TrackpadTouch.pinchLeft: EditorFeature.CanvasPoint(x: Double(pointer.x) - reach, y: Double(pointer.y)),
+                    TrackpadTouch.pinchRight: EditorFeature.CanvasPoint(x: Double(pointer.x) + reach, y: Double(pointer.y)),
+                ],
+                viewCenter: EditorFeature.CanvasPoint(x: Double(viewCenter.x), y: Double(viewCenter.y))
+            ))
+        case .ended, .cancelled, .failed:
+            ended()
+        default:
+            break
+        }
+    }
+}
+
+/// Ids for the stand-in fingers, apart from any real touch's.
+private enum TrackpadTouch {
+    static let scroll = -1
+    static let pinchLeft = -2
+    static let pinchRight = -3
+}
+#endif

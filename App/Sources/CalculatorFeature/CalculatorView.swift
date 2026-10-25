@@ -45,9 +45,9 @@ public struct CalculatorView: View {
         }()
 
         let paramBindings = ParameterBindings(
-            finalDay: Binding(
-                get: { viewStore.state.finalDay },
-                set: { viewStore.dispatch(.setFinalDay($0)) }
+            duration: Binding(
+                get: { viewStore.state.duration },
+                set: { viewStore.dispatch(.setDuration($0)) }
             ),
             stepSizeText: Binding(
                 get: { viewStore.state.stepSizeText },
@@ -76,7 +76,7 @@ public struct CalculatorView: View {
 
         return CalculatorContent(
             documentName:         viewStore.state.documentName,
-            lingo:                viewStore.state.lingo.value,
+            units: viewStore.state.units.value,
             halfLife:             viewStore.state.halfLife,
             variants:             viewStore.state.variants.value,
             solver:               viewStore.state.solver.value,
@@ -103,7 +103,7 @@ public struct CalculatorView: View {
                 automaticStepsPerDay: viewStore.state.automaticStepsPerDay
             ),
             remedies: viewStore.state.remedies.value,
-            stoppedAtDay: viewStore.state.stoppedAtDay,
+            stoppedAt: viewStore.state.stoppedAt,
             stoppedLabel: viewStore.state.stoppedLabel,
             csvExportInput:       viewStore.state.csvExportInput.value,
             pdfExportInput:       viewStore.state.pdfExportInput.value,
@@ -116,6 +116,13 @@ public struct CalculatorView: View {
             onToggleSeries:       { viewStore.dispatch(.toggleSeries($0)) },
             onToggleParamPanel:   { viewStore.dispatch(.toggleParamPanel) },
             onRemedy:             { viewStore.dispatch(.applyRemedy($0)) },
+            colorScheme: viewStore.state.colorScheme.value,
+            isCompact: viewStore.state.isCompact,
+            validationIssueTexts: viewStore.state.validationIssueTexts.value,
+            xTicks: viewStore.state.xTicks.value,
+            yTicks: viewStore.state.yTicks.value,
+            durationText: viewStore.state.durationText,
+            durationStepTexts: viewStore.state.durationStepTexts.value
         )
         .inlineNavigationTitle()
     }
@@ -126,7 +133,7 @@ public struct CalculatorView: View {
 struct CalculatorContent: View {
     // MARK: Read-only view state
     let documentName: String
-    let lingo: FieldLingo
+    let units: WorkingUnits
     let halfLife: Double
     let variants: [String]
     let solver: SolverMethod
@@ -147,7 +154,7 @@ struct CalculatorContent: View {
     let validationIssues: [CompartmentalModel.ValidationIssue]
     let hints: SolverHints
     let remedies: [CalculatorFeature.Remedy]
-    let stoppedAtDay: Double?
+    let stoppedAt: Double?
     let stoppedLabel: LocalizedStringResource?
     let csvExportInput: CSVExportInput?
     let pdfExportInput: PDFExportInput?
@@ -165,9 +172,15 @@ struct CalculatorContent: View {
     var onToggleParamPanel: () -> Void
     var onRemedy: (CalculatorFeature.Remedy) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var hSize
-    private var isCompact: Bool { hSize == .compact }
+    /// The screen's appearance and narrowness, from the view state.
+    let colorScheme: ColorScheme
+    let isCompact: Bool
+    /// What the screen shows, written where the view state is made.
+    let validationIssueTexts: [LocalizedStringResource]
+    let xTicks: [CalculatorFeature.AxisTick]
+    let yTicks: [CalculatorFeature.AxisTick]
+    let durationText: String
+    let durationStepTexts: [Int: String]
 
     var body: some View {
         ZStack {
@@ -185,7 +198,7 @@ struct CalculatorContent: View {
             if isParamPanelVisible {
                 ParameterContent(
                     paramBindings: paramBindings,
-                    lingo: lingo,
+                    units: units,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
@@ -195,7 +208,9 @@ struct CalculatorContent: View {
                     durationWarningTone: bannerTone(durationWarning),
                     hints: hints,
                     onSetSolver: onSetSolver,
-                    onCalculate: onCalculate
+                    onCalculate: onCalculate,
+                    colorScheme: colorScheme,
+                    durationText: durationText, durationStepTexts: durationStepTexts
                 )
                 .frame(width: 300)
                 .transition(.move(edge: .leading).combined(with: .opacity))
@@ -230,13 +245,13 @@ struct CalculatorContent: View {
                     DecayChartContent(
                         series: series, isCalculating: isCalculating,
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
-                        finalDay: paramBindings.finalDay.wrappedValue,
-                        lingo: lingo, validationIssues: validationIssues,
+                        duration: paramBindings.duration.wrappedValue,
+                        units: units, validationIssues: validationIssues,
                         remedies: remedies,
-                        stoppedAtDay: stoppedAtDay,
+                        stoppedAt: stoppedAt,
                         stoppedLabel: stoppedLabel,
                         onToggleSeries: onToggleSeries,
-                        onRemedy: onRemedy
+                        onRemedy: onRemedy, colorScheme: colorScheme, validationIssueTexts: validationIssueTexts, xTicks: xTicks, yTicks: yTicks
                     )
                 }
             }
@@ -249,7 +264,7 @@ struct CalculatorContent: View {
             // Report tab
             ReportContent(
                 reportRows: reportRows, compartmentNames: compartmentNames,
-                lingo: lingo, isCompact: true
+                units: units, isCompact: true
             )
             .tabItem { Label(L.Calc.report, systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)
@@ -258,7 +273,7 @@ struct CalculatorContent: View {
             // a registered bar, so the scroll view gives it the system's edge effect.
             ParameterContent(
                     paramBindings: paramBindings,
-                    lingo: lingo,
+                    units: units,
                     variants: variants, solver: solver,
                     isCalculating: isCalculating,
                     validationIssues: validationIssues,
@@ -269,7 +284,9 @@ struct CalculatorContent: View {
                     hints: hints,
                     showCalculateButton: false,
                     onSetSolver: onSetSolver,
-                    onCalculate: {}
+                    onCalculate: {},
+                    colorScheme: colorScheme,
+                    durationText: durationText, durationStepTexts: durationStepTexts
                 )
             // The panel's own background sits between its scroll view and the bar, so the
             // system's edge effect doesn't reach; our fade, sized from the safe area (which now
@@ -327,14 +344,14 @@ struct CalculatorContent: View {
                     DecayChartContent(
                         series: series, isCalculating: isCalculating,
                         error: error, logX: logX.wrappedValue, logY: logY.wrappedValue,
-                        finalDay: paramBindings.finalDay.wrappedValue,
-                        lingo: lingo,
+                        duration: paramBindings.duration.wrappedValue,
+                        units: units,
                         validationIssues: validationIssues,
                         remedies: remedies,
-                        stoppedAtDay: stoppedAtDay,
+                        stoppedAt: stoppedAt,
                         stoppedLabel: stoppedLabel,
                         onToggleSeries: onToggleSeries,
-                        onRemedy: onRemedy
+                        onRemedy: onRemedy, colorScheme: colorScheme, validationIssueTexts: validationIssueTexts, xTicks: xTicks, yTicks: yTicks
                     )
                 }
             }
@@ -346,7 +363,7 @@ struct CalculatorContent: View {
             // Report tab
             ReportContent(
                 reportRows: reportRows, compartmentNames: compartmentNames,
-                lingo: lingo, isCompact: isCompact
+                units: units, isCompact: isCompact
             )
             .tabItem { Label(L.Calc.report, systemImage: "tablecells") }
             .tag(CalculatorFeature.CalcView.report)

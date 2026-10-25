@@ -14,12 +14,12 @@ let package = Package(
     dependencies: [
         .package(name: "biokinetics-dosimetry", path: ".."),
         .package(url: "https://github.com/SwiftRex/SwiftRex.git", branch: "main", traits: ["ReactiveConcurrency"]),
-        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "2.0.0"),
+        .package(url: "https://github.com/luizmb/ReactiveConcurrency.git", from: "2.1.0"),
         .package(url: "https://github.com/luizmb/FP.git", from: "3.0.0"),
         .package(url: "https://github.com/luizmb/NetworkTools.git", from: "0.9.0"),
         .package(url: "https://github.com/CoreOffice/XMLCoder.git", from: "0.17.0"),
         .package(url: "https://github.com/pointfreeco/swift-snapshot-testing.git", from: "1.17.0"),
-        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.2.8"),
+        .package(url: "https://github.com/luizmb/Vitral.git", from: "0.5.0"),
     ],
     targets: [
 
@@ -117,6 +117,8 @@ let package = Package(
             name: "EditorFeatureTests",
             dependencies: [
                 "EditorFeature",
+                "AppDomain",
+                .product(name: "FP",                   package: "FP"),
                 .product(name: "SwiftRex",             package: "SwiftRex"),
                 .product(name: "SwiftRex.Architecture", package: "SwiftRex"),
                 .product(name: "SwiftRex.Testing",     package: "SwiftRex"),

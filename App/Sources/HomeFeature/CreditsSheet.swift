@@ -6,6 +6,8 @@ import Vitral
 // MARK: - CreditsSheet
 
 struct CreditsSheet: View {
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
     var onDismiss: () -> Void
 
 
@@ -27,7 +29,7 @@ struct CreditsSheet: View {
 
                         Text(L.Credits.ssidStatement)
                             .font(.caption)
-                            .foregroundStyle(Color(.inkFaint))
+                            .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                             .padding(.horizontal, 16)
                             .padding(.top, 24)
                             .padding(.bottom, 32)
@@ -53,7 +55,7 @@ struct CreditsSheet: View {
             .textCase(.uppercase)
             .font(TypeToken.sectionLabel)
             .kerning(0.5)
-            .foregroundStyle(Color(.inkFaint))
+            .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
             .padding(.horizontal, 16)
             .padding(.top, 28)
             .padding(.bottom, 8)
@@ -65,32 +67,32 @@ struct CreditsSheet: View {
             HStack(spacing: 6) {
                 item.title
                     .font(TypeToken.bodyStrong)
-                    .foregroundStyle(Color(.ink))
+                    .foregroundStyle(Color(.ink, scheme: colorScheme))
                 Spacer()
                 if let badge = item.license {
                     Text(badge)
                         .font(TypeToken.codeSmall.weight(.medium))
-                        .foregroundStyle(Color(.accent))
+                        .foregroundStyle(Color(.accent, scheme: colorScheme))
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color(.accent).opacity(0.10), in: Capsule())
+                        .background(Color(.accent, scheme: colorScheme).opacity(0.10), in: Capsule())
                 }
                 if item.url != nil {
                     Image(systemName: "arrow.up.right")
                         .font(TypeToken.sectionLabel.weight(.regular))
-                        .foregroundStyle(Color(.inkFaint))
+                        .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                 }
             }
             if let subtitle = item.subtitle {
                 subtitle
                     .font(TypeToken.detail)
-                    .foregroundStyle(Color(.inkMuted))
+                    .foregroundStyle(Color(.inkMuted, scheme: colorScheme))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let detail = item.detail {
                 detail
                     .font(TypeToken.detail)
-                    .foregroundStyle(Color(.inkFaint))
+                    .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

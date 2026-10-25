@@ -1,26 +1,49 @@
 import AppDomain
 import ReactiveConcurrency
+import DataStructure
 import Foundation
 import Solver
 @preconcurrency import XMLCoder
+#if os(iOS)
+import UIKit
+#endif
 
 // MARK: - World (live)
 
 extension World {
-    public static var real: Self {
+    #if os(iOS)
+    /// The live world for the app's one window, made by the scene delegate that made the window: the
+    /// screen's traits are that window's.
+    @MainActor public static func real(window: UIWindow) -> Self {
+        real(deviceTraits: { traits(of: window) })
+    }
+    #endif
+
+    static func real(deviceTraits: @escaping @Sendable () -> Publisher<DeviceTraits, Never>) -> Self {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+        // Identities from a `Gen`, run against the world's one generator (the system's
+        // randomness), rather than `UUID()` wherever one is needed.
+        let generator = GenRunner(seed: nil)
+        let ids = Gen<AnyRandomNumberGenerator, UUID>.uuid()
+        // The person's locale, read once here, at the boundary: every number the app writes or
+        // reads goes through a function made from it here, and nothing below the world holds it.
+        let locale = Locale.autoupdatingCurrent
 
         return .init(
             xmlDecoder:  XMLDecoder(),
             jsonDecoder: decoder,
-            newId:        { UUID() },
+            newId:        { generator(ids) },
             seedId:       liveSeedId,
-            formatDouble: liveFormatDouble,
-            parseDouble:  liveParseDouble,
+            formatDouble: localeFormatDouble(locale),
+            parseDouble:  localeParseDouble(locale),
+            formatScientific: localeFormatScientific(locale),
+            formatInteger: { $0.formatted(.number.locale(locale)) },
+            formatSignificant: { $0.formatted(.number.precision(.significantDigits(1 ... 4)).locale(locale)) },
+            deviceTraits: deviceTraits,
             solver:       { plan, model in Solver.solve(plan: plan, model: model).map { $0.mapError { $0 as Error } }.eraseToThrowingPublisher() },
             saveDocument: { doc in
                 Result {
@@ -108,18 +131,37 @@ private let liveSeedId: @Sendable (String) -> UUID = { key in
 
 // MARK: - Locale-aware number helpers
 
-private let liveFormatDouble: @Sendable (Double, Int) -> String = { value, dp in
-    let f = NumberFormatter()
-    f.numberStyle = .decimal
-    f.minimumFractionDigits = dp
-    f.maximumFractionDigits = dp
-    return f.string(from: NSNumber(value: value)) ?? String(value)
+private func localeFormatDouble(_ locale: Locale) -> @Sendable (Double, Int) -> String {
+    { value, dp in
+        let f = NumberFormatter()
+        f.locale = locale
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = dp
+        f.maximumFractionDigits = dp
+        return f.string(from: NSNumber(value: value)) ?? String(value)
+    }
 }
 
-private let liveParseDouble: @Sendable (String) -> Double? = { text in
-    let f = NumberFormatter()
-    f.numberStyle = .decimal
-    return f.number(from: text.trimmingCharacters(in: .whitespaces))?.doubleValue
+/// `value` in scientific notation, the mantissa with `places` decimals in the locale: 1.23e-05
+/// (1,23e-05). Zero is 0.00e+00.
+private func localeFormatScientific(_ locale: Locale) -> @Sendable (Double, Int) -> String {
+    { value, places in
+        guard value.isFinite else { return value.formatted(.number.locale(locale)) }
+        let exponent = value == 0 ? 0 : Int(floor(log10(abs(value))))
+        let mantissa = value == 0 ? 0 : value / pow(10, Double(exponent))
+        let digits = String(abs(exponent))
+        return mantissa.formatted(.number.precision(.fractionLength(places)).locale(locale))
+            + "e" + (exponent < 0 ? "-" : "+") + String(repeating: "0", count: max(0, 2 - digits.count)) + digits
+    }
+}
+
+private func localeParseDouble(_ locale: Locale) -> @Sendable (String) -> Double? {
+    { text in
+        let f = NumberFormatter()
+        f.locale = locale
+        f.numberStyle = .decimal
+        return f.number(from: text.trimmingCharacters(in: .whitespaces))?.doubleValue
+    }
 }
 
 // MARK: - Helpers

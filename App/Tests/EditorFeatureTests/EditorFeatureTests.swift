@@ -20,13 +20,94 @@ struct EditorFeatureBehaviorTests {
     private func store(
         initial: EditorFeature.State = EditorFeature.initialState(with: ())
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
-        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment.test)
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
         var s = EditorFeature.initialState(with: ())
         s.document = doc
         return s
+    }
+
+    // MARK: - Typed numbers
+
+    @Test func typedNumberKeepsTheTextAndUpdatesTheValueThroughTheParser() async {
+        let initial = loaded()
+        let id = initial.document.model.compartments[0].id
+        let s = store(initial: initial)
+
+        s.dispatch(.typeNumber(.fraction(compartment: id), "0.25")) { _ in }
+        await s.runEffects()
+        s.receive(EditorFeature.Action.prism.numberDrafted) { _, state in
+            state.numberDrafts[.fraction(compartment: id)] = "0.25"
+        }
+        _ = s.receive(EditorFeature.Action.prism.updateCompartmentFraction) { _, state in
+            state = s.state
+        }
+        #expect(s.state.document.model.compartments[0].fraction == 0.25)
+
+        s.dispatch(.endNumberEditing) { $0.numberDrafts = [:] }
+    }
+
+    @Test func textThatIsNotANumberYetIsKeptAndChangesNothing() async {
+        let initial = loaded()
+        let id = initial.document.model.compartments[0].id
+        let before = initial.document.model.compartments[0].fraction
+        let s = store(initial: initial)
+
+        s.dispatch(.typeNumber(.fraction(compartment: id), "-")) { _ in }
+        await s.runEffects()
+        s.receive(EditorFeature.Action.prism.numberDrafted) { _, state in
+            state.numberDrafts[.fraction(compartment: id)] = "-"
+        }
+        #expect(s.state.document.model.compartments[0].fraction == before)
+    }
+
+    /// A field that works in hours takes typed rates in h⁻¹ and stores them in day⁻¹.
+    @Test func typedRateIsTakenInTheFieldsUnit() async {
+        var document = ModelDocument.validation
+        document.field = .pharmacology
+        let s = store(initial: loaded(document))
+
+        s.dispatch(.typeNumber(.rate(link: 1), "2")) { _ in }
+        await s.runEffects()
+        s.receive(EditorFeature.Action.prism.numberDrafted) { _, state in
+            state.numberDrafts[.rate(link: 1)] = "2"
+        }
+        _ = s.receive(EditorFeature.Action.prism.updateLinkRate) { _, state in
+            state = s.state
+        }
+        #expect(s.state.document.model.connections[1].rate == 48)
+    }
+
+    /// And half-lives in hours, stored in days.
+    @Test func typedHalfLifeIsTakenInTheFieldsUnit() async {
+        var document = ModelDocument.validation
+        document.field = .pharmacology
+        let id = document.model.nuclides[0].id
+        let s = store(initial: loaded(document))
+
+        s.dispatch(.typeNumber(.halfLife(nuclide: id), "12")) { _ in }
+        await s.runEffects()
+        s.receive(EditorFeature.Action.prism.numberDrafted) { _, state in
+            state.numberDrafts[.halfLife(nuclide: id)] = "12"
+        }
+        _ = s.receive(EditorFeature.Action.prism.updateNuclideHalfLife) { _, state in
+            state = s.state
+        }
+        #expect(s.state.document.model.nuclides[0].halfLife == 0.5)
+    }
+
+    /// The projection shows the stored days in the field's hours.
+    @Test func numbersAreShownInTheFieldsUnit() {
+        var document = ModelDocument.validation
+        document.field = .pharmacology
+        let env = EditorFeature.Environment.test
+        let vs = EditorFeature.mapState(env)(loaded(document))
+        let link = document.model.connections[1]
+        #expect(vs.links[1].rateText == env.formatScientific(link.rate / 24, 2))
+        #expect(vs.nuclides[0].halfLifeInputText == env.formatDouble(document.model.nuclides[0].halfLife * 24, 4))
+        #expect(vs.units.time == .hours)
     }
 
     // MARK: - Initial state
@@ -39,7 +120,8 @@ struct EditorFeatureBehaviorTests {
         #expect(s.isLeftPanelVisible == true)
         #expect(s.isRightPanelVisible == true)
         #expect(s.showKValues == false)
-        #expect(s.linkingState == .idle)
+        #expect(s.modelTab == .document)
+        #expect(s.transferDraft == nil)
         #expect(s.canvasScale == 1.0)
     }
 
@@ -49,7 +131,7 @@ struct EditorFeatureBehaviorTests {
         var initial = loaded()
         initial.selectedCompartmentId = "A"
         initial.selectedLinkIndex = 0
-        initial.linkingState = .awaitingFrom
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A")
         initial.canvasOffset = EditorFeature.CanvasPoint(x: 100, y: 200)
         initial.canvasScale = 2.0
 
@@ -57,7 +139,7 @@ struct EditorFeatureBehaviorTests {
             state.document = .iodo131
             state.selectedCompartmentId = nil
             state.selectedLinkIndex = nil
-            state.linkingState = .idle
+            state.transferDraft = nil
             state.canvasOffset = EditorFeature.CanvasPoint(x: 0, y: 0)
             state.canvasScale = 1.0
         }
@@ -207,47 +289,110 @@ struct EditorFeatureBehaviorTests {
         }
     }
 
-    // MARK: - Linking flow
+    // MARK: - Editing
 
-    @Test func beginLinkingSetsAwaitingFrom() {
-        store().dispatch(.beginLinking) { $0.linkingState = .awaitingFrom }
-    }
-
-    @Test func linkStepFirstTapSetsAwaitingTo() {
-        var initial = EditorFeature.initialState(with: ())
-        initial.linkingState = .awaitingFrom
-        store(initial: initial).dispatch(.linkStep("A")) { $0.linkingState = .awaitingTo(fromId: "A") }
-    }
-
-    @Test func linkStepSecondTapCreatesConnectionAndSelectsIt() {
-        // validation: A→B(0), B→C(1), C→B(2)
+    @Test func editCompartmentPicksItAndBringsUpTheInspector() {
         var initial = loaded()
-        initial.linkingState = .awaitingTo(fromId: "A")
-        let newConn = CompartmentConnection(from: "A", to: "C", rate: 0.1)
-        store(initial: initial).dispatch(.linkStep("C")) { state in
-            state.document.model = state.document.model.with(
-                connections: state.document.model.connections + [newConn]
-            )
-            state.selectedLinkIndex = 3      // Was 3 connections; new one is at index 3
+        initial.selectedLinkIndex = 1
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A")
+        store(initial: initial).dispatch(.editCompartment("B")) { state in
+            state.selectedCompartmentId = "B"
+            state.selectedLinkIndex = nil
+            state.transferDraft = nil
+            state.overlayPanel = .inspector
+        }
+    }
+
+    @Test func editLinkPicksItAndBringsUpTheInspector() {
+        var initial = loaded()
+        initial.selectedCompartmentId = "A"
+        store(initial: initial).dispatch(.editLink(2)) { state in
+            state.selectedLinkIndex = 2
             state.selectedCompartmentId = nil
-            state.linkingState = .idle
+            state.overlayPanel = .inspector
+        }
+    }
+
+    @Test func editingOnAPadOpensTheInspectorBesideTheCanvas() {
+        var initial = loaded()
+        initial.traits = Self.pad
+        initial.isRightPanelVisible = false
+        store(initial: initial).dispatch(.editCompartment("A")) { state in
+            state.selectedCompartmentId = "A"
             state.isRightPanelVisible = true
         }
     }
 
-    @Test func linkStepSelfLoopCancelsLinkingWithoutAddingConnection() {
-        var initial = loaded()
-        initial.linkingState = .awaitingTo(fromId: "A")
-        store(initial: initial).dispatch(.linkStep("A")) { state in
-            // fromId == id → guard fires, just sets linkingState = .idle
-            state.linkingState = .idle
+    @Test func updateCompartmentTintRecolorsIt() {
+        store(initial: loaded()).dispatch(.updateCompartmentTint(id: "A", tint: .violet)) { state in
+            state.document.visuals["A"]?.tint = .violet
         }
     }
 
-    @Test func cancelLinkingResetsToIdle() {
-        var initial = EditorFeature.initialState(with: ())
-        initial.linkingState = .awaitingTo(fromId: "A")
-        store(initial: initial).dispatch(.cancelLinking) { $0.linkingState = .idle }
+    // MARK: - Making a transfer
+
+    @Test func beginTransferOpensTheDraftInTheInspector() {
+        store(initial: loaded()).dispatch(.beginTransfer(from: "A", to: nil)) { state in
+            state.transferDraft = EditorFeature.TransferDraft(from: "A")
+            state.overlayPanel = .inspector
+        }
+    }
+
+    @Test func choosingTheEndsFillsTheDraft() {
+        var initial = loaded()
+        initial.transferDraft = EditorFeature.TransferDraft()
+        let s = store(initial: initial)
+        s.dispatch(.setTransferFrom("A")) { $0.transferDraft?.from = "A" }
+        s.dispatch(.setTransferTo("C")) { $0.transferDraft?.to = "C" }
+    }
+
+    @Test func createTransferAddsItAndEditsIt() {
+        // validation: A→B(0), B→C(1), C→B(2)
+        var initial = loaded()
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A", to: "C")
+        initial.inspectorTab = .relationships
+        let newConn = CompartmentConnection(from: "A", to: "C", rate: 0.1)
+        store(initial: initial).dispatch(.createTransfer) { state in
+            state.document.model = state.document.model.with(
+                connections: state.document.model.connections + [newConn]
+            )
+            state.selectedLinkIndex = 3
+            state.selectedCompartmentId = nil
+            state.transferDraft = nil
+            state.inspectorTab = .details
+        }
+    }
+
+    @Test func createTransferNeedsTwoDifferentEnds() {
+        var initial = loaded()
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A", to: "A")
+        store(initial: initial).dispatch(.createTransfer)
+        var half = loaded()
+        half.transferDraft = EditorFeature.TransferDraft(from: "A")
+        store(initial: half).dispatch(.createTransfer)
+    }
+
+    @Test func cancelTransferDropsTheDraft() {
+        var initial = loaded()
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A")
+        store(initial: initial).dispatch(.cancelTransfer) { $0.transferDraft = nil }
+    }
+
+    @Test func deletingACompartmentTakesItOutOfTheDraft() {
+        var initial = loaded()
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A", to: "C")
+        store(initial: initial).dispatch(.deleteCompartment(id: "A")) { state in
+            state.document.model = state.document.model.with(
+                compartments: state.document.model.compartments.filter { $0.id != "A" },
+                connections: state.document.model.connections.filter { $0.from != "A" && $0.to != "A" }
+            )
+            state.document.visuals.removeValue(forKey: "A")
+            state.transferDraft?.from = nil
+        }
+    }
+
+    @Test func setModelTabSwitchesThePage() {
+        store().dispatch(.setModelTab(.contents)) { $0.modelTab = .contents }
     }
 
     // MARK: - Link mutations
@@ -321,20 +466,51 @@ struct EditorFeatureBehaviorTests {
         }
     }
 
-    // MARK: - Panel toggles
+    // MARK: - Panels
 
-    @Test func toggleLeftPanelHidesIt() {
-        store().dispatch(.toggleLeftPanel) { $0.isLeftPanelVisible = false }
+    private static let pad = DeviceTraits(isDark: false, isCompactWidth: false, isCompactHeight: false)
+    private static let phoneOnItsSide = DeviceTraits(isDark: false, isCompactWidth: false, isCompactHeight: true)
+
+    @Test func layoutFollowsTheTraits() {
+        #expect(EditorFeature.EditorLayout(.initial) == .sheets)
+        #expect(EditorFeature.EditorLayout(Self.pad) == .docked)
+        #expect(EditorFeature.EditorLayout(Self.phoneOnItsSide) == .floating)
     }
 
-    @Test func toggleLeftPanelTwiceRestores() {
+    @Test func dockedPanelsOpenAndCloseOnTheirOwn() {
+        var initial = EditorFeature.initialState(with: ())
+        initial.traits = Self.pad
+        let s = store(initial: initial)
+        s.dispatch(.setPanel(.modelList, isOpen: false)) { $0.isLeftPanelVisible = false }
+        s.dispatch(.setPanel(.inspector, isOpen: false)) { $0.isRightPanelVisible = false }
+        s.dispatch(.setPanel(.modelList, isOpen: true)) { $0.isLeftPanelVisible = true }
+        #expect(s.state.isOpen(.modelList))
+        #expect(!s.state.isOpen(.inspector))
+    }
+
+    @Test func overThePhoneOnePanelAtATime() {
+        // Nothing is over the canvas when the editor opens, whatever a pad left behind.
         let s = store()
-        s.dispatch(.toggleLeftPanel) { $0.isLeftPanelVisible = false }
-        s.dispatch(.toggleLeftPanel) { $0.isLeftPanelVisible = true }
+        #expect(!s.state.isOpen(.modelList))
+        #expect(!s.state.isOpen(.inspector))
+        s.dispatch(.setPanel(.modelList, isOpen: true)) { $0.overlayPanel = .modelList }
+        s.dispatch(.setPanel(.inspector, isOpen: true)) { $0.overlayPanel = .inspector }
+        // Closing one that isn't up leaves the one that is.
+        s.dispatch(.setPanel(.modelList, isOpen: false))
+        s.dispatch(.setPanel(.inspector, isOpen: false)) { $0.overlayPanel = nil }
     }
 
-    @Test func toggleRightPanelHidesIt() {
-        store().dispatch(.toggleRightPanel) { $0.isRightPanelVisible = false }
+    @Test func pickingOverThePhoneOnlyPicks() {
+        var initial = loaded()
+        initial.traits = Self.phoneOnItsSide
+        store(initial: initial).dispatch(.selectCompartment("A")) { $0.selectedCompartmentId = "A" }
+    }
+
+    @Test func pickingOnAPadLeavesThePanelsAlone() {
+        var initial = loaded()
+        initial.traits = Self.pad
+        initial.isRightPanelVisible = false
+        store(initial: initial).dispatch(.selectCompartment("A")) { $0.selectedCompartmentId = "A" }
     }
 
     @Test func toggleKValuesShowsThem() {
@@ -351,7 +527,7 @@ struct EditorFeatureMapStateTests {
     @Test func compartmentRowsReflectDocumentCompartments() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.compartments.count == 3)
         #expect(vs.compartments.map(\.id) == ["A", "B", "C"])
     }
@@ -360,7 +536,7 @@ struct EditorFeatureMapStateTests {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
         state.selectedCompartmentId = "B"
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.compartments.first { $0.id == "B" }?.isSelected == true)
         #expect(vs.compartments.filter { $0.isSelected }.count == 1)
     }
@@ -368,7 +544,7 @@ struct EditorFeatureMapStateTests {
     @Test func linkRowsReflectDocumentConnections() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation  // A→B, B→C, C→B
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.links.count == 3)
         #expect(vs.links[0].fromId == "A")
         #expect(vs.links[0].toId == "B")
@@ -378,7 +554,7 @@ struct EditorFeatureMapStateTests {
         var state = EditorFeature.initialState(with: ())
         state.canvasOffset = EditorFeature.CanvasPoint(x: 42, y: -10)
         state.canvasScale = 1.8
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.canvasOffsetX == 42)
         #expect(vs.canvasOffsetY == -10)
         #expect(vs.canvasScale == 1.8)
@@ -387,7 +563,7 @@ struct EditorFeatureMapStateTests {
     @Test func nucleiRowsReflectModelNuclides() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation  // has Nuclide("val", halfLife: 5.0)
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.nuclides.count == 1)
         #expect(vs.nuclides[0].id == "val")
         #expect(vs.nuclides[0].halfLife == 5.0)
@@ -398,7 +574,7 @@ struct EditorFeatureMapStateTests {
     @Test func compartmentRowCarriesNuclideId() {
         var state = EditorFeature.initialState(with: ())
         state.document = .validation
-        let vs = EditorFeature.mapState(EditorFeature.Environment())(state)
+        let vs = EditorFeature.mapState(EditorFeature.Environment.test)(state)
         #expect(vs.compartments.allSatisfy { $0.nuclideId == "val" })
     }
 }
@@ -412,7 +588,7 @@ struct EditorFeatureNuclideTests {
     private func store(
         initial: EditorFeature.State = EditorFeature.initialState(with: ())
     ) -> TestStore<EditorFeature.Action, EditorFeature.State, EditorFeature.Environment> {
-        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment())
+        TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment.test)
     }
 
     private func loaded(_ doc: ModelDocument = .validation) -> EditorFeature.State {
@@ -582,14 +758,14 @@ struct EditorFeatureSnapshotTests {
     // MARK: - Baseline states
 
     @Test func snapshotDefaultDocument() async {
-        let feature = TestFeature<EditorFeature>(initial: EditorFeature.initialState(with: ()), environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: EditorFeature.initialState(with: ()), environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "default-document")
     }
 
     @Test func snapshotValidationDocument() async {
         var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "validation-document")
     }
 
@@ -598,7 +774,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = false
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "panels-hidden")
     }
 
@@ -607,7 +783,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = false
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "left-panel-hidden")
     }
 
@@ -616,7 +792,7 @@ struct EditorFeatureSnapshotTests {
         initial.document = .validation
         initial.isLeftPanelVisible = true
         initial.isRightPanelVisible = false
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "right-panel-hidden")
     }
 
@@ -628,7 +804,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "compartment-selected")
     }
 
@@ -638,7 +814,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "A"
         initial.inspectorTab = .relationships
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "compartment-relationships-tab")
     }
 
@@ -650,7 +826,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "link-selected")
     }
 
@@ -660,7 +836,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedLinkIndex = 0
         initial.inspectorTab = .relationships
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "link-relationships-tab")
     }
 
@@ -668,7 +844,7 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "inspector-empty")
     }
 
@@ -678,24 +854,26 @@ struct EditorFeatureSnapshotTests {
         var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
         initial.showKValues = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "k-values-visible")
     }
 
-    @Test func snapshotDuringLinking() async {
+    @Test func snapshotNewTransfer() async {
         var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
-        initial.linkingState = .awaitingTo(fromId: "A")
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
-        await snapBoth(feature, named: "linking-in-progress")
+        initial.transferDraft = EditorFeature.TransferDraft(from: "A")
+        initial.isRightPanelVisible = true
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
+        await snapBoth(feature, named: "new-transfer")
     }
 
-    @Test func snapshotLinkingAwaitingFrom() async {
+    @Test func snapshotContentsPageWithAPick() async {
         var initial = EditorFeature.initialState(with: ())
         initial.document = .validation
-        initial.linkingState = .awaitingFrom
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
-        await snapBoth(feature, named: "linking-awaiting-from")
+        initial.modelTab = .contents
+        initial.selectedCompartmentId = "A"
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
+        await snapBoth(feature, named: "contents-page-picked")
     }
 
     // MARK: - Multi-nuclide document (phase 2)
@@ -703,7 +881,7 @@ struct EditorFeatureSnapshotTests {
     @Test func snapshotMultiNuclideDocument() async {
         var initial = EditorFeature.initialState(with: ())
         initial.document = Self.multiNuclideDoc
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "multi-nuclide-document")
     }
 
@@ -713,7 +891,7 @@ struct EditorFeatureSnapshotTests {
         initial.selectedCompartmentId = "k2"
         initial.inspectorTab = .details
         initial.isRightPanelVisible = true
-        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment())
+        let feature = TestFeature<EditorFeature>(initial: initial, environment: EditorFeature.Environment.test)
         await snapBoth(feature, named: "multi-nuclide-compartment-inspector")
     }
 

@@ -40,6 +40,11 @@ public enum HomeFeature {
             public var halfLife: Double
             public var compartmentCount: Int
             public var connectionCount: Int
+            /// The numbers above as the card shows them, written by the world where the view
+            /// state is made.
+            public var halfLifeText: String
+            public var compartmentCountText: String
+            public var connectionCountText: String
             public var tints: [CompartmentTint]
             public var document: ModelDocument
         }
@@ -59,6 +64,11 @@ public enum HomeFeature {
             public var draftName: String = ""
             /// Deleted sample models that "Restore sample models" would bring back; 0 hides it.
             public var restorableSampleCount: Int = 0
+
+            /// The screen's appearance, read off the state's traits here, in the projection.
+            public var colorScheme: ColorScheme
+            /// A narrow (or short) screen, read off the state's traits here.
+            public var isCompact: Bool
         }
 
         public enum ViewAction: Sendable {
@@ -98,6 +108,9 @@ public enum HomeFeature {
                         halfLife: doc.halfLife,
                         compartmentCount: doc.model.compartments.count,
                         connectionCount: doc.model.connections.count,
+                        halfLifeText: env.formatDouble(doc.field.units.time.iso.get(doc.halfLife), 1),
+                        compartmentCountText: env.formatInteger(doc.model.compartments.count),
+                        connectionCountText: env.formatInteger(doc.model.connections.count),
                         tints: doc.model.compartments
                             .compactMap { doc.visuals[$0.id]?.tint }
                             .prefix(8)
@@ -111,7 +124,9 @@ public enum HomeFeature {
             isCreationSheetOpen: state.isCreationSheetOpen,
             draftField: state.draftField,
             draftName: state.draftName,
-            restorableSampleCount: state.documents.loaded.map { SeedDocuments.missing(from: $0, idFor: env.seedId).count } ?? 0
+            restorableSampleCount: state.documents.loaded.map { SeedDocuments.missing(from: $0, idFor: env.seedId).count } ?? 0,
+            colorScheme: state.traits.isDark ? .dark : .light,
+            isCompact: state.traits.isCompactWidth
         )
     } }
 

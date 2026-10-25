@@ -12,7 +12,8 @@ struct NewDocumentSheet: View {
     let restorableSampleCount: Int
     var onRestoreSampleModels: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
 
     var body: some View {
         NavigationStack {
@@ -31,13 +32,13 @@ struct NewDocumentSheet: View {
                                                 .font(TypeToken.body)
                                             (Text(L.domain(f.lingo.substanceName)) + Text(verbatim: " · ") + Text(L.domain(f.lingo.intakeLabel)) + Text(verbatim: " · ") + Text(L.domain(f.lingo.eliminationLabel)))
                                                 .font(TypeToken.sectionLabel.weight(.regular))
-                                                .foregroundStyle(Color(.inkFaint))
+                                                .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                                         }
                                         Spacer()
                                         if field == f {
                                             Image(systemName: "checkmark")
                                                 .font(TypeToken.detail.weight(.semibold))
-                                                .foregroundStyle(Color(.accent))
+                                                .foregroundStyle(Color(.accent, scheme: colorScheme))
                                         }
                                     }
                                     .padding(.horizontal, 14).padding(.vertical, 11)
@@ -54,7 +55,7 @@ struct NewDocumentSheet: View {
 
                         Text(L.Home.renameHint)
                             .font(.caption)
-                            .foregroundStyle(Color(.inkFaint))
+                            .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                             .padding(.horizontal, 4)
 
                         if restorableSampleCount > 0 {
@@ -69,7 +70,7 @@ struct NewDocumentSheet: View {
                             )
                             Text(L.Home.restoreSamplesHint)
                                 .font(.caption)
-                                .foregroundStyle(Color(.inkFaint))
+                                .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                                 .padding(.horizontal, 4)
                                 .padding(.top, 8)
                         }

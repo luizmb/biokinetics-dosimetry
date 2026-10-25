@@ -32,6 +32,8 @@ public enum AppFeature {
         /// The pushed screens, each carrying its own state. One source of truth: there is no parallel
         /// table to keep in step, so a route and its data cannot disagree.
         public var path: [StackEntry]
+        /// The screen's traits as the world last reported them; every screen holds a copy.
+        public var traits: DeviceTraits = .initial
 
         public init() {
             home = HomeFeature.initialState(with: ())
@@ -50,6 +52,8 @@ public enum AppFeature {
         case home(HomeFeature.Action)
         case editor(EditorFeature.Action)
         case calculator(CalculatorFeature.Action)
+        /// The screen's traits changed (appearance, size classes), as the world reports them.
+        case traitsChanged(DeviceTraits)
     }
 
     // MARK: - Environment
@@ -92,6 +96,8 @@ public enum AppFeature {
         <> AppScopes.editor.behavior(of: EditorFeature.self)
 
         <> AppScopes.calculator.behavior(of: CalculatorFeature.self)
+
+        <> deviceBehavior()
     }
 }
 
@@ -114,7 +120,7 @@ public extension AppState {
 public extension MainStore {
 
     /// Builds the app store wired to the given environment.
-    /// Call `.app(world: .real)` at the entry point; pass a fake `World` in tests.
+    /// Call `.app(world: .real(window:))` from the scene delegate; pass a fake `World` in tests.
     @MainActor static func app(world: World) -> MainStoreType {
         Store(
             initial: AppState(),
@@ -158,18 +164,22 @@ public enum AppScopes: Rig {
         .state(\.home)
         .environment(fanout(
             \.xmlDecoder, \.jsonDecoder, \.newId, \.seedId,
-            \.saveDocument, \.loadAllDocuments, \.deleteDocument
+            \.saveDocument, \.loadAllDocuments, \.deleteDocument, \.formatDouble, \.formatInteger
         ) >>> HomeModule.Environment.init)
 
     public static let editor = ScopeOf<AppScopes>
         .action(\.editor)
         .state(preview: topmost(StackEntry.prism.editor), set: replacing(StackEntry.prism.editor))
-        .environment(\.newId >>> EditorFeature.Environment.init)
+        .environment(fanout(
+            \.newId, \.formatDouble, \.formatScientific, \.formatInteger, \.formatSignificant, \.parseDouble
+        ) >>> EditorFeature.Environment.init)
 
     public static let calculator = ScopeOf<AppScopes>
         .action(\.calculator)
         .state(preview: topmost(StackEntry.prism.calculator), set: replacing(StackEntry.prism.calculator))
-        .environment(fanout(\.solver, \.formatDouble, \.parseDouble) >>> CalculatorFeature.Environment.init)
+        .environment(fanout(
+            \.solver, \.formatDouble, \.parseDouble, \.formatScientific, \.formatInteger, \.formatSignificant
+        ) >>> CalculatorFeature.Environment.init)
 }
 
 // MARK: - The affine focus a pushed screen lives behind
@@ -188,5 +198,46 @@ private func replacing<S>(_ prism: Prism<StackEntry, S>) -> @Sendable (AppState,
         var updated = state
         updated.path[index] = prism.review(screen)
         return updated
+    }
+}
+
+// MARK: - The screen's traits
+
+/// The screen's traits, watched for as long as the app runs, and put into every screen's state:
+/// when they change, and when a screen is pushed (it was built without them). Last in the fold, so a
+/// pushed screen is there to receive them.
+private func deviceBehavior() -> Behavior<AppAction, AppState, World> {
+    Behavior<AppAction, AppState, World>.supervise { _ in
+        Supervision { world in [world.deviceTraits().asChannel(id: "device-traits", AppAction.traitsChanged)] }
+    }
+    <> Behavior<AppAction, AppState, World>.handle { action, _ in
+        switch action {
+        case .traitsChanged(let traits):
+            .reduce { state in
+                state.traits = traits
+                state.applyTraitsEverywhere()
+            }
+        case .navigation:
+            .reduce { $0.applyTraitsEverywhere() }
+        default:
+            .doNothing
+        }
+    }
+}
+
+extension AppState {
+    /// The traits, into every screen that holds a copy.
+    mutating func applyTraitsEverywhere() {
+        home.traits = traits
+        path = path.map { entry in
+            switch entry {
+            case .editor(var screen):
+                screen.traits = traits
+                return .editor(screen)
+            case .calculator(var screen):
+                screen.traits = traits
+                return .calculator(screen)
+            }
+        }
     }
 }

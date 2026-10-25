@@ -1,5 +1,5 @@
 {
-  "originHash" : "66c3fdcd16fcca01dd79772e5e3b076aad8f6a24df5166c67e2ab737137d63ed",
+  "originHash" : "761413b0b7f51d28233fce284a20eaaeaac896e05f8771db881ad3410b0f884c",
   "pins" : [
     {
       "identity" : "fp",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/ReactiveConcurrency.git",
       "state" : {
-        "revision" : "d417be0d55ecd2c737c90d6cd2e32d360bd84309",
-        "version" : "2.0.0"
+        "revision" : "2afd10d5b4e7d2700589d33047fcfaae66827212",
+        "version" : "2.1.0"
       }
     },
     {
@@ -115,7 +115,7 @@
       "location" : "https://github.com/SwiftRex/SwiftRex.git",
       "state" : {
         "branch" : "main",
-        "revision" : "3700d334862fb401a6a40098bf4f8c4345e183f6"
+        "revision" : "a67349c9d0b2bca0081f5218d9dcaa9e21c13c8f"
       }
     },
     {
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/luizmb/Vitral.git",
       "state" : {
-        "revision" : "98a6e0858a8ff48fff598c8712a4ae8bfc76d198",
-        "version" : "0.2.8"
+        "revision" : "84231cfe2970fb1b7f94170479eeb4d6a4e3c534",
+        "version" : "0.5.0"
       }
     },
     {

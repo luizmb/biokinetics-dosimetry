@@ -41,7 +41,7 @@ extension PDFExportInput {
         // Header
         UIColor.systemGray5.setFill()
         UIBezierPath(rect: CGRect(x: margin, y: y, width: pageW, height: 18)).fill()
-        let headers = [String(localized: L.Resource.Common.time(L.domainString(lingo.timeUnit.label)))] + compartmentNames
+        let headers = [String(localized: L.Resource.Common.time(L.domainString(units.time.symbol)))] + compartmentNames
         for (i, name) in headers.enumerated() {
             let truncated = name.count > 14 ? String(name.prefix(12)) + "…" : name
             drawInRect(truncated, rect: CGRect(x: xForCol(i), y: y, width: wForCol(i), height: 18),
@@ -54,7 +54,7 @@ extension PDFExportInput {
         let maxRows = Int((bounds.height - y - margin) / 12)
         for (ri, row) in rows.prefix(maxRows).enumerated() {
             if ri % 2 == 1 { UIColor.systemGray6.setFill(); UIBezierPath(rect: CGRect(x: margin, y: y, width: pageW, height: 11)).fill() }
-            drawInRect(String(format: "%.4g", row.day),
+            drawInRect(String(format: "%.4g", row.time),
                        rect: CGRect(x: xForCol(0), y: y, width: wForCol(0), height: 11),
                        font: rowFont, color: .label, align: .left)
             for (vi, val) in row.values.enumerated() {

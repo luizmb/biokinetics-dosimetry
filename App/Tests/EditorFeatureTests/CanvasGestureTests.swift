@@ -58,7 +58,7 @@ struct CanvasGestureTests {
     @Test func aSecondFingerReBasesWithoutAJump() {
         var initial = EditorFeature.State()
         initial.canvasOffset = Point(x: 10, y: 10)
-        let store = TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: .init(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))
+        let store = TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment.test(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))
         store.dispatch(.canvasTouchesChanged(touches([1: Point(x: 100, y: 100)]))) {
             $0.canvasTouchSession = .init(start: .init(offset: Point(x: 10, y: 10), scale: 1), touches: [1: Point(x: 100, y: 100)])
         }
@@ -79,7 +79,7 @@ struct CanvasGestureTests {
     @Test func aPinchPreviewsThenCommits() {
         var initial = EditorFeature.State()
         initial.canvasOffset = Point(x: 10, y: -20)
-        let store = TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: .init(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))
+        let store = TestStore(initial: initial, behavior: EditorFeature.behavior(), environment: EditorFeature.Environment.test(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))
         let down = [1: Point(x: 150, y: 400), 2: Point(x: 250, y: 400)]
         let apart = [1: Point(x: 100, y: 420), 2: Point(x: 300, y: 420)]
         store.dispatch(.canvasTouchesChanged(touches(down))) {
@@ -91,7 +91,7 @@ struct CanvasGestureTests {
         #expect(store.state.canvasOffset == Point(x: 10, y: -20))
 
         // The committed layout, scaled about the view's centre and moved, lands where the preview puts it.
-        let view = EditorFeature.mapState.runReader(.init(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))(store.state)
+        let view = EditorFeature.mapState.runReader(EditorFeature.Environment.test(newId: { UUID(uuidString: "00000000-0000-0000-0000-000000000001")! }))(store.state)
         let committed = EditorFeature.CanvasTransform(offset: store.state.canvasOffset, scale: store.state.canvasScale)
         for c in [Point(x: 450, y: 310), Point(x: 0, y: 0), Point(x: 900, y: 600)] {
             let base = screen(c, committed)

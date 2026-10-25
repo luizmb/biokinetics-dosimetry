@@ -36,7 +36,9 @@ public struct HomeView: View {
                 case "csv":  viewStore.dispatch(.importCSV(data))
                 default:     viewStore.dispatch(.importXML(data))
                 }
-            }
+            },
+            colorScheme: viewStore.state.colorScheme.value,
+            isCompact: viewStore.state.isCompact
         )
     }
 }
@@ -66,9 +68,9 @@ struct HomeContent: View {
     var onDelete:            (ModelDocument.ID) -> Void
     var onImportFile:        (String, Data) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var hSize
-    private var isCompact: Bool { hSize == .compact }
+    /// The screen's appearance and narrowness, from the view state.
+    let colorScheme: ColorScheme
+    let isCompact: Bool
 
     var body: some View {
         ZStack {
@@ -97,7 +99,8 @@ struct HomeContent: View {
                 onConfirm: onConfirmNewDocument,
                 onCancel: onCancelNewDocument,
                 restorableSampleCount: restorableSampleCount,
-                onRestoreSampleModels: onRestoreSampleModels
+                onRestoreSampleModels: onRestoreSampleModels,
+                colorScheme: colorScheme
             )
         }
         .fileImporter(
@@ -116,7 +119,7 @@ struct HomeContent: View {
             onImportFile(ext, data)
         }
         .sheet(isPresented: $isCreditsSheetPresented) {
-            CreditsSheet(onDismiss: { isCreditsSheetPresented = false })
+            CreditsSheet(colorScheme: colorScheme, onDismiss: { isCreditsSheetPresented = false })
         }
         // The system's large title and glass toolbar: the list scrolls under real glass.
         .navigationTitle(L.Home.title)
@@ -171,7 +174,8 @@ struct HomeContent: View {
                                 onEdit:      { onEdit(card.document) },
                                 onCalculate: { onCalculate(card.document) },
                                 onDuplicate: { onDuplicate(card.id) },
-                                onDelete:    { onDelete(card.id) }
+                                onDelete:    { onDelete(card.id) },
+                                colorScheme: colorScheme
                             )
                         }
                     }
@@ -200,7 +204,8 @@ struct HomeContent: View {
                         onEdit:      { onEdit(card.document) },
                         onCalculate: { onCalculate(card.document) },
                         onDuplicate: { onDuplicate(card.id) },
-                        onDelete:    { onDelete(card.id) }
+                        onDelete:    { onDelete(card.id) }, 
+                        colorScheme: colorScheme
                     )
                 }
             }
@@ -235,14 +240,14 @@ struct HomeContent: View {
                     )
                     .foregroundStyle(
                         colorScheme == .dark
-                            ? Color(ColorToken.fixedWhite.opacity(0.22))
-                            : Color(ColorToken.fixedBlack.opacity(0.20))
+                            ? Color(ColorToken.fixedWhite.opacity(0.22), scheme: colorScheme)
+                            : Color(ColorToken.fixedBlack.opacity(0.20), scheme: colorScheme)
                     )
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(
                         colorScheme == .dark
-                            ? Color(ColorToken.fixedWhite.opacity(0.03))
-                            : Color(ColorToken.fixedWhite.opacity(0.28))
+                            ? Color(ColorToken.fixedWhite.opacity(0.03), scheme: colorScheme)
+                            : Color(ColorToken.fixedWhite.opacity(0.28), scheme: colorScheme)
                     )
             }
         }
@@ -284,7 +289,8 @@ private struct HomeListRow: View {
     var onDuplicate: () -> Void
     var onDelete:    () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -293,9 +299,9 @@ private struct HomeListRow: View {
                 Spacer()
                 if card.halfLife > 0 {
                     HalfLifeTag {
-                        (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(card.field.lingo.timeUnit.label)))
+                        (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLifeText) ") + Text(L.domain(card.field.units.time.symbol)))
                             .font(TypeToken.detail.weight(.semibold))
-                            .foregroundStyle(Color(.inkMuted))
+                            .foregroundStyle(Color(.inkMuted, scheme: colorScheme))
                             .padding(.horizontal, 11)
                             .frame(height: 26)
                     }
@@ -312,11 +318,11 @@ private struct HomeListRow: View {
                 if !card.description.isEmpty {
                     Text(card.description)
                         .font(TypeToken.detail)
-                        .foregroundStyle(Color(.inkMuted))
+                        .foregroundStyle(Color(.inkMuted, scheme: colorScheme))
                 }
                 HStack(spacing: 16) {
-                    countStat(systemImage: "square.stack.3d.up", n: card.compartmentCount)
-                    countStat(systemImage: "arrow.triangle.branch", n: card.connectionCount)
+                    countStat(systemImage: "square.stack.3d.up", n: card.compartmentCountText)
+                    countStat(systemImage: "arrow.triangle.branch", n: card.connectionCountText)
                 }
                 .padding(.top, 7)
             }
@@ -354,8 +360,8 @@ private struct HomeListRow: View {
                 if let label { Text(label).font(TypeToken.bodyStrong).lineLimit(1).minimumScaleFactor(0.8) }
             }
             .foregroundStyle(danger
-                             ? Color(.danger)
-                             : Color(.accent))
+                             ? Color(.danger, scheme: colorScheme)
+                             : Color(.accent, scheme: colorScheme))
             .frame(maxWidth: label == nil ? nil : .infinity)
             .frame(height: 46)
             .contentShape(Rectangle())
@@ -364,10 +370,10 @@ private struct HomeListRow: View {
         .accessibilityLabel(Text(label ?? L.Common.delete))
     }
 
-    private func countStat(systemImage: String, n: Int) -> some View {
-        Label("\(n)", systemImage: systemImage)
+    private func countStat(systemImage: String, n: String) -> some View {
+        Label { Text(verbatim: n) } icon: { Image(systemName: systemImage) }
             .font(TypeToken.detail)
-            .foregroundStyle(Color(.inkFaint))
+            .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
     }
 }
 
@@ -380,7 +386,8 @@ private struct HomeModelCard: View {
     var onDuplicate: () -> Void
     var onDelete:    () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    /// The screen's appearance, from its parent's view state.
+    let colorScheme: ColorScheme
 
     var body: some View {
         Panel(cornerRadius: 20, padding: 0) {
@@ -391,9 +398,9 @@ private struct HomeModelCard: View {
                     Spacer()
                     if card.halfLife > 0 {
                         HalfLifeTag {
-                            (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLife.formatted(.number.precision(.fractionLength(1)))) ") + Text(L.domain(card.field.lingo.timeUnit.label)))
+                            (Text(L.domain(card.field.lingo.halfLifeLabel)) + Text(verbatim: " \(card.halfLifeText) ") + Text(L.domain(card.field.units.time.symbol)))
                                 .font(TypeToken.detail.weight(.semibold))
-                                .foregroundStyle(Color(.inkMuted))
+                                .foregroundStyle(Color(.inkMuted, scheme: colorScheme))
                                 .padding(.horizontal, 11)
                                 .frame(height: 26)
                         }
@@ -410,15 +417,15 @@ private struct HomeModelCard: View {
                     if !card.description.isEmpty {
                         Text(card.description)
                             .font(TypeToken.detail)
-                            .foregroundStyle(Color(.inkMuted))
+                            .foregroundStyle(Color(.inkMuted, scheme: colorScheme))
                             .lineLimit(4)
                     }
                     HStack(spacing: 16) {
-                        Label("\(card.compartmentCount)", systemImage: "square.stack.3d.up")
-                        Label("\(card.connectionCount)", systemImage: "arrow.triangle.branch")
+                        Label { Text(verbatim: card.compartmentCountText) } icon: { Image(systemName: "square.stack.3d.up") }
+                        Label { Text(verbatim: card.connectionCountText) } icon: { Image(systemName: "arrow.triangle.branch") }
                     }
                     .font(TypeToken.detail)
-                    .foregroundStyle(Color(.inkFaint))
+                    .foregroundStyle(Color(.inkFaint, scheme: colorScheme))
                     .padding(.top, 8)
                 }
                 .padding(.horizontal, 16)
@@ -459,8 +466,8 @@ private struct HomeModelCard: View {
                 }
             }
             .foregroundStyle(danger
-                             ? Color(.danger)
-                             : Color(.accent))
+                             ? Color(.danger, scheme: colorScheme)
+                             : Color(.accent, scheme: colorScheme))
             .frame(maxWidth: label == nil ? nil : .infinity)
             .frame(height: 44)
             .contentShape(Rectangle())

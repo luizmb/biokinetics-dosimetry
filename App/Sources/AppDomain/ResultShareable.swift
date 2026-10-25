@@ -11,16 +11,19 @@ import CoreTransferable
 public struct CSVExportInput: Transferable, Sendable, Equatable {
     public let documentName: String
     public let lingo: FieldLingo
+    /// The units `rows` are in: each row's time is in `units.time`.
+    public let units: WorkingUnits
     public let compartmentNames: [String]
-    public let rows: [(day: Double, values: [Double])]
+    public let rows: [(time: Double, values: [Double])]
     /// Set when the run stopped early ("Partial run: stopped at day 41.3 of 200"); the file name
     /// says so, since a note line would break CSV readers.
     public let note: String?
 
-    public init(documentName: String, lingo: FieldLingo,
-                compartmentNames: [String], rows: [(day: Double, values: [Double])], note: String? = nil) {
+    public init(documentName: String, lingo: FieldLingo, units: WorkingUnits,
+                compartmentNames: [String], rows: [(time: Double, values: [Double])], note: String? = nil) {
         self.documentName     = documentName
         self.lingo            = lingo
+        self.units            = units
         self.compartmentNames = compartmentNames
         self.rows             = rows
         self.note             = note
@@ -29,12 +32,12 @@ public struct CSVExportInput: Transferable, Sendable, Equatable {
     public static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(exportedContentType: .commaSeparatedText) { input in
             var lines: [String] = []
-            let header = (["Time (\(input.lingo.timeUnit.label))"] + input.compartmentNames)
+            let header = (["Time (\(input.units.time.symbol))"] + input.compartmentNames)
                 .map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
                 .joined(separator: ",")
             lines.append(header)
             for row in input.rows {
-                let time   = String(format: "%.6g", row.day)
+                let time   = String(format: "%.6g", row.time)
                 let values = row.values.map { String(format: "%.9e", $0) }
                 lines.append(([time] + values).joined(separator: ","))
             }
@@ -58,15 +61,18 @@ public struct CSVExportInput: Transferable, Sendable, Equatable {
 public struct PDFExportInput: Transferable, Sendable, Equatable {
     public let documentName: String
     public let lingo: FieldLingo
+    /// The units `rows` are in: each row's time is in `units.time`.
+    public let units: WorkingUnits
     public let compartmentNames: [String]
-    public let rows: [(day: Double, values: [Double])]
+    public let rows: [(time: Double, values: [Double])]
     /// Set when the run stopped early; printed under the title.
     public let note: String?
 
-    public init(documentName: String, lingo: FieldLingo,
-                compartmentNames: [String], rows: [(day: Double, values: [Double])], note: String? = nil) {
+    public init(documentName: String, lingo: FieldLingo, units: WorkingUnits,
+                compartmentNames: [String], rows: [(time: Double, values: [Double])], note: String? = nil) {
         self.documentName     = documentName
         self.lingo            = lingo
+        self.units            = units
         self.compartmentNames = compartmentNames
         self.rows             = rows
         self.note             = note
@@ -94,13 +100,16 @@ public struct PDFExportInput: Transferable, Sendable, Equatable {
 public struct CalculatorExportData: Sendable {
     public let documentName: String
     public let lingo: FieldLingo
+    /// The units `rows` are in: each row's time is in `units.time`.
+    public let units: WorkingUnits
     public let compartmentNames: [String]
-    public let rows: [(day: Double, values: [Double])]
+    public let rows: [(time: Double, values: [Double])]
 
-    public init(documentName: String, lingo: FieldLingo,
-                compartmentNames: [String], rows: [(day: Double, values: [Double])]) {
+    public init(documentName: String, lingo: FieldLingo, units: WorkingUnits,
+                compartmentNames: [String], rows: [(time: Double, values: [Double])]) {
         self.documentName     = documentName
         self.lingo            = lingo
+        self.units            = units
         self.compartmentNames = compartmentNames
         self.rows             = rows
     }
